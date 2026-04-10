@@ -150,15 +150,13 @@ export default function Home() {
         </div>
 
         {/* CTA */}
-        {!user && (
-          <Link to="/create-listing" style={{
-            display: 'block', marginTop: 20, padding: 12,
-            background: BLUE, color: '#fff', borderRadius: 10,
-            fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none',
-          }}>
-            + Post a listing
-          </Link>
-        )}
+        <Link to={user ? '/create-listing' : '/signup'} style={{
+          display: 'block', marginTop: 20, padding: 12,
+          background: BLUE, color: '#fff', borderRadius: 10,
+          fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none',
+        }}>
+          {user ? '+ Post a listing' : 'Offer your services →'}
+        </Link>
       </div>
 
       {/* Footer */}
