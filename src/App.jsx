@@ -8,13 +8,14 @@ import StudentDashboard from './pages/StudentDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
 import { SignUp, Login, ForgotPassword } from './pages/Auth';
 import CreateListing from './pages/CreateListing';
+import ResetPassword from './pages/ResetPassword';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 28, height: 28, border: '2px solid #2B6CB0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
       </div>
     );
   }
@@ -57,15 +58,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/signup"
-          element={user ? <Navigate to="/dashboard/student" replace /> : <SignUp />}
-        />
-        <Route
-          path="/login"
-          element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Login />}
-        />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route
           path="/create-listing"
           element={
             <ProtectedRoute>
@@ -73,6 +65,16 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/signup"
+          element={user ? <Navigate to="/" replace /> : <SignUp />}
+        />
+        <Route
+          path="/login"
+          element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Login />}
+        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

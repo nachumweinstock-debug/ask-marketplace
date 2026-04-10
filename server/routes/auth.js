@@ -7,6 +7,11 @@ import { sendVerificationCode, sendPasswordResetCode } from '../email.js';
 const router = Router();
 const YU_EMAIL = /^[^\s@]+@(mail\.)?yu\.edu$/i;
 
+// GET /auth/me — sync/create SQLite user from Supabase JWT, return user data
+router.get('/me', requireAuth, (req, res) => {
+  res.json(req.user);
+});
+
 function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }

@@ -3,13 +3,14 @@ import multer from 'multer';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import db from '../db.js';
-import { requireAuth, signToken } from '../auth.js';
+import { requireAuth } from '../auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
 
+const DATA_DIR = process.env.DATA_DIR || join(__dirname, '../..');
 const storage = multer.diskStorage({
-  destination: join(__dirname, '../../uploads'),
+  destination: join(DATA_DIR, 'uploads'),
   filename: (_, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -41,11 +42,9 @@ router.post('/become', requireAuth, (req, res) => {
   if (!existing) {
     db.prepare('INSERT INTO provider_profiles (user_id, category) VALUES (?, ?)').run(req.user.id, 'other');
   }
-  // Update role to provider so they can access provider dashboard
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
   const user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(req.user.id);
-  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
-  res.json({ token, user });
+  res.json({ user });
 });
 
 router.get('/me/profile', requireAuth, (req, res) => {

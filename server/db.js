@@ -3,7 +3,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const db = new Database(join(__dirname, '..', 'ask.db'));
+const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..');
+const db = new Database(join(DATA_DIR, 'ask.db'));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -73,8 +74,10 @@ db.exec(`
 const cols = db.pragma('table_info(users)').map(c => c.name);
 if (!cols.includes('email_verified')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
-  // Mark all existing users as verified so they can still log in
   db.exec('UPDATE users SET email_verified = 1');
+}
+if (!cols.includes('avatar_url')) {
+  db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
 }
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);

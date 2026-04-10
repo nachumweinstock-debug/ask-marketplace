@@ -1,21 +1,35 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Scissors, Star, Dumbbell, Sparkles, MoreHorizontal } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
+const BLUE = '#2B6CB0';
+const INPUT = {
+  width: '100%', border: '1px solid #E2E8F0', borderRadius: 8,
+  padding: '10px 12px', fontSize: 13, outline: 'none',
+  background: '#fff', color: '#1A1A2E',
+};
+const LABEL = { fontSize: 12, fontWeight: 500, color: '#64748B', marginBottom: 5, display: 'block' };
+
 const CATEGORIES = [
-  { id: 'tutor',        label: 'Tutor',         icon: BookOpen,      color: 'border-violet-300 bg-violet-50',  active: 'border-violet-600 bg-violet-100', icon: 'text-violet-600' },
-  { id: 'barber',       label: 'Barber',         icon: Scissors,      color: 'border-orange-300 bg-orange-50',  active: 'border-orange-600 bg-orange-100', icon: 'text-orange-600' },
-  { id: 'hebrew tutor', label: 'Hebrew Tutor',   icon: Star,          color: 'border-blue-300 bg-blue-50',      active: 'border-blue-600 bg-blue-100',     icon: 'text-blue-600' },
-  { id: 'tennis',       label: 'Tennis',         icon: Dumbbell,      color: 'border-green-300 bg-green-50',    active: 'border-green-600 bg-green-100',   icon: 'text-green-600' },
-  { id: 'other',        label: 'Something else', icon: MoreHorizontal,color: 'border-slate-300 bg-slate-50',   active: 'border-slate-600 bg-slate-100',   icon: 'text-slate-600' },
+  { id: 'tutor',        label: 'Tutors',   emoji: '📚' },
+  { id: 'barber',       label: 'Barbers',  emoji: '✂️' },
+  { id: 'hebrew tutor', label: 'Hebrew',   emoji: '✡️' },
+  { id: 'tennis',       label: 'Tennis',   emoji: '🎾' },
+  { id: 'other',        label: 'Other',    emoji: '💼' },
 ];
 
-export default function CreateListing() {
-  const { login, user } = useAuth();
-  const navigate = useNavigate();
+const BIO_PLACEHOLDERS = {
+  tutor: 'e.g. I tutor Calc 1 & 2 and Orgo. 3 years experience, patient.',
+  barber: 'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
+  'hebrew tutor': 'e.g. Rashi, Gemara, conversational Hebrew — all levels.',
+  tennis: 'e.g. USTA rated player, great with beginners and intermediates.',
+  other: 'Describe what you offer and who it\'s for...',
+};
 
+export default function CreateListing() {
+  const { refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [category, setCategory] = useState('');
   const [bio, setBio] = useState('');
   const [price, setPrice] = useState('');
@@ -26,23 +40,12 @@ export default function CreateListing() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!category) { setError('Pick a category first'); return; }
-    setError('');
-    setLoading(true);
+    if (!category) { setError('Select a category first'); return; }
+    setError(''); setLoading(true);
     try {
-      // Become a provider first (idempotent — safe to call if already one)
-      const becomeRes = await api.post('/providers/become');
-      login(becomeRes.data.token, becomeRes.data.user);
-
-      // Save the listing details
-      await api.put('/providers/me', {
-        category,
-        bio,
-        price_per_session: price || 0,
-        zelle,
-        venmo,
-      });
-
+      await api.post('/providers/become');
+      await api.put('/providers/me', { category, bio, price_per_session: price || 0, zelle, venmo });
+      await refreshUser();
       navigate('/dashboard/provider?tab=availability&new=1');
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong');
@@ -51,121 +54,97 @@ export default function CreateListing() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-10">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={20} className="text-amber-500" />
-          <span className="text-sm font-semibold text-amber-600 uppercase tracking-wide">New Listing</span>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900">What do you offer?</h1>
-        <p className="text-slate-500 mt-1">Takes 30 seconds. You can always edit later.</p>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
+
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>Post a listing</h1>
+        <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>Takes about 30 seconds.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-7">
+      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '24px' }}>
+        <form onSubmit={handleSubmit}>
 
-        {/* Category */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 mb-3 block">Pick a category</label>
-          <div className="grid grid-cols-2 gap-3">
-            {CATEGORIES.map(({ id, label, icon: Icon, color, active }) => {
-              const isActive = category === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setCategory(id)}
-                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${isActive ? active : color} hover:scale-[1.02]`}
-                >
-                  <Icon size={20} className={isActive ? 'text-inherit' : 'text-slate-500'} />
-                  <span className={`font-semibold text-sm ${isActive ? 'text-slate-900' : 'text-slate-700'}`}>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bio */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 mb-1.5 block">
-            Describe what you offer
-          </label>
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-            rows={3}
-            placeholder={
-              category === 'tutor' ? 'e.g. I tutor Calc 1 & 2, Chem 101. 3 years experience, patient and clear.' :
-              category === 'barber' ? 'e.g. Fades, lineups, beard trims. Clean cuts right on campus.' :
-              category === 'hebrew tutor' ? 'e.g. I can help with Rashi, Gemara, and conversational Hebrew.' :
-              category === 'tennis' ? 'e.g. USTA rated player, great with beginners and intermediates.' :
-              'Tell students what you can help with...'
-            }
-            className="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
-          />
-        </div>
-
-        {/* Price */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Price per session</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
-            <input
-              type="number"
-              min="0"
-              placeholder="0"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              className="w-full border border-amber-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            />
-          </div>
-          <p className="text-xs text-slate-400 mt-1">Leave blank or 0 if free / negotiable</p>
-        </div>
-
-        {/* Payment */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 mb-3 block">How do students pay you?</label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">Zelle (phone or email)</label>
-              <input
-                type="text"
-                placeholder="646-555-1234"
-                value={zelle}
-                onChange={e => setZelle(e.target.value)}
-                className="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              />
+          {/* Category */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={LABEL}>Category</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+              {CATEGORIES.map(({ id, label, emoji }) => {
+                const active = category === id;
+                return (
+                  <button key={id} type="button" onClick={() => setCategory(id)}
+                    style={{
+                      padding: '12px 8px', border: `1px solid ${active ? BLUE : '#E2E8F0'}`,
+                      borderRadius: 8, textAlign: 'center', cursor: 'pointer',
+                      background: active ? '#EBF4FF' : '#fff', transition: 'all 0.15s',
+                    }}>
+                    <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: active ? BLUE : '#64748B' }}>{label}</div>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">Venmo username</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
-                <input
-                  type="text"
-                  placeholder="your-venmo"
-                  value={venmo}
-                  onChange={e => setVenmo(e.target.value)}
-                  className="w-full border border-amber-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                />
+          </div>
+
+          {/* Bio */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={LABEL}>Describe what you offer</label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
+              placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
+              style={{ ...INPUT, resize: 'none', lineHeight: 1.5 }} />
+          </div>
+
+          {/* Price */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={LABEL}>Price per session</label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#64748B' }}>$</span>
+              <input type="number" min="0" placeholder="0" value={price}
+                onChange={e => setPrice(e.target.value)}
+                style={{ ...INPUT, paddingLeft: 24 }} />
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Leave 0 if free or negotiable</div>
+          </div>
+
+          {/* Payment */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={LABEL}>How do students pay you?</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ ...LABEL, marginBottom: 4 }}>Zelle (phone or email)</div>
+                <input type="text" placeholder="646-555-1234" value={zelle}
+                  onChange={e => setZelle(e.target.value)} style={INPUT} />
+              </div>
+              <div>
+                <div style={{ ...LABEL, marginBottom: 4 }}>Venmo username</div>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#64748B' }}>@</span>
+                  <input type="text" placeholder="username" value={venmo}
+                    onChange={e => setVenmo(e.target.value)}
+                    style={{ ...INPUT, paddingLeft: 22 }} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {error && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && (
+            <div style={{ background: '#FFF0F0', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#b91c1c', marginBottom: 14 }}>
+              {error}
+            </div>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading || !category}
-          className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors text-sm"
-        >
-          {loading ? 'Publishing...' : 'Publish Listing →'}
-        </button>
+          <button type="submit" disabled={loading || !category} style={{
+            width: '100%', background: loading || !category ? '#93C5FD' : BLUE,
+            color: '#fff', border: 'none', borderRadius: 8, padding: 12,
+            fontSize: 14, fontWeight: 500, cursor: loading || !category ? 'not-allowed' : 'pointer',
+          }}>
+            {loading ? 'Publishing...' : '+ Publish listing'}
+          </button>
 
-        <p className="text-center text-xs text-slate-400">
-          Next you&apos;ll add your availability so students can book you.
-        </p>
-      </form>
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 12 }}>
+            Next you'll add your available time slots.
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

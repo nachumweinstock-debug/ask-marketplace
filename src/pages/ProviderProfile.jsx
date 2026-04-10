@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, DollarSign, Calendar, Clock, MessageCircle, Smartphone, User } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+
+const BLUE = '#2B6CB0';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other',
@@ -10,15 +11,15 @@ const CATEGORY_LABELS = {
 
 function StarRating({ rating }) {
   return (
-    <div className="flex gap-0.5">
+    <div style={{ display: 'flex', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <Star key={n} size={14} className={n <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300 fill-slate-300'} />
+        <span key={n} style={{ fontSize: 14, color: n <= rating ? '#F59E0B' : '#E2E8F0' }}>★</span>
       ))}
     </div>
   );
 }
 
-function Initials({ name }) {
+function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
@@ -42,7 +43,6 @@ export default function ProviderProfile() {
 
   async function handleBook() {
     if (!user) return navigate('/login');
-    if (user.role !== 'student') return setBookingError('Only students can book sessions.');
     if (!booking) return setBookingError('Please select a time slot.');
     setBookingLoading(true);
     setBookingError('');
@@ -60,8 +60,8 @@ export default function ProviderProfile() {
   }
 
   if (loading) return (
-    <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-      <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+    <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+      <div style={{ width: 28, height: 28, border: `2px solid ${BLUE}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto' }} />
     </div>
   );
 
@@ -74,53 +74,59 @@ export default function ProviderProfile() {
   }, {});
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-        <div className="flex flex-col sm:flex-row gap-5">
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
+
+      {/* Profile card */}
+      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '24px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {provider.avatar_url ? (
-            <img src={provider.avatar_url} alt={provider.name} className="w-24 h-24 rounded-2xl object-cover shrink-0 border border-slate-200" />
+            <img src={provider.avatar_url} alt={provider.name}
+              style={{ width: 80, height: 80, borderRadius: 12, objectFit: 'cover', flexShrink: 0, border: '1px solid #E2E8F0' }} />
           ) : (
-            <div className="w-24 h-24 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-3xl shrink-0">
-              <Initials name={provider.name} />
+            <div style={{ width: 80, height: 80, borderRadius: 12, background: '#EBF4FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: BLUE, fontWeight: 700, fontSize: 28, flexShrink: 0 }}>
+              {initials(provider.name)}
             </div>
           )}
-          <div className="flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">{provider.name}</h1>
-                <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full mt-1">
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1A1A2E', marginBottom: 6 }}>{provider.name}</h1>
+                <span style={{ display: 'inline-block', background: '#EBF4FF', color: BLUE, fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 20 }}>
                   {CATEGORY_LABELS[provider.category] || provider.category}
                 </span>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-slate-900">
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A2E' }}>
                   {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
                 </div>
-                <div className="text-slate-400 text-sm">per session</div>
+                <div style={{ fontSize: 12, color: '#94A3B8' }}>per session</div>
               </div>
             </div>
-            <div className="flex items-center gap-3 mt-3">
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
               <StarRating rating={Math.round(provider.rating)} />
-              <span className="text-slate-700 font-medium text-sm">
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E' }}>
                 {provider.rating > 0 ? provider.rating.toFixed(1) : 'No reviews yet'}
               </span>
               {provider.review_count > 0 && (
-                <span className="text-slate-400 text-sm">· {provider.review_count} review{provider.review_count !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 12, color: '#94A3B8' }}>· {provider.review_count} review{provider.review_count !== 1 ? 's' : ''}</span>
               )}
             </div>
-            {provider.bio && <p className="text-slate-600 mt-3 text-sm leading-relaxed">{provider.bio}</p>}
+
+            {provider.bio && (
+              <p style={{ fontSize: 13, color: '#64748B', marginTop: 10, lineHeight: 1.6 }}>{provider.bio}</p>
+            )}
+
             {(provider.zelle || provider.venmo) && (
-              <div className="flex flex-wrap gap-3 mt-4">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 {provider.zelle && (
-                  <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2">
-                    <Smartphone size={14} className="text-violet-600" />
-                    <span className="text-xs font-medium text-violet-700">Zelle: {provider.zelle}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '5px 10px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#5B21B6' }}>Zelle: {provider.zelle}</span>
                   </div>
                 )}
                 {provider.venmo && (
-                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
-                    <Smartphone size={14} className="text-blue-600" />
-                    <span className="text-xs font-medium text-blue-700">Venmo: @{provider.venmo}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EBF4FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '5px 10px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: BLUE }}>Venmo: @{provider.venmo}</span>
                   </div>
                 )}
               </div>
@@ -129,87 +135,108 @@ export default function ProviderProfile() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-5 gap-6">
-        <div className="sm:col-span-3">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Calendar size={18} className="text-blue-600" /> Available Slots
-            </h2>
-            {Object.keys(groupedSlots).length === 0 ? (
-              <p className="text-slate-400 text-sm text-center py-8">No availability yet. Check back later!</p>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(groupedSlots).map(([date, slots]) => (
-                  <div key={date}>
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                      {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {slots.map(slot => (
-                        <button
-                          key={slot.id}
-                          onClick={() => setBooking(booking === slot.id ? null : slot.id)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${
-                            booking === slot.id
-                              ? 'border-blue-600 bg-blue-600 text-white'
-                              : 'border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50'
-                          }`}
-                        >
-                          <Clock size={13} />
-                          {slot.start_time} – {slot.end_time}
-                        </button>
-                      ))}
-                    </div>
+      {/* Slots + Reviews */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16 }}>
+
+        {/* Availability */}
+        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '20px' }}>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            📅 Available Slots
+          </h2>
+          {Object.keys(groupedSlots).length === 0 ? (
+            <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '24px 0' }}>
+              No availability yet. Check back later!
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {Object.entries(groupedSlots).map(([date, slots]) => (
+                <div key={date}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                    {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                   </div>
-                ))}
-              </div>
-            )}
-            {bookingError && <p className="text-red-600 text-sm mt-3 bg-red-50 rounded-lg px-3 py-2">{bookingError}</p>}
-            {bookingSuccess && <p className="text-green-700 text-sm mt-3 bg-green-50 rounded-lg px-3 py-2">{bookingSuccess}</p>}
-            {Object.keys(groupedSlots).length > 0 && (
-              <button
-                onClick={handleBook}
-                disabled={!booking || bookingLoading}
-                className="mt-4 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bookingLoading ? 'Booking...' : booking ? 'Book This Slot' : 'Select a Slot to Book'}
-              </button>
-            )}
-            {!user && (
-              <p className="text-center text-slate-500 text-xs mt-2">
-                <a href="/login" className="text-blue-600 hover:underline">Log in</a> to book a session
-              </p>
-            )}
-          </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {slots.map(slot => (
+                      <button
+                        key={slot.id}
+                        onClick={() => setBooking(booking === slot.id ? null : slot.id)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                          border: `2px solid ${booking === slot.id ? BLUE : '#E2E8F0'}`,
+                          background: booking === slot.id ? BLUE : '#fff',
+                          color: booking === slot.id ? '#fff' : '#1A1A2E',
+                          cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                      >
+                        {slot.start_time} – {slot.end_time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {bookingError && (
+            <div style={{ background: '#FFF0F0', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#b91c1c', marginTop: 12 }}>
+              {bookingError}
+            </div>
+          )}
+          {bookingSuccess && (
+            <div style={{ background: '#F0FFF4', border: '1px solid #86EFAC', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#166534', marginTop: 12 }}>
+              {bookingSuccess}
+            </div>
+          )}
+
+          {Object.keys(groupedSlots).length > 0 && (
+            <button
+              onClick={handleBook}
+              disabled={!booking || bookingLoading}
+              style={{
+                marginTop: 16, width: '100%', background: !booking || bookingLoading ? '#93C5FD' : BLUE,
+                color: '#fff', border: 'none', borderRadius: 10, padding: '12px',
+                fontSize: 14, fontWeight: 500, cursor: !booking || bookingLoading ? 'not-allowed' : 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              {bookingLoading ? 'Booking...' : booking ? 'Book This Slot' : 'Select a Slot to Book'}
+            </button>
+          )}
+
+          {!user && (
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 10 }}>
+              <a href="/login" style={{ color: BLUE }}>Log in</a> to book a session
+            </p>
+          )}
         </div>
 
-        <div className="sm:col-span-2">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <MessageCircle size={18} className="text-blue-600" /> Reviews
-            </h2>
-            {provider.reviews.length === 0 ? (
-              <p className="text-slate-400 text-sm text-center py-8">No reviews yet</p>
-            ) : (
-              <div className="space-y-4">
-                {provider.reviews.map(r => (
-                  <div key={r.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center">
-                          <User size={12} className="text-slate-500" />
-                        </div>
-                        <span className="text-sm font-medium text-slate-700">{r.student_name}</span>
+        {/* Reviews */}
+        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '20px' }}>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            💬 Reviews
+          </h2>
+          {provider.reviews.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '24px 0' }}>
+              No reviews yet
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {provider.reviews.map((r, i) => (
+                <div key={r.id} style={{ borderBottom: i < provider.reviews.length - 1 ? '1px solid #F1F5F9' : 'none', paddingBottom: i < provider.reviews.length - 1 ? 16 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#64748B' }}>
+                        👤
                       </div>
-                      <StarRating rating={r.rating} />
+                      <span style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E' }}>{r.student_name}</span>
                     </div>
-                    {r.comment && <p className="text-slate-500 text-sm leading-relaxed">{r.comment}</p>}
-                    <p className="text-slate-300 text-xs mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                    <StarRating rating={r.rating} />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  {r.comment && <p style={{ fontSize: 12, color: '#64748B', lineHeight: 1.6, marginTop: 4 }}>{r.comment}</p>}
+                  <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

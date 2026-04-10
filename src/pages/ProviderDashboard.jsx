@@ -1,24 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, Plus, Trash2, CheckCircle, Clock, Settings, Calendar, Sparkles } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const CATEGORIES = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
-const CATEGORY_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other' };
+const BLUE = '#2B6CB0';
 
-const STATUS_CONFIG = {
-  pending: { label: 'Pending', color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  confirmed: { label: 'Confirmed', color: 'text-green-700 bg-green-50 border-green-200' },
-  completed: { label: 'Completed', color: 'text-slate-600 bg-slate-50 border-slate-200' },
-  cancelled: { label: 'Cancelled', color: 'text-red-600 bg-red-50 border-red-200' },
+const INPUT = {
+  width: '100%', border: '1px solid #E2E8F0', borderRadius: 8,
+  padding: '10px 12px', fontSize: 13, outline: 'none',
+  background: '#fff', color: '#1A1A2E',
 };
+const LABEL = { fontSize: 12, fontWeight: 500, color: '#64748B', marginBottom: 5, display: 'block' };
+
+const CATEGORIES = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
+const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
+const STATUS = {
+  pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
+  confirmed: { label: 'Confirmed', bg: '#F0FFF4', color: '#166534' },
+  completed: { label: 'Completed', bg: '#EBF4FF', color: '#1D4ED8' },
+  cancelled: { label: 'Cancelled', bg: '#FFF0F0', color: '#b91c1c' },
+};
+
+const TABS = ['bookings', 'availability', 'profile'];
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get('tab') || 'bookings');
-  const isNewProvider = searchParams.get('tab') === 'profile';
+  const isNew = searchParams.get('new') === '1';
+
   const [profile, setProfile] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
@@ -35,233 +45,195 @@ export default function ProviderDashboard() {
     Promise.all([
       api.get('/providers/me/profile').then(r => {
         setProfile(r.data);
-        setProfileForm({
-          bio: r.data.bio || '',
-          category: r.data.category || 'other',
-          price_per_session: r.data.price_per_session || 0,
-          zelle: r.data.zelle || '',
-          venmo: r.data.venmo || '',
-        });
+        setProfileForm({ bio: r.data.bio || '', category: r.data.category || 'other', price_per_session: r.data.price_per_session || 0, zelle: r.data.zelle || '', venmo: r.data.venmo || '' });
       }),
       api.get('/bookings/mine').then(r => setBookings(r.data)),
     ]).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    if (profile?.id) {
-      api.get(`/availability/${profile.id}`).then(r => setAvailability(r.data));
-    }
+    if (profile?.id) api.get(`/availability/${profile.id}`).then(r => setAvailability(r.data));
   }, [profile?.id]);
 
   async function saveProfile() {
-    setProfileSaving(true);
-    setProfileMsg('');
+    setProfileSaving(true); setProfileMsg('');
     try {
       const form = new FormData();
       Object.entries(profileForm).forEach(([k, v]) => form.append(k, v));
       if (avatarFile) form.append('avatar', avatarFile);
       const { data } = await api.put('/providers/me', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setProfile(data);
-      setProfileMsg('Profile saved!');
+      setProfile(data); setProfileMsg('Saved!');
       setTimeout(() => setProfileMsg(''), 3000);
-    } catch (err) {
-      setProfileMsg(err.response?.data?.error || 'Save failed');
-    } finally {
-      setProfileSaving(false);
-    }
+    } catch (err) { setProfileMsg(err.response?.data?.error || 'Save failed'); }
+    finally { setProfileSaving(false); }
   }
 
   async function addSlot() {
     setSlotError('');
-    if (!newSlot.date || !newSlot.start_time || !newSlot.end_time) return setSlotError('All fields required');
+    if (!newSlot.date || !newSlot.start_time || !newSlot.end_time) { setSlotError('All fields required'); return; }
     setSlotLoading(true);
     try {
       const { data } = await api.post('/availability', newSlot);
       setAvailability(a => [...a, data]);
       setNewSlot({ date: '', start_time: '', end_time: '' });
-    } catch (err) {
-      setSlotError(err.response?.data?.error || 'Failed to add slot');
-    } finally {
-      setSlotLoading(false);
-    }
+    } catch (err) { setSlotError(err.response?.data?.error || 'Failed'); }
+    finally { setSlotLoading(false); }
   }
 
   async function removeSlot(id) {
-    try {
-      await api.delete(`/availability/${id}`);
-      setAvailability(a => a.filter(s => s.id !== id));
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to remove');
-    }
+    try { await api.delete(`/availability/${id}`); setAvailability(a => a.filter(s => s.id !== id)); }
+    catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
   async function updateBookingStatus(id, status) {
-    try {
-      await api.patch(`/bookings/${id}`, { status });
-      setBookings(bs => bs.map(b => b.id === id ? { ...b, status } : b));
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed');
-    }
+    try { await api.patch(`/bookings/${id}`, { status }); setBookings(bs => bs.map(b => b.id === id ? { ...b, status } : b)); }
+    catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
-  if (loading) return <div className="text-center py-16 text-slate-400">Loading...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: '#94A3B8', fontSize: 13 }}>Loading...</div>;
 
-  const upcomingBookings = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
-  const pastBookings = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
+  const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
+  const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {isNewProvider && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 flex items-start gap-3">
-          <Sparkles size={20} className="text-blue-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-blue-900 text-sm">You&apos;re now a provider!</p>
-            <p className="text-blue-700 text-sm mt-0.5">Fill in your profile below, then add availability so students can book you.</p>
-          </div>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
+
+      {isNew && (
+        <div style={{ background: '#EBF4FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#1D4ED8' }}>
+          <strong>You're live!</strong> Add availability below so students can book you.
         </div>
       )}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">My Services</h1>
-        <p className="text-slate-500 mt-1">Manage your profile, availability, and bookings</p>
+
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>My Services</h1>
+        <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>Manage your bookings, availability, and profile</p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-amber-50 border border-amber-100 rounded-xl mb-7 w-fit">
-        {[
-          { id: 'bookings', label: 'Bookings', icon: Calendar },
-          { id: 'availability', label: 'Availability', icon: Clock },
-          { id: 'profile', label: 'Profile', icon: Settings },
-        ].map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === id ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}>
-            <Icon size={15} /> {label}
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #E2E8F0', marginBottom: 24 }}>
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: tab === t ? 600 : 400,
+            color: tab === t ? BLUE : '#64748B',
+            borderBottom: tab === t ? `2px solid ${BLUE}` : '2px solid transparent',
+            textTransform: 'capitalize',
+          }}>
+            {t}
           </button>
         ))}
       </div>
 
+      {/* Bookings */}
       {tab === 'bookings' && (
-        <div className="space-y-8">
+        <div>
           {bookings.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-              <div className="text-5xl mb-4">📭</div>
-              <h3 className="font-semibold text-slate-900 mb-2">No bookings yet</h3>
-              <p className="text-slate-500 text-sm">Complete your profile and add availability to get started.</p>
+            <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, textAlign: 'center', padding: '48px 24px' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#1A1A2E', marginBottom: 6 }}>No bookings yet</div>
+              <div style={{ fontSize: 13, color: '#64748B' }}>Complete your profile and add availability to get started.</div>
             </div>
           ) : (
-            <>
-              {upcomingBookings.length > 0 && (
-                <section>
-                  <h2 className="text-base font-semibold text-slate-900 mb-3">Upcoming ({upcomingBookings.length})</h2>
-                  <div className="space-y-3">
-                    {upcomingBookings.map(b => (
-                      <div key={b.id} className="bg-white rounded-2xl border border-slate-200 p-5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <div className="font-semibold text-slate-900">{b.student_name}</div>
-                            <div className="text-slate-500 text-sm">{b.student_email}</div>
-                            <div className="text-slate-600 text-sm mt-1 flex items-center gap-1">
-                              <Clock size={13} />
-                              {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              · {b.start_time} – {b.end_time}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STATUS_CONFIG[b.status]?.color}`}>
-                              {STATUS_CONFIG[b.status]?.label}
-                            </span>
-                            {b.status === 'pending' && (
-                              <button onClick={() => updateBookingStatus(b.id, 'confirmed')}
-                                className="flex items-center gap-1 bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-green-700 transition-colors">
-                                <CheckCircle size={13} /> Confirm
-                              </button>
-                            )}
-                            {b.status === 'confirmed' && (
-                              <button onClick={() => updateBookingStatus(b.id, 'completed')}
-                                className="flex items-center gap-1 bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                                <CheckCircle size={13} /> Mark Complete
-                              </button>
-                            )}
+            <div>
+              {upcoming.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>
+                    Upcoming ({upcoming.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {upcoming.map(b => (
+                      <div key={b.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E' }}>{b.student_name}</div>
+                          <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
+                            {b.student_email} · {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {b.start_time}–{b.end_time}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {pastBookings.length > 0 && (
-                <section>
-                  <h2 className="text-base font-semibold text-slate-900 mb-3">Past Sessions</h2>
-                  <div className="space-y-3">
-                    {pastBookings.map(b => (
-                      <div key={b.id} className="bg-white rounded-2xl border border-slate-200 p-4 opacity-70">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <span className="font-medium text-slate-800">{b.student_name}</span>
-                            <div className="text-slate-500 text-xs mt-0.5">{b.date} · {b.start_time}</div>
-                          </div>
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STATUS_CONFIG[b.status]?.color}`}>
-                            {STATUS_CONFIG[b.status]?.label}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color }}>
+                            {STATUS[b.status]?.label}
                           </span>
+                          {b.status === 'pending' && (
+                            <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{ background: '#F0FFF4', color: '#166534', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                              Confirm
+                            </button>
+                          )}
+                          {b.status === 'confirmed' && (
+                            <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{ background: '#EBF4FF', color: '#1D4ED8', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                              Complete
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
-                </section>
+                </div>
               )}
-            </>
+              {past.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>Past Sessions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {past.map(b => (
+                      <div key={b.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.7 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E' }}>{b.student_name}</div>
+                          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{b.date} · {b.start_time}</div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color }}>
+                          {STATUS[b.status]?.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
 
+      {/* Availability */}
       {tab === 'availability' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-5">Manage Availability</h2>
-          <div className="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-100">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Add New Slot</h3>
-            <div className="grid sm:grid-cols-3 gap-3 mb-3">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Date</label>
-                <input type="date" value={newSlot.date} onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Start Time</label>
-                <input type="time" value={newSlot.start_time} onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">End Time</label>
-                <input type="time" value={newSlot.end_time} onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-              </div>
+        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '20px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Add Availability</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, marginBottom: 10, alignItems: 'end' }}>
+            <div>
+              <label style={LABEL}>Date</label>
+              <input type="date" value={newSlot.date} min={new Date().toISOString().split('T')[0]}
+                onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))} style={INPUT} />
             </div>
-            {slotError && <p className="text-red-600 text-xs mb-2">{slotError}</p>}
-            <button onClick={addSlot} disabled={slotLoading}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-              <Plus size={16} /> {slotLoading ? 'Adding...' : 'Add Slot'}
+            <div>
+              <label style={LABEL}>Start</label>
+              <input type="time" value={newSlot.start_time}
+                onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))} style={INPUT} />
+            </div>
+            <div>
+              <label style={LABEL}>End</label>
+              <input type="time" value={newSlot.end_time}
+                onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))} style={INPUT} />
+            </div>
+            <button onClick={addSlot} disabled={slotLoading} style={{
+              background: BLUE, color: '#fff', border: 'none', borderRadius: 8,
+              padding: '10px 16px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+              {slotLoading ? '...' : '+ Add'}
             </button>
           </div>
+          {slotError && <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>{slotError}</div>}
+
           {availability.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-6">No availability slots yet. Add some above!</p>
+            <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: '#94A3B8' }}>No slots yet — add some above</div>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
               {availability.map(slot => (
-                <div key={slot.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Clock size={15} className="text-blue-500" />
-                    <span className="text-sm text-slate-700 font-medium">
-                      {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </span>
-                    <span className="text-slate-500 text-sm">{slot.start_time} – {slot.end_time}</span>
-                    {slot.is_booked && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Booked</span>}
+                <div key={slot.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid #E2E8F0', borderRadius: 8 }}>
+                  <div style={{ fontSize: 13, color: '#1A1A2E' }}>
+                    {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {' · '}{slot.start_time} – {slot.end_time}
+                    {slot.is_booked && <span style={{ marginLeft: 8, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>Booked</span>}
                   </div>
                   {!slot.is_booked && (
-                    <button onClick={() => removeSlot(slot.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 size={15} />
-                    </button>
+                    <button onClick={() => removeSlot(slot.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#b91c1c' }}>Remove</button>
                   )}
                 </div>
               ))}
@@ -270,71 +242,68 @@ export default function ProviderDashboard() {
         </div>
       )}
 
+      {/* Profile */}
       {tab === 'profile' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-5">Edit Profile</h2>
-          <div className="space-y-5">
+        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '20px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Edit Profile</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-2 block">Profile Photo</label>
-              <div className="flex items-center gap-4">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <User size={24} className="text-blue-600" />
-                  </div>
-                )}
-                <input type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])} className="text-sm text-slate-500" />
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">Category</label>
-                <select value={profileForm.category} onChange={e => setProfileForm(f => ({ ...f, category: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                  {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">Price per Session ($)</label>
-                <input type="number" min="0" value={profileForm.price_per_session}
-                  onChange={e => setProfileForm(f => ({ ...f, price_per_session: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" />
-              </div>
+              <label style={LABEL}>Category</label>
+              <select value={profileForm.category} onChange={e => setProfileForm(f => ({ ...f, category: e.target.value }))} style={{ ...INPUT }}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
+              </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-2 block">Bio</label>
-              <textarea value={profileForm.bio} onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
-                rows={4} placeholder="Tell students about yourself, your experience, and what you offer..."
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+              <label style={LABEL}>Price per session ($)</label>
+              <input type="number" min="0" value={profileForm.price_per_session}
+                onChange={e => setProfileForm(f => ({ ...f, price_per_session: e.target.value }))}
+                style={INPUT} placeholder="0" />
             </div>
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">Zelle Phone/Email</label>
-                <input type="text" value={profileForm.zelle} onChange={e => setProfileForm(f => ({ ...f, zelle: e.target.value }))}
-                  placeholder="e.g. 646-555-1234"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">Venmo Username</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
-                  <input type="text" value={profileForm.venmo} onChange={e => setProfileForm(f => ({ ...f, venmo: e.target.value }))}
-                    placeholder="your-venmo"
-                    className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-            </div>
-            {profileMsg && (
-              <p className={`text-sm px-3 py-2 rounded-lg ${profileMsg.includes('saved') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
-                {profileMsg}
-              </p>
-            )}
-            <button onClick={saveProfile} disabled={profileSaving}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {profileSaving ? 'Saving...' : 'Save Profile'}
-            </button>
           </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={LABEL}>Bio</label>
+            <textarea value={profileForm.bio} onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
+              rows={3} placeholder="Describe what you offer..."
+              style={{ ...INPUT, resize: 'none', lineHeight: 1.5 }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={LABEL}>Zelle</label>
+              <input type="text" value={profileForm.zelle} onChange={e => setProfileForm(f => ({ ...f, zelle: e.target.value }))} style={INPUT} placeholder="646-555-1234" />
+            </div>
+            <div>
+              <label style={LABEL}>Venmo</label>
+              <input type="text" value={profileForm.venmo} onChange={e => setProfileForm(f => ({ ...f, venmo: e.target.value }))} style={INPUT} placeholder="@username" />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={LABEL}>Profile Photo</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EBF4FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤</div>
+              )}
+              <input type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])} style={{ fontSize: 12, color: '#64748B' }} />
+            </div>
+          </div>
+
+          {profileMsg && (
+            <div style={{ fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 14, background: profileMsg === 'Saved!' ? '#F0FFF4' : '#FFF0F0', color: profileMsg === 'Saved!' ? '#166534' : '#b91c1c' }}>
+              {profileMsg}
+            </div>
+          )}
+
+          <button onClick={saveProfile} disabled={profileSaving} style={{
+            background: profileSaving ? '#93C5FD' : BLUE, color: '#fff', border: 'none',
+            borderRadius: 8, padding: '11px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            {profileSaving ? 'Saving...' : 'Save profile'}
+          </button>
         </div>
       )}
     </div>
