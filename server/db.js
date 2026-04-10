@@ -1,9 +1,11 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..');
+mkdirSync(DATA_DIR, { recursive: true });
 const db = new Database(join(DATA_DIR, 'ask.db'));
 
 db.pragma('journal_mode = WAL');
