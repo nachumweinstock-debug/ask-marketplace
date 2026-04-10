@@ -9,12 +9,24 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const syncUser = useCallback(async () => {
+  const syncUser = useCallback(async (fallbackSession) => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
     } catch {
-      setUser(null);
+      // Backend unreachable — keep user logged in with Supabase session data
+      // so the app doesn't silently log them out on a transient error
+      if (fallbackSession?.user) {
+        const u = fallbackSession.user;
+        setUser({
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.full_name || u.email.split('@')[0],
+          role: 'student',
+        });
+      } else {
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -24,7 +36,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        syncUser();
+        syncUser(session);
       } else {
         setUser(null);
         setLoading(false);
