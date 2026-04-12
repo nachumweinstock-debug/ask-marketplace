@@ -3,13 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import ProviderCard from '../components/ProviderCard';
 
-const FILTERS = [
+const BASE_FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'tutor', label: 'Tutors' },
   { id: 'barber', label: 'Barbers' },
   { id: 'hebrew tutor', label: 'Hebrew' },
   { id: 'tennis', label: 'Fitness' },
-  { id: 'other', label: 'Other' },
 ];
 
 export default function Browse() {
@@ -19,6 +18,14 @@ export default function Browse() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
+  const [customCats, setCustomCats] = useState([]);
+
+  // Fetch live custom categories once on mount
+  useEffect(() => {
+    api.get('/providers/categories')
+      .then(({ data }) => setCustomCats(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => { fetchProviders(); }, [category, sort]);
 
@@ -129,9 +136,9 @@ export default function Browse() {
         </div>
       </div>
 
-      {/* Pill filters */}
+      {/* Pill filters — base categories + any live custom categories */}
       <div className="pill-row" style={{ marginBottom: 32 }}>
-        {FILTERS.map(({ id, label }) => {
+        {[...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))].map(({ id, label }) => {
           const active = category === id;
           return (
             <button key={id} onClick={() => handleCategory(id)} style={{

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { mediaUrl } from '../lib/media';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
@@ -135,8 +136,8 @@ export default function AccountProfile() {
                   border: '2px solid var(--border)', position: 'relative',
                 }}
               >
-                {avatarPreview || profile?.avatar_url ? (
-                  <img src={avatarPreview || profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {avatarPreview || mediaUrl(profile?.avatar_url) ? (
+                  <img src={avatarPreview || mediaUrl(profile.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : initials(form.name)}
                 <div style={{
                   position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',

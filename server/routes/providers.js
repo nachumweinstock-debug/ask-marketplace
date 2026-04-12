@@ -15,6 +15,19 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
+const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
+
+// GET /providers/categories — distinct custom category labels (must be before /:id)
+router.get('/categories', (req, res) => {
+  const rows = db.prepare(`
+    SELECT DISTINCT custom_category
+    FROM provider_profiles
+    WHERE custom_category IS NOT NULL AND custom_category != ''
+    ORDER BY custom_category
+  `).all();
+  res.json(rows.map(r => r.custom_category));
+});
+
 router.get('/', (req, res) => {
   const { category, search, sort } = req.query;
   let query = `
@@ -25,7 +38,12 @@ router.get('/', (req, res) => {
   `;
   const params = [];
   if (category && category !== 'all') {
-    query += ' AND pp.category = ?';
+    if (STANDARD_CATS.includes(category)) {
+      query += ' AND pp.category = ?';
+    } else {
+      // Custom category — filter by the text label
+      query += ' AND pp.custom_category = ?';
+    }
     params.push(category);
   }
   if (search) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { mediaUrl } from '../lib/media';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other',
@@ -82,8 +83,8 @@ export default function ProviderProfile() {
       {/* Profile header */}
       <div className="card" style={{ padding: '28px', marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          {provider.avatar_url ? (
-            <img src={provider.avatar_url} alt={provider.name}
+          {mediaUrl(provider.avatar_url) ? (
+            <img src={mediaUrl(provider.avatar_url)} alt={provider.name}
               style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }} />
           ) : (
             <div style={{

@@ -4,6 +4,9 @@ import api from '../api';
 
 const AuthContext = createContext(null);
 
+// Hardwired superadmins — guaranteed admin flag even when backend is unreachable
+const SUPERADMINS = ['nachumweinstock@gmail.com'];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -18,11 +21,13 @@ export function AuthProvider({ children }) {
       // so the app doesn't silently log them out on a transient error
       if (fallbackSession?.user) {
         const u = fallbackSession.user;
+        const email = u.email?.toLowerCase() || '';
         setUser({
           id: u.id,
-          email: u.email,
-          name: u.user_metadata?.full_name || u.email.split('@')[0],
+          email,
+          name: u.user_metadata?.full_name || email.split('@')[0],
           role: 'student',
+          is_admin: SUPERADMINS.includes(email) ? 1 : 0,
         });
       } else {
         setUser(null);

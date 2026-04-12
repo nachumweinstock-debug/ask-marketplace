@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { mediaUrl } from '../lib/media';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor',
@@ -33,8 +34,8 @@ export default function ProviderCard({ provider }) {
     >
       {/* Avatar */}
       <div style={{ marginBottom: 14 }}>
-        {provider.avatar_url ? (
-          <img src={provider.avatar_url} alt={provider.name} style={{
+        {mediaUrl(provider.avatar_url) ? (
+          <img src={mediaUrl(provider.avatar_url)} alt={provider.name} style={{
             width: 44, height: 44, borderRadius: '50%', objectFit: 'cover',
             border: '1px solid var(--border)',
           }} />
