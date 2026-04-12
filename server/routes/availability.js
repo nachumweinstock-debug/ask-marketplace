@@ -4,9 +4,19 @@ import { requireAuth } from '../auth.js';
 
 const router = Router();
 
+const DAY_ORDER = `CASE date
+  WHEN 'Monday'    THEN 1
+  WHEN 'Tuesday'   THEN 2
+  WHEN 'Wednesday' THEN 3
+  WHEN 'Thursday'  THEN 4
+  WHEN 'Friday'    THEN 5
+  WHEN 'Saturday'  THEN 6
+  WHEN 'Sunday'    THEN 7
+  ELSE 8 END`;
+
 router.get('/:providerId', (req, res) => {
   const slots = db.prepare(
-    'SELECT * FROM availability WHERE provider_id = ? AND date >= date("now") ORDER BY date, start_time'
+    `SELECT * FROM availability WHERE provider_id = ? AND is_booked = 0 ORDER BY ${DAY_ORDER}, start_time`
   ).all(req.params.providerId);
   res.json(slots);
 });

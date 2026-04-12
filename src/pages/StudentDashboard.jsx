@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { fmtTime, fmtDay } from '../lib/slots';
 
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
@@ -189,8 +190,8 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview }) {
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
           {CAT_LABELS[booking.category] || booking.category}
           {' · '}
-          {new Date(booking.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-          {' · '}{booking.start_time}–{booking.end_time}
+          {fmtDay(booking.date)}
+          {' · '}{fmtTime(booking.start_time)}–{fmtTime(booking.end_time)}
         </div>
         {booking.price_per_session > 0 && (
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.8 }}>

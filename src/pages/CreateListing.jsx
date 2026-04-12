@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { DAYS, fmtTime } from '../lib/slots';
 
 const CATEGORIES = [
   { id: 'tutor',        label: 'Tutors'   },
@@ -207,24 +208,38 @@ export default function CreateListing() {
           </div>
 
           {/* Availability */}
-          <SectionHeader>Add Your Availability</SectionHeader>
+          <SectionHeader>When are you available?</SectionHeader>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-            Add time slots so students can book you right away. You can always add more later.
+            Pick a day, set a time window, hit Add. You can add as many as you want.
           </p>
 
-          {/* Slot input row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, alignItems: 'end', marginBottom: 10 }}>
-            <div>
-              <label style={labelStyle}>Date</label>
-              <input type="date" value={newSlot.date} min={new Date().toISOString().split('T')[0]}
-                onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
+          {/* Day pills */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Day</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {DAYS.map(day => {
+                const active = newSlot.date === day;
+                return (
+                  <button key={day} type="button" onClick={() => setNewSlot(s => ({ ...s, date: day }))}
+                    style={{
+                      padding: '7px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s',
+                      fontFamily: 'var(--font-ui)',
+                    }}>
+                    {day.slice(0, 3)}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+
+          {/* Time row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end', marginBottom: 10 }}>
             <div>
-              <label style={labelStyle}>Start</label>
+              <label style={labelStyle}>From</label>
               <input type="time" value={newSlot.start_time}
                 onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))}
                 style={inputStyle}
@@ -233,7 +248,7 @@ export default function CreateListing() {
               />
             </div>
             <div>
-              <label style={labelStyle}>End</label>
+              <label style={labelStyle}>To</label>
               <input type="time" value={newSlot.end_time}
                 onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))}
                 style={inputStyle}
@@ -242,8 +257,8 @@ export default function CreateListing() {
               />
             </div>
             <button type="button" onClick={addSlot} style={{
-              background: 'var(--accent)', color: 'var(--primary)', border: '1.5px solid var(--primary)',
-              borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 600,
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: 999, padding: '11px 20px', fontSize: 13, fontWeight: 600,
               cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-ui)',
             }}>
               + Add
@@ -261,8 +276,7 @@ export default function CreateListing() {
                   padding: '9px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
                 }}>
                   <span style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
-                    {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {' · '}{slot.start_time} – {slot.end_time}
+                    <strong>{slot.date}</strong> · {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
                   </span>
                   <button type="button" onClick={() => removeSlot(slot.id)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)' }}>

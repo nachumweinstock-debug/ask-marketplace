@@ -111,8 +111,9 @@ router.get('/:id', (req, res) => {
   `).get(req.params.id);
   if (!provider) return res.status(404).json({ error: 'Provider not found' });
 
+  const DAY_ORDER = `CASE date WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 WHEN 'Sunday' THEN 7 ELSE 8 END`;
   const availability = db.prepare(
-    'SELECT * FROM availability WHERE provider_id = ? AND is_booked = 0 AND date >= date("now") ORDER BY date, start_time'
+    `SELECT * FROM availability WHERE provider_id = ? AND is_booked = 0 ORDER BY ${DAY_ORDER}, start_time`
   ).all(req.params.id);
 
   const reviews = db.prepare(`

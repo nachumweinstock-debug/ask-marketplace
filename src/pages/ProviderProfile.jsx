@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
+import { fmtTime, fmtDay } from '../lib/slots';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other',
@@ -64,8 +65,9 @@ export default function ProviderProfile() {
   if (!provider) return null;
 
   const groupedSlots = provider.availability.reduce((acc, slot) => {
-    if (!acc[slot.date]) acc[slot.date] = [];
-    acc[slot.date].push(slot);
+    const key = fmtDay(slot.date);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(slot);
     return acc;
   }, {});
 
@@ -168,21 +170,21 @@ export default function ProviderProfile() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {Object.entries(groupedSlots).map(([date, slots]) => (
                 <div key={date}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                    {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.6px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+                    {date}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {slots.map(slot => (
                       <button key={slot.id} onClick={() => setBooking(booking === slot.id ? null : slot.id)}
                         style={{
-                          padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                          padding: '7px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
                           border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
                           background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
                           color: booking === slot.id ? '#fff' : 'var(--text)',
                           cursor: 'pointer', transition: 'all .15s',
                           fontFamily: 'var(--font-ui)',
                         }}>
-                        {slot.start_time} – {slot.end_time}
+                        {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
                       </button>
                     ))}
                   </div>

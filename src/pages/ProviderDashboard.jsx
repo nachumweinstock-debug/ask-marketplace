@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
+import { DAYS, fmtTime, fmtDay } from '../lib/slots';
 
 const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 const STATUS = {
@@ -136,8 +137,8 @@ export default function ProviderDashboard() {
                           <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
                             {b.student_email}
                             {' · '}
-                            {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            {' · '}{b.start_time}–{b.end_time}
+                            {fmtDay(b.date)}
+                            {' · '}{fmtTime(b.start_time)}–{fmtTime(b.end_time)}
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -175,7 +176,7 @@ export default function ProviderDashboard() {
                       <div key={b.id} className="card" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.72 }}>
                         <div>
                           <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{b.date} · {b.start_time}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fmtDay(b.date)} · {fmtTime(b.start_time)}</div>
                         </div>
                         <span style={{
                           fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
@@ -197,18 +198,33 @@ export default function ProviderDashboard() {
       {tab === 'availability' && (
         <div className="card" style={{ padding: '28px' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 20 }}>Add Availability</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 12, alignItems: 'end' }}>
-            <div>
-              <label style={labelStyle}>Date</label>
-              <input type="date" value={newSlot.date} min={new Date().toISOString().split('T')[0]}
-                onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
+
+          {/* Day pills */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Day</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {DAYS.map(day => {
+                const active = newSlot.date === day;
+                return (
+                  <button key={day} type="button" onClick={() => setNewSlot(s => ({ ...s, date: day }))}
+                    style={{
+                      padding: '7px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                    }}>
+                    {day.slice(0, 3)}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+
+          {/* Time + Add row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, marginBottom: 12, alignItems: 'end' }}>
             <div>
-              <label style={labelStyle}>Start</label>
+              <label style={labelStyle}>From</label>
               <input type="time" value={newSlot.start_time}
                 onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))}
                 style={inputStyle}
@@ -217,7 +233,7 @@ export default function ProviderDashboard() {
               />
             </div>
             <div>
-              <label style={labelStyle}>End</label>
+              <label style={labelStyle}>To</label>
               <input type="time" value={newSlot.end_time}
                 onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))}
                 style={inputStyle}
@@ -227,7 +243,7 @@ export default function ProviderDashboard() {
             </div>
             <button onClick={addSlot} disabled={slotLoading} style={{
               background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 999,
-              padding: '11px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              padding: '11px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               whiteSpace: 'nowrap', fontFamily: 'var(--font-ui)',
             }}>
               {slotLoading ? '...' : '+ Add'}
@@ -248,8 +264,8 @@ export default function ProviderDashboard() {
                   background: 'var(--bg)',
                 }}>
                   <div style={{ fontSize: 13.5, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
-                    {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {' · '}{slot.start_time} – {slot.end_time}
+                    <strong>{fmtDay(slot.date)}</strong>
+                    {' · '}{fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
                     {slot.is_booked && (
                       <span style={{ marginLeft: 10, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>Booked</span>
                     )}
