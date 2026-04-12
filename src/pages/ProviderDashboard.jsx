@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { uploadToStorage } from '../lib/media';
 import { fmtTime, fmtDay } from '../lib/slots';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
@@ -13,24 +14,6 @@ const STATUS = {
   cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
 };
 const TABS = ['bookings', 'availability'];
-
-function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
-  return new Promise(resolve => {
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      let w = img.width, h = img.height;
-      const ratio = Math.min(maxW / w, maxH / h, 1);
-      w = Math.round(w * ratio); h = Math.round(h * ratio);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(objectUrl);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.src = objectUrl;
-  });
-}
 
 
 export default function ProviderDashboard() {
@@ -80,15 +63,22 @@ export default function ProviderDashboard() {
 
   async function handleImageFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    const dataUrl = await resizeToDataUrl(file, 1200, 600);
-    setImagePreview(dataUrl);
-  }
-
-  async function saveListingImage(dataUrl) {
     setImageSaving(true);
     try {
-      await api.put('/providers/me', { listing_image_data_url: dataUrl ?? null });
-      setProfile(p => ({ ...p, listing_image: dataUrl ?? null }));
+      const url = await uploadToStorage(file, 'listings', 1200);
+      setImagePreview(url);
+    } catch (err) {
+      alert('Image upload failed: ' + (err.message || 'unknown error'));
+    } finally {
+      setImageSaving(false);
+    }
+  }
+
+  async function saveListingImage(url) {
+    setImageSaving(true);
+    try {
+      await api.put('/providers/me', { listing_image_data_url: url ?? null });
+      setProfile(p => ({ ...p, listing_image: url ?? null }));
       setImagePreview(null);
     } catch (err) { alert(err.response?.data?.error || 'Failed to save image'); }
     finally { setImageSaving(false); }

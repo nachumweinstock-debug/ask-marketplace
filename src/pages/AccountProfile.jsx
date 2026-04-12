@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { mediaUrl } from '../lib/media';
-import { supabase } from '../lib/supabase';
+import { mediaUrl, uploadToStorage } from '../lib/media';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
@@ -62,6 +61,7 @@ export default function AccountProfile() {
     name: '', user_bio: '', major: '', classes_taking: '', gpa: '',
     zelle: '', venmo: '',
   });
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
   const [pwMsg, setPwMsg] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
@@ -98,23 +98,19 @@ export default function AccountProfile() {
     }
   }
 
-  function handleAvatarChange(e) {
+  async function handleAvatarChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 400;
-      let w = img.width, h = img.height;
-      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-      else       { w = Math.round(w * MAX / h); h = MAX; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      setAvatarPreview(canvas.toDataURL('image/jpeg', 0.85));
-      URL.revokeObjectURL(objectUrl);
-    };
-    img.src = objectUrl;
+    setAvatarUploading(true);
+    try {
+      const url = await uploadToStorage(file, 'avatars', 400);
+      setAvatarPreview(url);
+    } catch (err) {
+      setMsg('Photo upload failed: ' + (err.message || 'unknown error'));
+    } finally {
+      setAvatarUploading(false);
+      if (avatarRef.current) avatarRef.current.value = '';
+    }
   }
 
   async function handlePasswordChange(e) {
@@ -142,7 +138,6 @@ export default function AccountProfile() {
       const { data: updated } = await api.put('/account', payload);
       setProfile(p => ({ ...p, avatar_url: updated.avatar_url }));
       setAvatarPreview(null);
-      if (avatarRef.current) avatarRef.current.value = '';
       await refreshUser();
       setMsg('Saved!');
       setTimeout(() => setMsg(''), 3000);
@@ -190,17 +185,23 @@ export default function AccountProfile() {
                 {avatarPreview || mediaUrl(profile?.avatar_url) ? (
                   <img src={avatarPreview || mediaUrl(profile.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : initials(form.name)}
-                <div style={{
-                  position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: 0, transition: 'opacity .15s',
-                  color: '#fff', fontSize: 11, fontWeight: 600,
-                }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '0'}
-                >
-                  Edit
-                </div>
+                {avatarUploading ? (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 18, height: 18, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  </div>
+                ) : (
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: 0, transition: 'opacity .15s',
+                    color: '#fff', fontSize: 11, fontWeight: 600,
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                  >
+                    Edit
+                  </div>
+                )}
               </div>
               <input ref={avatarRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: 'none' }} />
             </div>

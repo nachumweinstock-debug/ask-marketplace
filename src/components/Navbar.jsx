@@ -40,7 +40,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-          <img src="/logo.png" alt="ASK" style={{ height: 32 }} />
+          <img src="/logo.png" alt="ASK" style={{ height: 40 }} />
         </Link>
 
         {/* Right */}

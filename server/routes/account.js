@@ -58,7 +58,9 @@ router.put('/', requireAuth, (req, res) => {
   if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
   if (gpa !== undefined)            userUpdates.gpa            = gpa;
   if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
-  if (avatar_data_url?.startsWith('data:image/')) userUpdates.avatar_url = avatar_data_url;
+  if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
+    userUpdates.avatar_url = avatar_data_url;
+  }
 
   if (Object.keys(userUpdates).length > 0) {
     const setClauses = Object.keys(userUpdates).map(k => `${k} = ?`).join(', ');

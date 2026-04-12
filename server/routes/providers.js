@@ -73,7 +73,7 @@ router.put('/me', requireAuth, (req, res) => {
 
   const listing_image = listing_image_data_url === null
     ? null
-    : listing_image_data_url?.startsWith('data:image/')
+    : (listing_image_data_url?.startsWith('data:image/') || listing_image_data_url?.startsWith('http'))
       ? listing_image_data_url
       : profile.listing_image;
 

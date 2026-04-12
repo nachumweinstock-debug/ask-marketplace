@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { uploadToStorage } from '../lib/media';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
 const CATEGORIES = [
@@ -40,32 +41,22 @@ function SectionHeader({ children }) {
   );
 }
 
-function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
-  return new Promise(resolve => {
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      let w = img.width, h = img.height;
-      const ratio = Math.min(maxW / w, maxH / h, 1);
-      w = Math.round(w * ratio); h = Math.round(h * ratio);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(objectUrl);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.src = objectUrl;
-  });
-}
-
 function ImageDrop({ value, onChange }) {
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
 
   async function processFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    const dataUrl = await resizeToDataUrl(file, 1200, 600);
-    onChange(dataUrl);
+    setUploading(true);
+    try {
+      const url = await uploadToStorage(file, 'listings', 1200);
+      onChange(url);
+    } catch (err) {
+      alert('Image upload failed: ' + (err.message || 'unknown error'));
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -85,7 +76,12 @@ function ImageDrop({ value, onChange }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {value ? (
+        {uploading ? (
+          <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 24, height: 24, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Uploading...</div>
+          </div>
+        ) : value ? (
           <>
             <img src={value} alt="listing" style={{ width: '100%', display: 'block', maxHeight: 220, objectFit: 'cover' }} />
             <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
