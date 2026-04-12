@@ -90,7 +90,7 @@ function AppRoutes() {
         />
         <Route
           path="/login"
-          element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Login />}
+          element={user ? <Navigate to="/dashboard/student" replace /> : <Login />}
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

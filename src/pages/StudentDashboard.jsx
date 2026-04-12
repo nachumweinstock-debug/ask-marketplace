@@ -118,15 +118,13 @@ export default function StudentDashboard() {
           </h1>
           <p style={{ fontSize: 14, color: 'var(--muted)' }}>Welcome back, {user?.name?.split(' ')[0]}</p>
         </div>
-        {user?.role !== 'provider' && (
-          <button onClick={() => navigate('/create-listing')} style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            padding: '10px 22px', borderRadius: 999, fontSize: 13, fontWeight: 600,
-            cursor: 'pointer', fontFamily: 'var(--font-ui)',
-          }}>
-            Post a listing
-          </button>
-        )}
+        <button onClick={() => navigate('/create-listing')} style={{
+          background: 'var(--primary)', color: '#fff', border: 'none',
+          padding: '10px 22px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'var(--font-ui)',
+        }}>
+          {user?.role === 'provider' ? 'Edit listing' : 'Post a listing'}
+        </button>
       </div>
 
       {loading ? (

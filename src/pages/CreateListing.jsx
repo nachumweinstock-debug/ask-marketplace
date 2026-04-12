@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { DAYS, fmtTime } from '../lib/slots';
+import SlotPicker, { SlotList } from '../components/SlotPicker';
 
 const CATEGORIES = [
   { id: 'tutor',        label: 'Tutors'   },
@@ -40,39 +40,92 @@ function SectionHeader({ children }) {
   );
 }
 
+function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
+  return new Promise(resolve => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const ratio = Math.min(maxW / w, maxH / h, 1);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = objectUrl;
+  });
+}
+
+function ImageDrop({ value, onChange }) {
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef(null);
+
+  async function processFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await resizeToDataUrl(file, 1200, 600);
+    onChange(dataUrl);
+  }
+
+  return (
+    <div>
+      <div
+        onClick={() => !value && inputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
+        style={{
+          border: `2px dashed ${dragging ? 'var(--primary)' : 'var(--border)'}`,
+          borderRadius: 10, overflow: 'hidden',
+          background: dragging ? 'var(--accent)' : 'var(--bg)',
+          transition: 'all .15s', position: 'relative',
+          cursor: value ? 'default' : 'pointer',
+          minHeight: value ? 'auto' : 130,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        {value ? (
+          <>
+            <img src={value} alt="listing" style={{ width: '100%', display: 'block', maxHeight: 220, objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+              <button type="button" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+                style={{ background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
+                Change
+              </button>
+              <button type="button" onClick={e => { e.stopPropagation(); onChange(null); }}
+                style={{ background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 999, width: 26, height: 26, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                ×
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--muted)' }}>
+            <div style={{ fontSize: 32, marginBottom: 8, lineHeight: 1 }}>🖼</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Drag a photo here, or click to browse</div>
+            <div style={{ fontSize: 11.5, marginTop: 4 }}>Shows as a cover image on your listing card</div>
+          </div>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" onChange={e => processFile(e.target.files[0])} style={{ display: 'none' }} />
+    </div>
+  );
+}
+
 export default function CreateListing() {
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
-  // Service details
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [bio, setBio] = useState('');
   const [price, setPrice] = useState('');
   const [zelle, setZelle] = useState('');
   const [venmo, setVenmo] = useState('');
-
-  // Availability slots
+  const [listingImage, setListingImage] = useState(null);
   const [slots, setSlots] = useState([]);
-  const [newSlot, setNewSlot] = useState({ date: '', start_time: '', end_time: '' });
-  const [slotError, setSlotError] = useState('');
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  function addSlot() {
-    setSlotError('');
-    if (!newSlot.date || !newSlot.start_time || !newSlot.end_time) {
-      setSlotError('Fill in all three slot fields');
-      return;
-    }
-    setSlots(s => [...s, { ...newSlot, id: Date.now() }]);
-    setNewSlot({ date: '', start_time: '', end_time: '' });
-  }
-
-  function removeSlot(id) {
-    setSlots(s => s.filter(sl => sl.id !== id));
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -87,9 +140,9 @@ export default function CreateListing() {
         price_per_session: price || 0,
         zelle,
         venmo,
+        ...(listingImage ? { listing_image_data_url: listingImage } : {}),
       });
 
-      // Create all availability slots
       await Promise.all(slots.map(sl =>
         api.post('/availability', { date: sl.date, start_time: sl.start_time, end_time: sl.end_time })
       ));
@@ -127,8 +180,7 @@ export default function CreateListing() {
                       border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
                       background: active ? 'var(--primary)' : 'var(--card)',
                       color: active ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer', transition: 'all .15s',
-                      fontFamily: 'var(--font-ui)',
+                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
                     }}>
                     {label}
                   </button>
@@ -137,7 +189,7 @@ export default function CreateListing() {
             </div>
           </div>
 
-          {/* Custom category for "other" */}
+          {/* Custom category */}
           {category === 'other' && (
             <div style={{ marginBottom: 20, marginTop: 12 }}>
               <label style={labelStyle}>What is it? (shown on your card)</label>
@@ -153,8 +205,14 @@ export default function CreateListing() {
             </div>
           )}
 
-          {/* Bio */}
+          {/* Listing image */}
           <div style={{ marginBottom: 20, marginTop: 16 }}>
+            <label style={labelStyle}>Cover photo <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+            <ImageDrop value={listingImage} onChange={setListingImage} />
+          </div>
+
+          {/* Bio */}
+          <div style={{ marginBottom: 20 }}>
             <label style={labelStyle}>Describe what you offer</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
               placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
@@ -210,94 +268,24 @@ export default function CreateListing() {
           {/* Availability */}
           <SectionHeader>When are you available?</SectionHeader>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-            Pick a day, set a time window, hit Add. You can add as many as you want.
+            Toggle multiple days at once — same time block applies to all selected days.
           </p>
 
-          {/* Day pills */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Day</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {DAYS.map(day => {
-                const active = newSlot.date === day;
-                return (
-                  <button key={day} type="button" onClick={() => setNewSlot(s => ({ ...s, date: day }))}
-                    style={{
-                      padding: '7px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
-                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                      background: active ? 'var(--primary)' : 'var(--card)',
-                      color: active ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer', transition: 'all .15s',
-                      fontFamily: 'var(--font-ui)',
-                    }}>
-                    {day.slice(0, 3)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Time row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end', marginBottom: 10 }}>
-            <div>
-              <label style={labelStyle}>From</label>
-              <input type="time" value={newSlot.start_time}
-                onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>To</label>
-              <input type="time" value={newSlot.end_time}
-                onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-            <button type="button" onClick={addSlot} style={{
-              background: 'var(--primary)', color: '#fff', border: 'none',
-              borderRadius: 999, padding: '11px 20px', fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-ui)',
-            }}>
-              + Add
-            </button>
-          </div>
-
-          {slotError && <div style={{ fontSize: 12, color: '#DC2626', marginBottom: 10 }}>{slotError}</div>}
-
-          {/* Slot list */}
-          {slots.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-              {slots.map(slot => (
-                <div key={slot.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '9px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
-                }}>
-                  <span style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
-                    <strong>{slot.date}</strong> · {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
-                  </span>
-                  <button type="button" onClick={() => removeSlot(slot.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)' }}>
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {slots.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, padding: '10px 14px', border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center' }}>
-              No slots added yet — you can add them now or after publishing.
-            </div>
-          )}
+          <SlotPicker
+            onAdd={newSlots => setSlots(s => [...s, ...newSlots.map(sl => ({ ...sl, id: Date.now() + Math.random() }))])}
+            existingSlots={slots}
+          />
+          <SlotList
+            slots={slots}
+            onRemove={id => setSlots(s => s.filter(sl => sl.id !== id))}
+            emptyText="No slots yet — add some above or after publishing."
+          />
 
           {error && (
             <div style={{
               background: '#FEF2F2', border: '1px solid #FECACA',
               borderRadius: 8, padding: '9px 14px',
-              fontSize: 12.5, color: '#DC2626', marginBottom: 16,
+              fontSize: 12.5, color: '#DC2626', marginBottom: 16, marginTop: 16,
             }}>
               {error}
             </div>

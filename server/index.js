@@ -28,7 +28,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '6mb' }));
 app.use('/uploads', express.static(join(DATA_DIR, 'uploads')));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));

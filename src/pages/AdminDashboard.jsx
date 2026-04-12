@@ -35,10 +35,21 @@ export default function AdminDashboard() {
   }
 
   async function deleteUser(id, name) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${name}? This removes their account and everything associated with it.`)) return;
     try {
       await api.delete(`/admin/users/${id}`);
       setUsers(us => us.filter(u => u.id !== id));
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+  }
+
+  async function deleteListing(profileId, name) {
+    if (!confirm(`Delete ${name}'s listing? Their account stays but their service, slots, and bookings are removed.`)) return;
+    try {
+      await api.delete(`/admin/listings/${profileId}`);
+      setUsers(us => us.map(u => u.provider_profile_id === profileId
+        ? { ...u, role: 'student', provider_profile_id: null, rating: null, review_count: null, category: null }
+        : u
+      ));
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
@@ -138,7 +149,7 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>★ {u.rating.toFixed(1)}</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button onClick={() => toggleAdmin(u.id, u.is_admin)} style={{
                   fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
                   border: '1px solid var(--border)', background: 'var(--card)',
@@ -146,12 +157,21 @@ export default function AdminDashboard() {
                 }}>
                   {u.is_admin ? 'Revoke admin' : 'Make admin'}
                 </button>
+                {u.role === 'provider' && u.provider_profile_id && (
+                  <button onClick={() => deleteListing(u.provider_profile_id, u.name)} style={{
+                    fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
+                    border: '1px solid #FED7AA', background: '#FFF7ED', color: '#C2410C',
+                    fontFamily: 'var(--font-ui)',
+                  }}>
+                    Delete listing
+                  </button>
+                )}
                 <button onClick={() => deleteUser(u.id, u.name)} style={{
                   fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
                   border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626',
                   fontFamily: 'var(--font-ui)',
                 }}>
-                  Delete
+                  Delete user
                 </button>
               </div>
             </div>

@@ -87,6 +87,7 @@ if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user
 
 const ppCols = db.pragma('table_info(provider_profiles)').map(c => c.name);
 if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles ADD COLUMN custom_category TEXT');
+if (!ppCols.includes('listing_image'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN listing_image TEXT');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

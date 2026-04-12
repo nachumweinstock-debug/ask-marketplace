@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
+import { supabase } from '../lib/supabase';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
@@ -48,17 +49,22 @@ function Section({ title, children }) {
 
 export default function AccountProfile() {
   const { user: authUser, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const avatarRef = useRef(null);
 
   const [form, setForm] = useState({
     name: '', user_bio: '', major: '', classes_taking: '', gpa: '',
     zelle: '', venmo: '',
   });
+  const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
     api.get('/account').then(({ data }) => {
@@ -77,21 +83,66 @@ export default function AccountProfile() {
 
   function set(k) { return v => setForm(f => ({ ...f, [k]: v })); }
 
+  async function deleteListing() {
+    if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. This cannot be undone.')) return;
+    setDeleteLoading(true);
+    try {
+      await api.delete('/providers/me');
+      await refreshUser();
+      setProfile(p => ({ ...p, role: 'student', provider_profile_id: null, rating: null, review_count: null, recent_reviews: null }));
+      setMsg('Listing deleted.');
+    } catch (err) {
+      setMsg(err.response?.data?.error || 'Failed to delete listing');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   function handleAvatarChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    setAvatarPreview(URL.createObjectURL(file));
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else       { w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      setAvatarPreview(canvas.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(objectUrl);
+    };
+    img.src = objectUrl;
+  }
+
+  async function handlePasswordChange(e) {
+    e.preventDefault();
+    if (pwForm.newPassword.length < 6) return setPwMsg('Password must be at least 6 characters.');
+    if (pwForm.newPassword !== pwForm.confirm) return setPwMsg('Passwords do not match.');
+    setPwSaving(true); setPwMsg('');
+    const { error } = await supabase.auth.updateUser({ password: pwForm.newPassword });
+    if (error) {
+      setPwMsg(error.message || 'Failed to update password.');
+    } else {
+      setPwForm({ newPassword: '', confirm: '' });
+      setPwMsg('Password updated!');
+      setTimeout(() => setPwMsg(''), 4000);
+    }
+    setPwSaving(false);
   }
 
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true); setMsg('');
     try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      const avatarFile = avatarRef.current?.files[0];
-      if (avatarFile) fd.append('avatar', avatarFile);
-      await api.put('/account', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const payload = { ...form };
+      if (avatarPreview) payload.avatar_data_url = avatarPreview;
+      const { data: updated } = await api.put('/account', payload);
+      setProfile(p => ({ ...p, avatar_url: updated.avatar_url }));
+      setAvatarPreview(null);
+      if (avatarRef.current) avatarRef.current.value = '';
       await refreshUser();
       setMsg('Saved!');
       setTimeout(() => setMsg(''), 3000);
@@ -327,9 +378,9 @@ export default function AccountProfile() {
         {msg && (
           <div style={{
             fontSize: 13, padding: '10px 16px', borderRadius: 8, marginBottom: 16,
-            background: msg === 'Saved!' ? '#F0FDF4' : '#FEF2F2',
-            color: msg === 'Saved!' ? '#166534' : '#DC2626',
-            border: `1px solid ${msg === 'Saved!' ? '#BBF7D0' : '#FECACA'}`,
+            background: msg === 'Saved!' || msg === 'Listing deleted.' ? '#F0FDF4' : '#FEF2F2',
+            color: msg === 'Saved!' || msg === 'Listing deleted.' ? '#166534' : '#DC2626',
+            border: `1px solid ${msg === 'Saved!' || msg === 'Listing deleted.' ? '#BBF7D0' : '#FECACA'}`,
           }}>
             {msg}
           </div>
@@ -344,6 +395,84 @@ export default function AccountProfile() {
           {saving ? 'Saving...' : 'Save profile'}
         </button>
       </form>
+
+      {/* Security */}
+      <div className="card" style={{ padding: '24px 28px', marginTop: 32 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 20 }}>
+          Security
+        </div>
+        <form onSubmit={handlePasswordChange}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>New Password</label>
+              <input
+                type="password"
+                value={pwForm.newPassword}
+                onChange={e => setPwForm(f => ({ ...f, newPassword: e.target.value }))}
+                placeholder="At least 6 characters"
+                style={fieldStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Confirm Password</label>
+              <input
+                type="password"
+                value={pwForm.confirm}
+                onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                placeholder="Repeat new password"
+                style={fieldStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+          </div>
+          {pwMsg && (
+            <div style={{
+              fontSize: 13, padding: '9px 14px', borderRadius: 8, marginBottom: 12,
+              background: pwMsg === 'Password updated!' ? '#F0FDF4' : '#FEF2F2',
+              color: pwMsg === 'Password updated!' ? '#166534' : '#DC2626',
+              border: `1px solid ${pwMsg === 'Password updated!' ? '#BBF7D0' : '#FECACA'}`,
+            }}>
+              {pwMsg}
+            </div>
+          )}
+          <button type="submit" disabled={pwSaving || !pwForm.newPassword} style={{
+            background: pwSaving || !pwForm.newPassword ? '#93C5FD' : 'var(--primary)',
+            color: '#fff', border: 'none', borderRadius: 999, padding: '10px 24px',
+            fontSize: 13, fontWeight: 600, cursor: pwSaving || !pwForm.newPassword ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-ui)',
+          }}>
+            {pwSaving ? 'Updating...' : 'Change password'}
+          </button>
+        </form>
+      </div>
+
+      {/* Danger zone — providers only */}
+      {profile?.role === 'provider' && (
+        <div style={{ marginTop: 32, border: '1.5px solid #FECACA', borderRadius: 12, padding: '20px 24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#DC2626', marginBottom: 10 }}>
+            Danger Zone
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>Delete listing</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+                Removes your service, all availability slots, and booking history.
+              </div>
+            </div>
+            <button onClick={deleteListing} disabled={deleteLoading} style={{
+              background: 'none', border: '1.5px solid #FECACA', color: '#DC2626',
+              borderRadius: 999, padding: '8px 20px', fontSize: 13, fontWeight: 600,
+              cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+              opacity: deleteLoading ? 0.6 : 1, whiteSpace: 'nowrap',
+            }}>
+              {deleteLoading ? 'Deleting...' : 'Delete listing'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

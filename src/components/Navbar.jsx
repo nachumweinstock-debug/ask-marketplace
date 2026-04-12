@@ -39,10 +39,8 @@ export default function Navbar() {
       }}>
 
         {/* Logo */}
-        <Link to="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', letterSpacing: '-0.5px' }}>
-            ASK
-          </span>
+        <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.png" alt="ASK" style={{ height: 32 }} />
         </Link>
 
         {/* Right */}

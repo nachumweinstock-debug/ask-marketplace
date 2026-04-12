@@ -1,19 +1,8 @@
 import { Router } from 'express';
-import multer from 'multer';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-
-const DATA_DIR = process.env.DATA_DIR || join(__dirname, '../..');
-const storage = multer.diskStorage({
-  destination: join(DATA_DIR, 'uploads'),
-  filename: (_, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
 
@@ -77,16 +66,20 @@ router.get('/me/profile', requireAuth, (req, res) => {
   res.json(profile);
 });
 
-router.put('/me', requireAuth, upload.single('avatar'), (req, res) => {
+router.put('/me', requireAuth, (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
   if (!profile) return res.status(404).json({ error: 'No provider profile found' });
-  const { bio, category, price_per_session, zelle, venmo, custom_category } = req.body;
+  const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url } = req.body;
 
-  const avatar_url = req.file ? `/uploads/${req.file.filename}` : profile.avatar_url;
+  const listing_image = listing_image_data_url === null
+    ? null
+    : listing_image_data_url?.startsWith('data:image/')
+      ? listing_image_data_url
+      : profile.listing_image;
 
   db.prepare(`
     UPDATE provider_profiles
-    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, avatar_url = ?, custom_category = ?
+    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, custom_category = ?, listing_image = ?
     WHERE user_id = ?
   `).run(
     bio ?? profile.bio,
@@ -94,12 +87,24 @@ router.put('/me', requireAuth, upload.single('avatar'), (req, res) => {
     price_per_session ?? profile.price_per_session,
     zelle ?? profile.zelle,
     venmo ?? profile.venmo,
-    avatar_url,
     custom_category !== undefined ? custom_category : profile.custom_category,
+    listing_image,
     req.user.id
   );
 
   res.json(db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id));
+});
+
+router.delete('/me', requireAuth, (req, res) => {
+  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+  if (!profile) return res.status(404).json({ error: 'No provider profile found' });
+
+  // Delete profile — CASCADE handles availability, bookings, reviews
+  db.prepare('DELETE FROM provider_profiles WHERE id = ?').run(profile.id);
+  // Reset role to student
+  db.prepare("UPDATE users SET role = 'student' WHERE id = ?").run(req.user.id);
+
+  res.json({ ok: true });
 });
 
 router.get('/:id', (req, res) => {

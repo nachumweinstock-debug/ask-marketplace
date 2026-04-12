@@ -1,19 +1,8 @@
 import { Router } from 'express';
-import multer from 'multer';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = Router();
-
-const DATA_DIR = process.env.DATA_DIR || join(__dirname, '../..');
-const storage = multer.diskStorage({
-  destination: join(DATA_DIR, 'uploads'),
-  filename: (_, file, cb) => cb(null, `avatar-${Date.now()}-${file.originalname}`),
-});
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // GET /api/account — full profile with stats
 router.get('/', requireAuth, (req, res) => {
@@ -59,30 +48,30 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // PUT /api/account — update profile fields
-router.put('/', requireAuth, upload.single('avatar'), (req, res) => {
-  const { name, major, classes_taking, gpa, user_bio } = req.body;
+// Avatar is sent as a base64 data URL in the `avatar_data_url` field (client resizes to ≤400px before sending)
+router.put('/', requireAuth, (req, res) => {
+  const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo } = req.body;
   const userUpdates = {};
 
-  if (name?.trim())           userUpdates.name           = name.trim();
-  if (major !== undefined)    userUpdates.major           = major;
+  if (name?.trim())                 userUpdates.name           = name.trim();
+  if (major !== undefined)          userUpdates.major          = major;
   if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
-  if (gpa !== undefined)      userUpdates.gpa             = gpa;
-  if (user_bio !== undefined) userUpdates.user_bio        = user_bio;
-  if (req.file)               userUpdates.avatar_url      = `/uploads/${req.file.filename}`;
+  if (gpa !== undefined)            userUpdates.gpa            = gpa;
+  if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
+  if (avatar_data_url?.startsWith('data:image/')) userUpdates.avatar_url = avatar_data_url;
 
   if (Object.keys(userUpdates).length > 0) {
     const setClauses = Object.keys(userUpdates).map(k => `${k} = ?`).join(', ');
     db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...Object.values(userUpdates), req.user.id);
   }
 
-  // Sync avatar_url to provider_profile if they're a provider
+  // Sync avatar to provider_profile
   if (userUpdates.avatar_url) {
     db.prepare('UPDATE provider_profiles SET avatar_url = ? WHERE user_id = ?').run(userUpdates.avatar_url, req.user.id);
   }
 
-  // Update provider-specific fields if provided
-  const { zelle, venmo } = req.body;
-  if ((zelle !== undefined || venmo !== undefined) && req.user.role === 'provider') {
+  // Update provider-specific fields
+  if (zelle !== undefined || venmo !== undefined) {
     const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
     if (profile) {
       db.prepare('UPDATE provider_profiles SET zelle = ?, venmo = ? WHERE user_id = ?').run(

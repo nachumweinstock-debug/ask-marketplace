@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
 
 const BASE_FILTERS = [
@@ -12,6 +13,7 @@ const BASE_FILTERS = [
 ];
 
 export default function Browse() {
+  const { user, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,17 @@ export default function Browse() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteOwn(providerId) {
+    if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
+    try {
+      await api.delete('/providers/me');
+      await refreshUser();
+      setProviders(ps => ps.filter(p => p.id !== providerId));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete listing');
     }
   }
 
@@ -180,7 +193,14 @@ export default function Browse() {
             {providers.length} {providers.length === 1 ? 'listing' : 'listings'}
           </div>
           <div className="provider-grid">
-            {providers.map(p => <ProviderCard key={p.id} provider={p} />)}
+            {providers.map(p => (
+              <ProviderCard
+                key={p.id}
+                provider={p}
+                isOwn={!!user && user.id === p.user_id}
+                onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
+              />
+            ))}
           </div>
         </>
       )}

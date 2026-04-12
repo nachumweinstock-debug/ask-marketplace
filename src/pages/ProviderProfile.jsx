@@ -25,7 +25,7 @@ function Stars({ rating }) {
 
 export default function ProviderProfile() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [provider, setProvider] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,7 @@ export default function ProviderProfile() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     api.get(`/providers/${id}`)
@@ -40,6 +41,19 @@ export default function ProviderProfile() {
       .catch(() => navigate('/browse'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  async function handleDeleteListing() {
+    if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
+    setDeleteLoading(true);
+    try {
+      await api.delete('/providers/me');
+      await refreshUser();
+      navigate('/dashboard/student');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete listing');
+      setDeleteLoading(false);
+    }
+  }
 
   async function handleBook() {
     if (!user) return navigate('/login');
@@ -64,6 +78,8 @@ export default function ProviderProfile() {
   );
   if (!provider) return null;
 
+  const isOwner = user && user.id === provider.user_id;
+
   const groupedSlots = provider.availability.reduce((acc, slot) => {
     const key = fmtDay(slot.date);
     if (!acc[key]) acc[key] = [];
@@ -83,7 +99,38 @@ export default function ProviderProfile() {
       </Link>
 
       {/* Profile header */}
-      <div className="card" style={{ padding: '28px', marginBottom: 20 }}>
+      <div className="card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
+        {/* Listing cover image */}
+        {provider.listing_image && (
+          <img src={provider.listing_image} alt="listing cover"
+            style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+        )}
+        {/* Owner controls */}
+        {isOwner && (
+          <div style={{
+            padding: '10px 20px', background: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1 }}>This is your listing</span>
+            <Link to="/dashboard/provider?tab=availability" style={{
+              fontSize: 12, fontWeight: 600, color: 'var(--primary)',
+              textDecoration: 'none', padding: '5px 14px',
+              border: '1.5px solid var(--primary)', borderRadius: 999,
+            }}>
+              Edit listing
+            </Link>
+            <button onClick={handleDeleteListing} disabled={deleteLoading} style={{
+              fontSize: 12, fontWeight: 600, color: '#DC2626', background: 'none',
+              border: '1.5px solid #FECACA', borderRadius: 999, padding: '5px 14px',
+              cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+              opacity: deleteLoading ? 0.6 : 1,
+            }}>
+              {deleteLoading ? 'Deleting...' : 'Delete listing'}
+            </button>
+          </div>
+        )}
+      <div style={{ padding: '28px' }}>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           {mediaUrl(provider.avatar_url) ? (
             <img src={mediaUrl(provider.avatar_url)} alt={provider.name}
@@ -151,6 +198,7 @@ export default function ProviderProfile() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Slots + Reviews */}
