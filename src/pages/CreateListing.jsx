@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { uploadToStorage } from '../lib/media';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
 const CATEGORIES = [
@@ -41,22 +40,35 @@ function SectionHeader({ children }) {
   );
 }
 
+function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
+  return new Promise(resolve => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = objectUrl;
+  });
+}
+
 function ImageDrop({ value, onChange }) {
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const inputRef = useRef(null);
 
   async function processFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    setUploading(true);
-    try {
-      const url = await uploadToStorage(file, 'listings', 1200);
-      onChange(url);
-    } catch (err) {
-      alert('Image upload failed: ' + (err.message || 'unknown error'));
-    } finally {
-      setUploading(false);
-    }
+    setProcessing(true);
+    const dataUrl = await resizeToDataUrl(file, 1200, 600);
+    onChange(dataUrl);
+    setProcessing(false);
   }
 
   return (
@@ -76,10 +88,10 @@ function ImageDrop({ value, onChange }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {uploading ? (
+        {processing ? (
           <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 24, height: 24, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Uploading...</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Processing...</div>
           </div>
         ) : value ? (
           <>

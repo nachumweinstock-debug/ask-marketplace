@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { uploadToStorage } from '../lib/media';
 import { fmtTime, fmtDay } from '../lib/slots';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
@@ -63,15 +62,19 @@ export default function ProviderDashboard() {
 
   async function handleImageFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    setImageSaving(true);
-    try {
-      const url = await uploadToStorage(file, 'listings', 1200);
-      setImagePreview(url);
-    } catch (err) {
-      alert('Image upload failed: ' + (err.message || 'unknown error'));
-    } finally {
-      setImageSaving(false);
-    }
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1200 / img.width, 600 / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      setImagePreview(canvas.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(objectUrl);
+    };
+    img.src = objectUrl;
   }
 
   async function saveListingImage(url) {

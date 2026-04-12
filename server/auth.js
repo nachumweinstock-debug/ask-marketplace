@@ -7,8 +7,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ask-yu-secret-2024';
 // Permanently hardwired superadmins — always admin regardless of DB state
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 
-// Supabase admin client — used to verify Supabase JWTs server-side
-const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+// Supabase admin client — used to verify Supabase JWTs server-side AND for storage uploads
+export const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })

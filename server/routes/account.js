@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { storeImage } from '../storage.js';
 
 const router = Router();
 
@@ -48,46 +49,57 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // PUT /api/account — update profile fields
-// Avatar is sent as a base64 data URL in the `avatar_data_url` field (client resizes to ≤400px before sending)
-router.put('/', requireAuth, (req, res) => {
-  const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo } = req.body;
-  const userUpdates = {};
+// Avatar is sent as a base64 data URL; server uploads it to Supabase Storage (or keeps base64 as fallback)
+router.put('/', requireAuth, async (req, res) => {
+  try {
+    const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo } = req.body;
+    const userUpdates = {};
 
-  if (name?.trim())                 userUpdates.name           = name.trim();
-  if (major !== undefined)          userUpdates.major          = major;
-  if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
-  if (gpa !== undefined)            userUpdates.gpa            = gpa;
-  if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
-  if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
-    userUpdates.avatar_url = avatar_data_url;
-  }
+    if (name?.trim())                 userUpdates.name           = name.trim();
+    if (major !== undefined)          userUpdates.major          = major;
+    if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
+    if (gpa !== undefined)            userUpdates.gpa            = gpa;
+    if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
 
-  if (Object.keys(userUpdates).length > 0) {
-    const setClauses = Object.keys(userUpdates).map(k => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...Object.values(userUpdates), req.user.id);
-  }
-
-  // Sync avatar to provider_profile
-  if (userUpdates.avatar_url) {
-    db.prepare('UPDATE provider_profiles SET avatar_url = ? WHERE user_id = ?').run(userUpdates.avatar_url, req.user.id);
-  }
-
-  // Update provider-specific fields
-  if (zelle !== undefined || venmo !== undefined) {
-    const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-    if (profile) {
-      db.prepare('UPDATE provider_profiles SET zelle = ?, venmo = ? WHERE user_id = ?').run(
-        zelle ?? profile.zelle,
-        venmo ?? profile.venmo,
-        req.user.id
-      );
+    if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
+      // Upload to Supabase Storage if it's a fresh base64 upload; http URLs are already stored
+      const stored = avatar_data_url.startsWith('data:image/')
+        ? await storeImage(avatar_data_url, 'avatars', req.user.id)
+        : avatar_data_url;
+      userUpdates.avatar_url = stored;
     }
-  }
 
-  const updated = db.prepare(
-    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio FROM users WHERE id = ?'
-  ).get(req.user.id);
-  res.json(updated);
+    if (Object.keys(userUpdates).length > 0) {
+      const setClauses = Object.keys(userUpdates).map(k => `${k} = ?`).join(', ');
+      db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...Object.values(userUpdates), req.user.id);
+    }
+
+    // Sync avatar to provider_profile if changed
+    if (userUpdates.avatar_url) {
+      db.prepare('UPDATE provider_profiles SET avatar_url = ? WHERE user_id = ?')
+        .run(userUpdates.avatar_url, req.user.id);
+    }
+
+    // Update provider-specific payment fields
+    if (zelle !== undefined || venmo !== undefined) {
+      const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+      if (profile) {
+        db.prepare('UPDATE provider_profiles SET zelle = ?, venmo = ? WHERE user_id = ?').run(
+          zelle ?? profile.zelle,
+          venmo ?? profile.venmo,
+          req.user.id
+        );
+      }
+    }
+
+    const updated = db.prepare(
+      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio FROM users WHERE id = ?'
+    ).get(req.user.id);
+    res.json(updated);
+  } catch (err) {
+    console.error('PUT /account error:', err);
+    res.status(500).json({ error: 'Failed to save profile' });
+  }
 });
 
 export default router;

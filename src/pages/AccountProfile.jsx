@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { mediaUrl, uploadToStorage } from '../lib/media';
+import { mediaUrl } from '../lib/media';
+import { supabase } from '../lib/supabase';
 
 const CATEGORY_LABELS = {
   tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
@@ -98,19 +99,27 @@ export default function AccountProfile() {
     }
   }
 
-  async function handleAvatarChange(e) {
+  function handleAvatarChange(e) {
     const file = e.target.files[0];
     if (!file) return;
     setAvatarUploading(true);
-    try {
-      const url = await uploadToStorage(file, 'avatars', 400);
-      setAvatarPreview(url);
-    } catch (err) {
-      setMsg('Photo upload failed: ' + (err.message || 'unknown error'));
-    } finally {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else       { w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      setAvatarPreview(canvas.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(objectUrl);
       setAvatarUploading(false);
       if (avatarRef.current) avatarRef.current.value = '';
-    }
+    };
+    img.onerror = () => { setAvatarUploading(false); URL.revokeObjectURL(objectUrl); };
+    img.src = objectUrl;
   }
 
   async function handlePasswordChange(e) {
@@ -136,11 +145,14 @@ export default function AccountProfile() {
       const payload = { ...form };
       if (avatarPreview) payload.avatar_data_url = avatarPreview;
       const { data: updated } = await api.put('/account', payload);
-      setProfile(p => ({ ...p, avatar_url: updated.avatar_url }));
+      // Merge all updated user fields into local profile state
+      setProfile(p => ({ ...p, ...updated }));
       setAvatarPreview(null);
-      await refreshUser();
+      if (avatarRef.current) avatarRef.current.value = '';
       setMsg('Saved!');
       setTimeout(() => setMsg(''), 3000);
+      // Refresh auth context in background (updates Navbar avatar etc.)
+      refreshUser().catch(() => {});
     } catch (err) {
       setMsg(err.response?.data?.error || 'Save failed');
     } finally {

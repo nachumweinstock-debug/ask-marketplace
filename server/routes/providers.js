@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { storeImage } from '../storage.js';
 
 const router = Router();
 
@@ -66,33 +67,41 @@ router.get('/me/profile', requireAuth, (req, res) => {
   res.json(profile);
 });
 
-router.put('/me', requireAuth, (req, res) => {
-  const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-  if (!profile) return res.status(404).json({ error: 'No provider profile found' });
-  const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url } = req.body;
+router.put('/me', requireAuth, async (req, res) => {
+  try {
+    const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+    if (!profile) return res.status(404).json({ error: 'No provider profile found' });
+    const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url } = req.body;
 
-  const listing_image = listing_image_data_url === null
-    ? null
-    : (listing_image_data_url?.startsWith('data:image/') || listing_image_data_url?.startsWith('http'))
-      ? listing_image_data_url
-      : profile.listing_image;
+    let listing_image = profile.listing_image;
+    if (listing_image_data_url === null) {
+      listing_image = null;
+    } else if (listing_image_data_url?.startsWith('data:image/')) {
+      listing_image = await storeImage(listing_image_data_url, 'listings', req.user.id);
+    } else if (listing_image_data_url?.startsWith('http')) {
+      listing_image = listing_image_data_url;
+    }
 
-  db.prepare(`
-    UPDATE provider_profiles
-    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, custom_category = ?, listing_image = ?
-    WHERE user_id = ?
-  `).run(
-    bio ?? profile.bio,
-    category ?? profile.category,
-    price_per_session ?? profile.price_per_session,
-    zelle ?? profile.zelle,
-    venmo ?? profile.venmo,
-    custom_category !== undefined ? custom_category : profile.custom_category,
-    listing_image,
-    req.user.id
-  );
+    db.prepare(`
+      UPDATE provider_profiles
+      SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, custom_category = ?, listing_image = ?
+      WHERE user_id = ?
+    `).run(
+      bio ?? profile.bio,
+      category ?? profile.category,
+      price_per_session ?? profile.price_per_session,
+      zelle ?? profile.zelle,
+      venmo ?? profile.venmo,
+      custom_category !== undefined ? custom_category : profile.custom_category,
+      listing_image,
+      req.user.id
+    );
 
-  res.json(db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id));
+    res.json(db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id));
+  } catch (err) {
+    console.error('PUT /providers/me error:', err);
+    res.status(500).json({ error: 'Failed to save listing' });
+  }
 });
 
 router.delete('/me', requireAuth, (req, res) => {
