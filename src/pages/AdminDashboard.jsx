@@ -196,46 +196,138 @@ const CSV_TEMPLATE = `email,name,category,custom_category,bio,price_per_session,
 yitz@yu.edu,Yitz Cohen,tutor,,I tutor Calc I and Orgo. 3 yrs experience.,35,9175551234,yitzcohen
 sarah@mail.yu.edu,Sarah Levy,other,Photography,Campus portrait sessions — headshots and events.,50,,sarahlevy
 `;
-
 const TEMPLATE_URL = URL.createObjectURL(new Blob([CSV_TEMPLATE], { type: 'text/csv' }));
 
 /** Robust CSV parser — handles quoted fields with embedded commas/newlines */
 function parseCSV(text) {
-  // normalise line endings, strip BOM
   const raw = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   const lines = raw.split('\n');
   if (lines.length < 2) return [];
 
   function splitLine(line) {
-    const cols = [];
-    let cur = '', inQ = false;
+    const cols = []; let cur = '', inQ = false;
     for (let i = 0; i < line.length; i++) {
       const ch = line[i];
-      if (ch === '"') {
-        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
-        else inQ = !inQ;
-      } else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
       else cur += ch;
     }
     cols.push(cur.trim());
     return cols;
   }
 
-  const headers = splitLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+  const headers = splitLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''));
   return lines.slice(1)
-    .filter(l => l.trim())
+    .filter(l => l.replace(/,/g, '').trim())
     .map(l => {
       const vals = splitLine(l);
       return headers.reduce((obj, h, i) => ({ ...obj, [h]: vals[i] ?? '' }), {});
     });
 }
 
+// ── Google Form auto-normalizer ───────────────────────────────────────────────
+
+const GF_MARKERS = ['subjects', 'hourly_rate', 'short_bio', 'availability', 'phone_number'];
+
+function isGoogleForm(headers) {
+  return GF_MARKERS.some(m => headers.some(h => h.includes(m)));
+}
+
+function gfGet(row, ...patterns) {
+  for (const p of patterns) {
+    const key = Object.keys(row).find(k => k.includes(p));
+    if (key && row[key]?.trim()) return row[key].trim();
+  }
+  return '';
+}
+
+function parsePrice(str) {
+  if (!str) return 0;
+  // strip $ signs, find first number >= 10 (avoids "1 on 1: 120" → 1)
+  const nums = str.replace(/\$/g, '').match(/\d+/g);
+  if (!nums) return 0;
+  const price = nums.map(Number).find(n => n >= 10);
+  return price || 0;
+}
+
+function parsePayment(paymentStr, phone) {
+  const s = paymentStr || '';
+  let venmo = null, zelle = null;
+
+  // Venmo URL pattern: venmo.com/u/Handle
+  const venmoUrl = s.match(/venmo\.com\/u\/([^\s,\n/?]+)/i);
+  if (venmoUrl) venmo = venmoUrl[1];
+
+  // Labeled patterns: "Venmo: handle", "Venmo - @handle", "Venmo = handle"
+  if (!venmo) {
+    const vm = s.match(/venmo[\s:\-=@]+([^\s,\n/]+)/i);
+    if (vm) venmo = vm[1].replace(/^@/, '').replace(/\/$/, '').trim();
+  }
+
+  // Labeled zelle
+  const zm = s.match(/zelle[\s:\-=@]+([^\s,\n/]+)/i);
+  if (zm) zelle = zm[1].replace(/^@/, '').trim();
+
+  // If nothing labeled, whole string might be a single handle
+  if (!venmo && !zelle) {
+    const clean = s.trim();
+    if (/^[\d\-().+]+$/.test(clean) && clean.replace(/\D/g,'').length >= 7) {
+      zelle = clean;
+    } else if (clean && !/ /.test(clean) && clean.length < 40 &&
+               !clean.toLowerCase().match(/^(venmo|zelle|cash|other)$/)) {
+      venmo = clean.replace(/^@/, '');
+    }
+  }
+
+  // Fall back to phone number for zelle
+  if (!zelle && phone) {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length >= 7) zelle = digits;
+  }
+
+  return { venmo: venmo || null, zelle: zelle || null };
+}
+
+function inferCategory(subjects) {
+  const s = (subjects || '').toLowerCase();
+  if (/hair|barber|fade|lineup|beard|cut/.test(s))   return { category: 'barber',       custom_category: null };
+  if (/\bgolf\b/.test(s))                             return { category: 'other',        custom_category: 'Golf Lessons' };
+  if (/soccer/.test(s))                               return { category: 'other',        custom_category: 'Soccer Training' };
+  if (/basketball/.test(s))                           return { category: 'other',        custom_category: 'Basketball' };
+  if (/\btennis\b/.test(s))                           return { category: 'tennis',       custom_category: null };
+  if (/hebrew|judaic|gemara|rashi|chumash/.test(s))   return { category: 'hebrew tutor', custom_category: null };
+  return { category: 'tutor', custom_category: null };
+}
+
+function normalizeGoogleFormRow(row) {
+  const name     = gfGet(row, 'name');
+  const email    = gfGet(row, 'email');
+  const subjects = gfGet(row, 'subjects', 'tutor');
+  const shortBio = gfGet(row, 'short_bio', 'bio');
+  const priceStr = gfGet(row, 'hourly_rate', 'rate', 'price');
+  const payment  = gfGet(row, 'venmo', 'zelle', 'payment');
+  const phone    = gfGet(row, 'phone');
+  const year     = gfGet(row, 'year', 'degree', 'program');
+
+  // Bio: prefer short bio; if absent use subjects description
+  let bio = shortBio || subjects || '';
+  // Append year/program as a short credential note
+  if (year && bio) bio = `${bio.replace(/\.?\s*$/, '')}. ${year}.`;
+
+  const price = parsePrice(priceStr);
+  const { venmo, zelle } = parsePayment(payment, phone);
+  const { category, custom_category } = inferCategory(subjects);
+
+  return { email, name, category, custom_category, bio, price_per_session: price, venmo, zelle };
+}
+
 // ── Import card ───────────────────────────────────────────────────────────────
 
 function ImportCard({ onImported }) {
   const fileRef = useRef(null);
-  const [rows, setRows] = useState(null);       // parsed CSV rows
-  const [results, setResults] = useState(null); // server response
+  const [rows, setRows]       = useState(null);
+  const [isGF, setIsGF]       = useState(false);
+  const [results, setResults] = useState(null);
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -244,7 +336,14 @@ function ImportCard({ onImported }) {
     const reader = new FileReader();
     reader.onload = e => {
       const parsed = parseCSV(e.target.result);
-      setRows(parsed);
+      if (!parsed.length) return;
+      const headers = Object.keys(parsed[0]);
+      const googleForm = isGoogleForm(headers);
+      setIsGF(googleForm);
+      const normalized = googleForm
+        ? parsed.map(normalizeGoogleFormRow).filter(r => r.email?.includes('@'))
+        : parsed.filter(r => r.email?.includes('@'));
+      setRows(normalized);
       setResults(null);
     };
     reader.readAsText(file);
@@ -264,15 +363,10 @@ function ImportCard({ onImported }) {
     }
   }
 
-  function reset() { setRows(null); setResults(null); if (fileRef.current) fileRef.current.value = ''; }
-
-  const fieldStyle = {
-    fontSize: 12, padding: '4px 0', color: 'var(--muted)',
-  };
+  function reset() { setRows(null); setResults(null); setIsGF(false); if (fileRef.current) fileRef.current.value = ''; }
 
   return (
     <div className="card" style={{ padding: '20px 24px' }}>
-      {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
         onClick={() => setOpen(o => !o)}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
@@ -283,87 +377,80 @@ function ImportCard({ onImported }) {
 
       {open && (
         <div style={{ marginTop: 16 }}>
-          {/* Instructions */}
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
-            Upload a CSV with one provider per row. When the user signs up with that email, their
-            listing will already be live.{' '}
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>
+            Upload any CSV — your Google Form export works directly.{' '}
             <a href={TEMPLATE_URL} download="ask-import-template.csv"
-              style={{ color: 'var(--primary)', fontWeight: 600 }}
-              onClick={e => e.stopPropagation()}>
-              Download template
+              style={{ color: 'var(--primary)', fontWeight: 600 }} onClick={e => e.stopPropagation()}>
+              Download blank template
             </a>
           </p>
 
-          {/* Column reference */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px 16px', marginBottom: 16, background: 'var(--bg)', borderRadius: 8, padding: '10px 14px' }}>
-            {[
-              ['email *', 'required'],
-              ['name', 'optional'],
-              ['category', 'tutor / barber / hebrew tutor / tennis / other'],
-              ['custom_category', 'shown if category = other'],
-              ['bio', 'listing description'],
-              ['price_per_session', 'number, 0 = free'],
-              ['zelle', 'phone or email'],
-              ['venmo', 'username (no @)'],
-            ].map(([col, hint]) => (
-              <div key={col} style={fieldStyle}>
-                <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace', fontSize: 11.5 }}>{col}</span>
-                <div style={{ fontSize: 11, marginTop: 1 }}>{hint}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* File input */}
+          {/* File upload */}
           {!rows && !results && (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <input ref={fileRef} type="file" accept=".csv,text/csv"
-                onChange={e => handleFile(e.target.files[0])}
-                style={{ fontSize: 13, fontFamily: 'var(--font-ui)', color: 'var(--text)' }} />
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>or</span>
-              <label style={{
-                background: 'var(--primary)', color: '#fff', borderRadius: 999,
-                padding: '7px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'var(--font-ui)',
-              }}>
-                Browse CSV
-                <input type="file" accept=".csv,text/csv" style={{ display: 'none' }}
-                  onChange={e => handleFile(e.target.files[0])} />
-              </label>
-            </div>
+            <label style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'var(--primary)', color: '#fff', borderRadius: 999,
+              padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+            }}>
+              Choose CSV file
+              <input type="file" accept=".csv,text/csv" style={{ display: 'none' }}
+                onChange={e => handleFile(e.target.files[0])} />
+            </label>
           )}
 
           {/* Preview */}
           {rows && !results && (
             <div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
-                <strong style={{ color: 'var(--text)' }}>{rows.length} rows</strong> parsed — preview (first 5):
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
+                  {rows.length} provider{rows.length !== 1 ? 's' : ''} ready
+                </span>
+                {isGF && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 999, background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>
+                    Google Form detected — fields mapped automatically
+                  </span>
+                )}
               </div>
-              <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+
+              <div style={{ overflowX: 'auto', marginBottom: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['email', 'name', 'category', 'price_per_session', 'bio'].map(h => (
-                        <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                    <tr style={{ background: 'var(--bg)' }}>
+                      {['name', 'email', 'category', 'price', 'zelle', 'venmo', 'bio'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice(0, 5).map((r, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                        {['email', 'name', 'category', 'price_per_session', 'bio'].map(h => (
-                          <td key={h} style={{ padding: '6px 10px', color: 'var(--text)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {r[h] || <span style={{ color: 'var(--muted)', opacity: 0.5 }}>—</span>}
-                          </td>
-                        ))}
+                    {rows.slice(0, 8).map((r, i) => (
+                      <tr key={i} style={{ borderBottom: i < Math.min(rows.length, 8) - 1 ? '1px solid var(--border)' : 'none' }}>
+                        <td style={{ padding: '7px 12px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{r.name || <em style={{color:'var(--muted)'}}>—</em>}</td>
+                        <td style={{ padding: '7px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.email}</td>
+                        <td style={{ padding: '7px 12px', whiteSpace: 'nowrap' }}>
+                          <span style={{ background: 'var(--accent)', color: 'var(--primary)', borderRadius: 999, padding: '1px 8px', fontSize: 11, fontWeight: 600 }}>
+                            {r.custom_category || r.category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '7px 12px', whiteSpace: 'nowrap' }}>{r.price_per_session > 0 ? `$${r.price_per_session}` : <em style={{color:'var(--muted)'}}>free</em>}</td>
+                        <td style={{ padding: '7px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.zelle || <em style={{color:'var(--muted)', opacity:.5}}>—</em>}</td>
+                        <td style={{ padding: '7px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r.venmo || <em style={{color:'var(--muted)', opacity:.5}}>—</em>}</td>
+                        <td style={{ padding: '7px 12px', color: 'var(--muted)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.bio || <em style={{color:'var(--muted)', opacity:.5}}>—</em>}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {rows.length > 8 && (
+                  <div style={{ padding: '6px 12px', fontSize: 11.5, color: 'var(--muted)', borderTop: '1px solid var(--border)' }}>
+                    …and {rows.length - 8} more rows
+                  </div>
+                )}
               </div>
+
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={runImport} disabled={importing} style={{
                   background: importing ? '#93C5FD' : 'var(--primary)', color: '#fff',
-                  border: 'none', borderRadius: 999, padding: '9px 24px',
+                  border: 'none', borderRadius: 999, padding: '10px 28px',
                   fontSize: 13, fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-ui)',
                 }}>
@@ -371,7 +458,7 @@ function ImportCard({ onImported }) {
                 </button>
                 <button onClick={reset} style={{
                   background: 'none', border: '1.5px solid var(--border)', color: 'var(--muted)',
-                  borderRadius: 999, padding: '9px 18px', fontSize: 13, cursor: 'pointer',
+                  borderRadius: 999, padding: '10px 18px', fontSize: 13, cursor: 'pointer',
                   fontFamily: 'var(--font-ui)',
                 }}>
                   Cancel
