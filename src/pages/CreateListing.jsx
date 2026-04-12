@@ -3,20 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const BLUE = '#2B6CB0';
-const INPUT = {
-  width: '100%', border: '1px solid #E2E8F0', borderRadius: 8,
-  padding: '10px 12px', fontSize: 13, outline: 'none',
-  background: '#fff', color: '#1A1A2E',
-};
-const LABEL = { fontSize: 12, fontWeight: 500, color: '#64748B', marginBottom: 5, display: 'block' };
-
 const CATEGORIES = [
-  { id: 'tutor',        label: 'Tutors',   emoji: '📚' },
-  { id: 'barber',       label: 'Barbers',  emoji: '✂️' },
-  { id: 'hebrew tutor', label: 'Hebrew',   emoji: '✡️' },
-  { id: 'tennis',       label: 'Tennis',   emoji: '🎾' },
-  { id: 'other',        label: 'Other',    emoji: '💼' },
+  { id: 'tutor',        label: 'Tutors'  },
+  { id: 'barber',       label: 'Barbers' },
+  { id: 'hebrew tutor', label: 'Hebrew'  },
+  { id: 'tennis',       label: 'Fitness' },
+  { id: 'other',        label: 'Other'   },
 ];
 
 const BIO_PLACEHOLDERS = {
@@ -24,7 +16,19 @@ const BIO_PLACEHOLDERS = {
   barber: 'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
   'hebrew tutor': 'e.g. Rashi, Gemara, conversational Hebrew — all levels.',
   tennis: 'e.g. USTA rated player, great with beginners and intermediates.',
-  other: 'Describe what you offer and who it\'s for...',
+  other: "Describe what you offer and who it's for...",
+};
+
+const inputStyle = {
+  width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+  padding: '10px 14px', fontSize: 13.5, outline: 'none',
+  background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
+  transition: 'border-color .15s', boxSizing: 'border-box',
+};
+
+const labelStyle = {
+  display: 'block', fontSize: 12, fontWeight: 500,
+  color: 'var(--muted)', marginBottom: 6,
 };
 
 export default function CreateListing() {
@@ -54,31 +58,34 @@ export default function CreateListing() {
   }
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
-
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>Post a listing</h1>
-        <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>Takes about 30 seconds.</p>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '48px 32px 80px' }}>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
+          Post a listing
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Takes about 30 seconds.</p>
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '24px' }}>
+      <div className="card" style={{ padding: '32px 28px' }}>
         <form onSubmit={handleSubmit}>
 
           {/* Category */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={LABEL}>Category</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-              {CATEGORIES.map(({ id, label, emoji }) => {
+          <div style={{ marginBottom: 24 }}>
+            <label style={labelStyle}>Category</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {CATEGORIES.map(({ id, label }) => {
                 const active = category === id;
                 return (
                   <button key={id} type="button" onClick={() => setCategory(id)}
                     style={{
-                      padding: '12px 8px', border: `1px solid ${active ? BLUE : '#E2E8F0'}`,
-                      borderRadius: 8, textAlign: 'center', cursor: 'pointer',
-                      background: active ? '#EBF4FF' : '#fff', transition: 'all 0.15s',
+                      padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s',
+                      fontFamily: 'var(--font-ui)',
                     }}>
-                    <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: active ? BLUE : '#64748B' }}>{label}</div>
+                    {label}
                   </button>
                 );
               })}
@@ -86,61 +93,80 @@ export default function CreateListing() {
           </div>
 
           {/* Bio */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={LABEL}>Describe what you offer</label>
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelStyle}>Describe what you offer</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
               placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
-              style={{ ...INPUT, resize: 'none', lineHeight: 1.5 }} />
+              style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
           </div>
 
           {/* Price */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={LABEL}>Price per session</label>
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelStyle}>Price per session</label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#64748B' }}>$</span>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13.5, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>$</span>
               <input type="number" min="0" placeholder="0" value={price}
                 onChange={e => setPrice(e.target.value)}
-                style={{ ...INPUT, paddingLeft: 24 }} />
+                style={{ ...inputStyle, paddingLeft: 28 }}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
-            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Leave 0 if free or negotiable</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>Leave 0 if free or negotiable</div>
           </div>
 
           {/* Payment */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={LABEL}>How do students pay you?</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ marginBottom: 24 }}>
+            <label style={labelStyle}>How do students pay you?</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <div style={{ ...LABEL, marginBottom: 4 }}>Zelle (phone or email)</div>
+                <div style={{ ...labelStyle, marginBottom: 5 }}>Zelle (phone or email)</div>
                 <input type="text" placeholder="646-555-1234" value={zelle}
-                  onChange={e => setZelle(e.target.value)} style={INPUT} />
+                  onChange={e => setZelle(e.target.value)}
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                />
               </div>
               <div>
-                <div style={{ ...LABEL, marginBottom: 4 }}>Venmo username</div>
+                <div style={{ ...labelStyle, marginBottom: 5 }}>Venmo username</div>
                 <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#64748B' }}>@</span>
+                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>@</span>
                   <input type="text" placeholder="username" value={venmo}
                     onChange={e => setVenmo(e.target.value)}
-                    style={{ ...INPUT, paddingLeft: 22 }} />
+                    style={{ ...inputStyle, paddingLeft: 26 }}
+                    onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           {error && (
-            <div style={{ background: '#FFF0F0', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#b91c1c', marginBottom: 14 }}>
+            <div style={{
+              background: '#FEF2F2', border: '1px solid #FECACA',
+              borderRadius: 8, padding: '9px 14px',
+              fontSize: 12.5, color: '#DC2626', marginBottom: 16,
+            }}>
               {error}
             </div>
           )}
 
           <button type="submit" disabled={loading || !category} style={{
-            width: '100%', background: loading || !category ? '#93C5FD' : BLUE,
-            color: '#fff', border: 'none', borderRadius: 8, padding: 12,
-            fontSize: 14, fontWeight: 500, cursor: loading || !category ? 'not-allowed' : 'pointer',
+            width: '100%', background: loading || !category ? '#93C5FD' : 'var(--primary)',
+            color: '#fff', border: 'none', borderRadius: 999,
+            padding: '12px', fontSize: 14, fontWeight: 600,
+            cursor: loading || !category ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-ui)', transition: 'opacity .15s',
           }}>
-            {loading ? 'Publishing...' : '+ Publish listing'}
+            {loading ? 'Publishing...' : 'Publish listing'}
           </button>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 12 }}>
+          <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', marginTop: 14 }}>
             Next you'll add your available time slots.
           </p>
         </form>

@@ -1,13 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const BLUE = '#2B6CB0';
-
-const CATEGORY_STYLE = {
-  tutor:          { bg: '#EBF4FF', color: '#1D4ED8', label: 'Tutor',   emoji: '📚' },
-  barber:         { bg: '#FDF2F8', color: '#9D174D', label: 'Barber',  emoji: '✂️' },
-  'hebrew tutor': { bg: '#F0FFF4', color: '#166534', label: 'Hebrew',  emoji: '✡️' },
-  tennis:         { bg: '#FFFBEB', color: '#92400E', label: 'Tennis',  emoji: '🎾' },
-  other:          { bg: '#F5F3FF', color: '#5B21B6', label: 'Other',   emoji: '💼' },
+const CATEGORY_LABELS = {
+  tutor: 'Tutors',
+  barber: 'Barbers',
+  'hebrew tutor': 'Hebrew',
+  tennis: 'Fitness',
+  other: 'Other',
 };
 
 function initials(name) {
@@ -15,55 +14,82 @@ function initials(name) {
 }
 
 export default function ProviderCard({ provider }) {
-  const s = CATEGORY_STYLE[provider.category] || CATEGORY_STYLE.other;
+  const [hovered, setHovered] = useState(false);
+  const label = CATEGORY_LABELS[provider.category] || 'Other';
 
   return (
-    <Link to={`/providers/${provider.id}`} style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      background: '#fff', border: '1px solid #E2E8F0',
-      borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
-      textDecoration: 'none', transition: 'border-color 0.15s, box-shadow 0.15s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.boxShadow = '0 2px 8px rgba(43,108,176,0.1)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
+    <Link
+      to={`/providers/${provider.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'block', textDecoration: 'none', position: 'relative',
+        background: 'var(--card)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: '20px',
+        boxShadow: hovered ? '0 6px 24px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        transition: 'box-shadow .2s, transform .2s',
+      }}
     >
-      {provider.avatar_url ? (
-        <img src={provider.avatar_url} alt={provider.name}
-          style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-      ) : (
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: s.bg, color: s.color,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 600, fontSize: 13,
-        }}>
-          {initials(provider.name)}
-        </div>
-      )}
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {provider.name}
-        </div>
-        <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-          {provider.bio ? provider.bio.slice(0, 60) + (provider.bio.length > 60 ? '…' : '') : s.label}
-        </div>
+      {/* Avatar */}
+      <div style={{ marginBottom: 14 }}>
+        {provider.avatar_url ? (
+          <img src={provider.avatar_url} alt={provider.name} style={{
+            width: 44, height: 44, borderRadius: '50%', objectFit: 'cover',
+            border: '1px solid var(--border)',
+          }} />
+        ) : (
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'var(--accent)', color: 'var(--primary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-ui)',
+          }}>
+            {initials(provider.name)}
+          </div>
+        )}
       </div>
 
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: BLUE }}>
-          {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
-        </div>
-        <div style={{ fontSize: 11, color: '#94A3B8' }}>
-          {provider.price_per_session > 0 ? 'per session' : ''}
-        </div>
-        <div style={{
-          display: 'inline-block', fontSize: 10, fontWeight: 600,
-          padding: '2px 8px', borderRadius: 4, marginTop: 4,
-          background: s.bg, color: s.color,
-        }}>
-          {s.label}
-        </div>
+      {/* Name */}
+      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', marginBottom: 6, lineHeight: 1.3 }}>
+        {provider.name}
+      </div>
+
+      {/* Category badge */}
+      <span style={{
+        display: 'inline-block', marginBottom: 10,
+        background: 'var(--accent)', color: 'var(--primary)',
+        fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999,
+      }}>
+        {label}
+      </span>
+
+      {/* Bio */}
+      <p style={{
+        fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.55,
+        marginBottom: 14, minHeight: 36,
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      }}>
+        {provider.bio || 'No description provided.'}
+      </p>
+
+      {/* Price */}
+      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
+        {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
+        {provider.price_per_session > 0 && (
+          <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>/ session</span>
+        )}
+      </div>
+
+      {/* Hover CTA */}
+      <div style={{
+        position: 'absolute', bottom: 16, right: 16,
+        background: 'var(--primary)', color: '#fff',
+        borderRadius: 999, padding: '5px 14px',
+        fontSize: 12, fontWeight: 600,
+        opacity: hovered ? 1 : 0, transition: 'opacity .15s',
+      }}>
+        View
       </div>
     </Link>
   );

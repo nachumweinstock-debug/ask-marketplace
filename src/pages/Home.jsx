@@ -1,172 +1,207 @@
-import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const BLUE = '#2B6CB0';
-
-const CATEGORIES = [
-  { id: 'tutor',        label: 'Tutors',   emoji: '📚', bg: '#EBF4FF' },
-  { id: 'barber',       label: 'Barbers',  emoji: '✂️', bg: '#FDF2F8' },
-  { id: 'hebrew tutor', label: 'Hebrew',   emoji: '✡️', bg: '#F0FFF4' },
-  { id: 'tennis',       label: 'Tennis',   emoji: '🎾', bg: '#FFFBEB' },
-  { id: 'other',        label: 'Other',    emoji: '💼', bg: '#F5F3FF' },
+const PREVIEW_CARDS = [
+  { initials: 'YM', name: 'Yosef M.', category: 'Barbers', price: '$20', bio: 'Clean fades and lineups. Available on campus daily.' },
+  { initials: 'AK', name: 'Ari K.', category: 'Tutors', price: '$35', bio: 'Calc I–II, Orgo, Stats. 4.0 GPA, 3 years experience.' },
+  { initials: 'ML', name: 'Moshe L.', category: 'Hebrew', price: '$15', bio: 'Rashi, Gemara, conversational Hebrew. All levels.' },
 ];
 
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'tutor', label: 'Tutors' },
+  { id: 'barber', label: 'Barbers' },
+  { id: 'hebrew tutor', label: 'Hebrew' },
+  { id: 'tennis', label: 'Fitness' },
+  { id: 'other', label: 'Other' },
+];
+
+function PreviewCard({ card, style }) {
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #E5E0D8',
+      borderRadius: 14, padding: '18px 20px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+      width: 260,
+      ...style,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: '50%',
+          background: '#EBF4FF', color: '#2B6CB0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 13, fontFamily: 'var(--font-ui)', flexShrink: 0,
+        }}>
+          {card.initials}
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: '#1A1A1A', lineHeight: 1.2 }}>{card.name}</div>
+          <span style={{
+            display: 'inline-block', marginTop: 3,
+            background: '#EBF4FF', color: '#2B6CB0',
+            fontSize: 10, fontWeight: 600, padding: '1px 8px', borderRadius: 999,
+          }}>
+            {card.category}
+          </span>
+        </div>
+        <div style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 15, color: '#1A1A1A' }}>
+          {card.price}
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5 }}>{card.bio}</p>
+    </div>
+  );
+}
+
 export default function Home() {
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  function handleSearch(e) {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (search.trim()) params.set('search', search.trim());
-    if (category) params.set('category', category);
-    navigate(`/browse?${params}`);
-  }
 
   return (
     <div>
       {/* Hero */}
-      <div style={{
-        background: 'linear-gradient(180deg, #EBF4FF 0%, #FAF8F5 100%)',
-        padding: '44px 24px 52px',
-        textAlign: 'center',
-      }}>
-        <h1 style={{ fontSize: 26, fontWeight: 600, color: '#1A1A2E', marginBottom: 8, lineHeight: 1.3 }}>
-          Services for the YU community
-        </h1>
-        <p style={{ fontSize: 14, color: '#64748B', marginBottom: 28 }}>
-          Tutoring, barbers, Hebrew, tennis — offered by students, for students.
-        </p>
+      <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 56px)', display: 'flex', alignItems: 'center', padding: '0 32px' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%', padding: '64px 0' }}>
+          <div className="hero-grid">
+            {/* Left */}
+            <div className="fade-up">
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(48px, 6vw, 76px)',
+                color: 'var(--text)', lineHeight: 1.08,
+                marginBottom: 20, letterSpacing: '-1px',
+              }}>
+                Find your guy.
+              </h1>
+              <p style={{
+                fontSize: 17, color: 'var(--muted)', lineHeight: 1.65,
+                maxWidth: 380, marginBottom: 36,
+              }}>
+                Students offering tutoring, haircuts, Hebrew, and more — right on campus.
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => navigate('/browse')}
+                  style={{
+                    background: 'var(--primary)', color: '#fff',
+                    border: 'none', borderRadius: 999,
+                    padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                    cursor: 'pointer', transition: 'opacity .15s',
+                    fontFamily: 'var(--font-ui)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  Browse listings
+                </button>
+                <button
+                  onClick={() => navigate(user ? '/create-listing' : '/signup')}
+                  style={{
+                    background: 'transparent', color: 'var(--text)',
+                    border: '1px solid var(--border)', borderRadius: 999,
+                    padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                    cursor: 'pointer', transition: 'border-color .15s',
+                    fontFamily: 'var(--font-ui)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#9CA3AF'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                >
+                  Post a service
+                </button>
+              </div>
+            </div>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearch} style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{
-            display: 'flex', background: '#fff',
-            borderRadius: 10, overflow: 'hidden', border: '1px solid #E2E8F0',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          }}>
-            <input
-              type="text"
-              placeholder="Search services..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                flex: 1, border: 'none', padding: '11px 16px',
-                fontSize: 14, outline: 'none', background: 'transparent', color: '#1A1A2E',
-              }}
-            />
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              style={{
-                border: 'none', borderLeft: '1px solid #E2E8F0',
-                padding: '0 14px', fontSize: 13,
-                background: '#F8FAFC', color: '#64748B', cursor: 'pointer', outline: 'none',
-              }}
-            >
-              <option value="">All categories</option>
-              <option value="tutor">Tutors</option>
-              <option value="barber">Barbers</option>
-              <option value="hebrew tutor">Hebrew</option>
-              <option value="tennis">Tennis</option>
-              <option value="other">Other</option>
-            </select>
-            <button type="submit" style={{
-              background: BLUE, color: '#fff', border: 'none',
-              padding: '0 18px', fontSize: 13, cursor: 'pointer', fontWeight: 500,
-            }}>
-              Search
-            </button>
+            {/* Right — stacked cards */}
+            <div className="hero-cards" style={{ position: 'relative', height: 300 }}>
+              <div style={{ position: 'absolute', top: 50, left: 40, transform: 'rotate(-5deg)' }}>
+                <PreviewCard card={PREVIEW_CARDS[2]} />
+              </div>
+              <div style={{ position: 'absolute', top: 25, left: 20, transform: 'rotate(3deg)' }}>
+                <PreviewCard card={PREVIEW_CARDS[1]} />
+              </div>
+              <div style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-1deg)' }}>
+                <PreviewCard card={PREVIEW_CARDS[0]} />
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 24px 48px' }}>
+      {/* Category pills */}
+      <div style={{ background: 'var(--bg)', borderTop: '1px solid var(--border)', padding: '28px 32px' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 14 }}>
+            Browse by category
+          </div>
+          <div className="pill-row">
+            {FILTERS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => navigate(id === 'all' ? '/browse' : `/browse?category=${id}`)}
+                style={{
+                  padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)', color: 'var(--muted)',
+                  cursor: 'pointer', transition: 'all .15s',
+                  fontFamily: 'var(--font-ui)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--primary)';
+                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--card)';
+                  e.currentTarget.style.color = 'var(--muted)';
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-        {/* Categories */}
-        <div style={{
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.8px',
-          color: '#64748B', textTransform: 'uppercase', margin: '28px 0 14px',
-        }}>
-          Browse by category
+      {/* Bottom CTA */}
+      <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '80px 32px' }}>
+        <div style={{ maxWidth: 540, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(32px, 4vw, 48px)',
+            color: 'var(--text)', lineHeight: 1.1,
+            marginBottom: 16, letterSpacing: '-0.5px',
+          }}>
+            Offer something?
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 32, lineHeight: 1.6 }}>
+            Post a listing in under a minute and start getting booked.
+          </p>
+          <Link
+            to={user ? '/create-listing' : '/signup'}
+            style={{
+              display: 'inline-block',
+              background: 'var(--primary)', color: '#fff',
+              borderRadius: 999, padding: '13px 36px',
+              fontSize: 14, fontWeight: 600, textDecoration: 'none',
+              transition: 'opacity .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Post a service
+          </Link>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-          {CATEGORIES.map(({ id, label, emoji, bg }) => (
-            <button key={id} onClick={() => navigate(`/browse?category=${id}`)}
-              style={{
-                background: '#fff', border: '1px solid #E2E8F0',
-                borderRadius: 10, padding: '14px 12px', textAlign: 'center',
-                cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.boxShadow = '0 2px 8px rgba(43,108,176,0.12)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 8, background: bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 8px', fontSize: 16,
-              }}>
-                {emoji}
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#1A1A2E' }}>{label}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* How it works */}
-        <div style={{
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.8px',
-          color: '#64748B', textTransform: 'uppercase', margin: '32px 0 14px',
-        }}>
-          How it works
-        </div>
-        <div style={{
-          background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        }}>
-          {[
-            { n: '1', title: 'Find someone', desc: 'Browse students offering services on campus.' },
-            { n: '2', title: 'Pick a time', desc: 'Choose from their open slots — no back and forth.' },
-            { n: '3', title: 'Pay & show up', desc: 'Zelle or Venmo them and you\'re done.' },
-          ].map(({ n, title, desc }, i) => (
-            <div key={n} style={{
-              padding: '20px 18px', textAlign: 'center',
-              borderLeft: i > 0 ? '1px solid #E2E8F0' : 'none',
-            }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 6,
-                background: BLUE, color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 600, margin: '0 auto 10px',
-              }}>{n}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 4 }}>{title}</div>
-              <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>{desc}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <Link to={user ? '/create-listing' : '/signup'} style={{
-          display: 'block', marginTop: 20, padding: 12,
-          background: BLUE, color: '#fff', borderRadius: 10,
-          fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none',
-        }}>
-          {user ? '+ Post a listing' : 'Offer your services →'}
-        </Link>
       </div>
 
       {/* Footer */}
-      <div style={{
-        borderTop: '1px solid #E2E8F0', background: '#fff',
-        textAlign: 'center', padding: '16px 24px',
-        fontSize: 12, color: '#94A3B8',
+      <footer style={{
+        borderTop: '1px solid var(--border)', background: 'var(--bg)',
+        padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        ASK · Yeshiva University Student Marketplace
-      </div>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)' }}>ASK</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>Yeshiva University Student Marketplace</span>
+      </footer>
     </div>
   );
 }

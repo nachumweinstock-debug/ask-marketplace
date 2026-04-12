@@ -3,13 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const BLUE = '#2B6CB0';
-
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
-  confirmed: { label: 'Confirmed', bg: '#F0FFF4', color: '#166534' },
-  completed: { label: 'Completed', bg: '#EBF4FF', color: '#1D4ED8' },
-  cancelled: { label: 'Cancelled', bg: '#FFF0F0', color: '#b91c1c' },
+  confirmed: { label: 'Confirmed', bg: '#F0FDF4', color: '#166534' },
+  completed: { label: 'Completed', bg: 'var(--accent)', color: 'var(--primary)' },
+  cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
 };
 
 const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
@@ -27,32 +25,49 @@ function ReviewModal({ booking, onClose, onSubmit }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 12, padding: '24px', width: '100%', maxWidth: 380, border: '1px solid #E2E8F0' }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', marginBottom: 4 }}>Leave a review</div>
-        <div style={{ fontSize: 12, color: '#64748B', marginBottom: 20 }}>Session with {booking.provider_name}</div>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+      <div className="card" style={{ padding: '28px', width: '100%', maxWidth: 380 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text)', marginBottom: 4 }}>Leave a review</div>
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 22 }}>Session with {booking.provider_name}</div>
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>Rating</div>
-            <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 8 }}>Rating</div>
+            <div style={{ display: 'flex', gap: 4 }}>
               {[1,2,3,4,5].map(n => (
                 <button key={n} type="button" onClick={() => setRating(n)}
-                  style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer', opacity: n <= rating ? 1 : 0.3 }}>
-                  ⭐
+                  style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer', color: n <= rating ? '#F59E0B' : '#E5E0D8', padding: 0 }}>
+                  ★
                 </button>
               ))}
             </div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Comment (optional)</div>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>Comment (optional)</div>
             <textarea value={comment} onChange={e => setComment(e.target.value)} rows={3}
               placeholder="How was your session?"
-              style={{ width: '100%', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'none', background: '#FAFAFA' }} />
+              style={{
+                width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+                padding: '10px 14px', fontSize: 13, outline: 'none', resize: 'none',
+                background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
           </div>
-          {error && <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 10 }}>{error}</div>}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>Cancel</button>
-            <button type="submit" disabled={loading} style={{ flex: 1, padding: '10px', background: BLUE, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+          {error && <div style={{ fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" onClick={onClose} style={{
+              flex: 1, padding: '10px', border: '1.5px solid var(--border)', borderRadius: 999,
+              fontSize: 13, cursor: 'pointer', background: 'var(--card)',
+              color: 'var(--text)', fontFamily: 'var(--font-ui)',
+            }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{
+              flex: 1, padding: '10px', background: loading ? '#93C5FD' : 'var(--primary)',
+              color: '#fff', border: 'none', borderRadius: 999,
+              fontSize: 13, cursor: 'pointer', fontWeight: 600,
+              fontFamily: 'var(--font-ui)',
+            }}>
               {loading ? 'Submitting...' : 'Submit'}
             </button>
           </div>
@@ -94,47 +109,56 @@ export default function StudentDashboard() {
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 36, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>My Bookings</h1>
-          <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>Welcome back, {user?.name?.split(' ')[0]}</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
+            My Bookings
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--muted)' }}>Welcome back, {user?.name?.split(' ')[0]}</p>
         </div>
         {user?.role !== 'provider' && (
           <button onClick={() => navigate('/create-listing')} style={{
-            background: BLUE, color: '#fff', border: 'none',
-            padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            padding: '10px 22px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'var(--font-ui)',
           }}>
-            + Post a listing
+            Post a listing
           </button>
         )}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: '#94A3B8', fontSize: 13 }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>
       ) : bookings.length === 0 ? (
-        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, textAlign: 'center', padding: '48px 24px' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📅</div>
-          <div style={{ fontSize: 15, fontWeight: 500, color: '#1A1A2E', marginBottom: 6 }}>No bookings yet</div>
-          <div style={{ fontSize: 13, color: '#64748B', marginBottom: 20 }}>Browse providers and book your first session.</div>
-          <Link to="/browse" style={{ display: 'inline-block', background: BLUE, color: '#fff', padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>
+            No bookings yet
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 28 }}>Browse providers and book your first session.</div>
+          <Link to="/browse" style={{
+            display: 'inline-block', background: 'var(--primary)', color: '#fff',
+            padding: '10px 24px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', fontFamily: 'var(--font-ui)',
+          }}>
             Browse listings
           </Link>
         </div>
       ) : (
         <div>
           {upcoming.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>Upcoming</div>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Upcoming</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {upcoming.map(b => <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} />)}
+                {upcoming.map(b => (
+                  <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} />
+                ))}
               </div>
             </div>
           )}
           {past.length > 0 && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>Past Sessions</div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Past Sessions</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {past.map(b => (
                   <BookingRow key={b.id} booking={b}
@@ -156,33 +180,41 @@ export default function StudentDashboard() {
 function BookingRow({ booking, onCancel, cancelLoading, onReview }) {
   const s = STATUS[booking.status] || STATUS.pending;
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <Link to={`/providers/${booking.provider_profile_id}`}
-          style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E', textDecoration: 'none' }}>
+          style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}>
           {booking.provider_name}
         </Link>
-        <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-          {CAT_LABELS[booking.category] || booking.category} · {new Date(booking.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {booking.start_time}–{booking.end_time}
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+          {CAT_LABELS[booking.category] || booking.category}
+          {' · '}
+          {new Date(booking.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          {' · '}{booking.start_time}–{booking.end_time}
         </div>
         {booking.price_per_session > 0 && (
-          <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Pay ${booking.price_per_session} via Zelle/Venmo</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.8 }}>
+            Pay ${booking.price_per_session} via Zelle/Venmo
+          </div>
         )}
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: s.bg, color: s.color }}>
+        <span style={{
+          display: 'inline-block', fontSize: 11, fontWeight: 600,
+          padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color,
+        }}>
           {s.label}
         </span>
-        <div style={{ marginTop: 6, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ marginTop: 8, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           {onCancel && booking.status !== 'cancelled' && (
             <button onClick={() => onCancel(booking.id)} disabled={cancelLoading === booking.id}
-              style={{ fontSize: 11, color: '#b91c1c', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              style={{ fontSize: 12, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)' }}>
               Cancel
             </button>
           )}
           {onReview && (
             <button onClick={onReview}
-              style={{ fontSize: 11, color: '#2B6CB0', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)' }}>
               Review
             </button>
           )}

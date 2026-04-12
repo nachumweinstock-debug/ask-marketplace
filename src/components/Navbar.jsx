@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const BLUE = '#2B6CB0';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -10,31 +8,17 @@ function initials(name) {
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
-    function handleClick(e) {
+    function handle(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false);
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
   }, []);
-
-  function navLink(to, label) {
-    const active = location.pathname === to || location.pathname.startsWith(to + '/');
-    return (
-      <Link to={to} style={{
-        fontSize: 13, color: active ? BLUE : '#64748B',
-        fontWeight: active ? 600 : 400, textDecoration: 'none',
-        transition: 'color 0.15s',
-      }}>
-        {label}
-      </Link>
-    );
-  }
 
   async function handleSignOut() {
     setOpen(false);
@@ -44,51 +28,57 @@ export default function Navbar() {
 
   return (
     <nav style={{
-      background: '#fff',
-      borderBottom: '1px solid #E2E8F0',
+      background: 'var(--bg)',
+      borderBottom: '1px solid var(--border)',
       position: 'sticky', top: 0, zIndex: 50,
     }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{
+        maxWidth: 1080, margin: '0 auto', padding: '0 32px',
+        height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
 
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 6, background: BLUE,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 13, color: '#fff', letterSpacing: '-0.5px',
-          }}>ASK</div>
-          <div>
-            <div style={{ color: '#1A1A2E', fontSize: 15, fontWeight: 600 }}>YU Services</div>
-            <div style={{ color: '#94A3B8', fontSize: 11, marginTop: 1 }}>Yeshiva University</div>
-          </div>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <span style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 22, color: 'var(--text)', letterSpacing: '-0.5px',
+          }}>
+            ASK
+          </span>
         </Link>
 
-        {/* Center nav links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          {navLink('/browse', 'Browse')}
-          {user && navLink('/dashboard/student', 'My Bookings')}
-          {user?.role === 'provider' && navLink('/dashboard/provider', 'My Services')}
-        </div>
-
         {/* Right */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <Link to="/browse" style={{
+            fontSize: 13, fontWeight: 500, color: 'var(--muted)',
+            textDecoration: 'none', transition: 'color .15s',
+          }}
+            onMouseEnter={e => e.target.style.color = 'var(--text)'}
+            onMouseLeave={e => e.target.style.color = 'var(--muted)'}
+          >
+            Browse
+          </Link>
+
           {user ? (
             <>
               <Link to="/create-listing" style={{
-                background: BLUE, color: '#fff', padding: '5px 14px',
-                borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: 'none',
-              }}>
-                + Post a listing
+                fontSize: 13, fontWeight: 500, color: 'var(--muted)',
+                textDecoration: 'none', transition: 'color .15s',
+              }}
+                onMouseEnter={e => e.target.style.color = 'var(--text)'}
+                onMouseLeave={e => e.target.style.color = 'var(--muted)'}
+              >
+                Post a service
               </Link>
 
-              {/* Avatar dropdown */}
               <div ref={dropRef} style={{ position: 'relative' }}>
                 <button onClick={() => setOpen(o => !o)} style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: BLUE, color: '#fff',
-                  border: 'none', cursor: 'pointer',
-                  fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
+                  background: 'var(--accent)', color: 'var(--primary)',
+                  border: '1px solid var(--border)', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-ui)',
                 }}>
                   {initials(user.name)}
                 </button>
@@ -96,39 +86,36 @@ export default function Navbar() {
                 {open && (
                   <div style={{
                     position: 'absolute', right: 0, top: 40,
-                    background: '#fff', border: '1px solid #E2E8F0',
-                    borderRadius: 10, padding: '6px 0',
-                    minWidth: 200, boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                    background: 'var(--card)', border: '1px solid var(--border)',
+                    borderRadius: 12, padding: '6px 0',
+                    minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
                     zIndex: 100,
                   }}>
-                    {/* User info */}
-                    <div style={{ padding: '10px 16px 8px', borderBottom: '1px solid #F1F5F9' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E' }}>{user.name}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{user.email}</div>
+                    <div style={{ padding: '10px 16px 10px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{user.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{user.email}</div>
                       {user.role === 'provider' && (
-                        <div style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#EBF4FF', color: BLUE }}>
+                        <div style={{
+                          display: 'inline-block', marginTop: 6, fontSize: 10, fontWeight: 700,
+                          padding: '2px 8px', borderRadius: 999,
+                          background: 'var(--accent)', color: 'var(--primary)',
+                        }}>
                           Provider
                         </div>
                       )}
                     </div>
-
-                    {/* Links */}
                     <div style={{ padding: '6px 0' }}>
                       <DropItem to="/dashboard/student" label="My Bookings" onClick={() => setOpen(false)} />
                       {user.role === 'provider' && (
                         <DropItem to="/dashboard/provider" label="My Services" onClick={() => setOpen(false)} />
                       )}
-                      {user.role === 'admin' && (
-                        <DropItem to="/admin" label="Admin Dashboard" onClick={() => setOpen(false)} />
-                      )}
                     </div>
-
-                    {/* Sign out */}
-                    <div style={{ borderTop: '1px solid #F1F5F9', padding: '6px 0 2px' }}>
+                    <div style={{ borderTop: '1px solid var(--border)', padding: '6px 0 2px' }}>
                       <button onClick={handleSignOut} style={{
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '8px 16px', background: 'none', border: 'none',
-                        fontSize: 13, color: '#EF4444', cursor: 'pointer',
+                        fontSize: 13, color: '#DC2626', cursor: 'pointer',
+                        fontFamily: 'var(--font-ui)',
                       }}>
                         Sign out
                       </button>
@@ -140,15 +127,23 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/login" style={{
-                color: '#64748B', padding: '5px 14px', borderRadius: 6, fontSize: 12,
-                fontWeight: 500, textDecoration: 'none', border: '1px solid #E2E8F0',
-              }}>
+                fontSize: 13, fontWeight: 500, color: 'var(--muted)',
+                textDecoration: 'none', transition: 'color .15s',
+              }}
+                onMouseEnter={e => e.target.style.color = 'var(--text)'}
+                onMouseLeave={e => e.target.style.color = 'var(--muted)'}
+              >
                 Log in
               </Link>
               <Link to="/signup" style={{
-                background: BLUE, color: '#fff', padding: '5px 14px',
-                borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: 'none',
-              }}>
+                background: 'var(--primary)', color: '#fff',
+                padding: '7px 18px', borderRadius: 999,
+                fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                transition: 'opacity .15s',
+              }}
+                onMouseEnter={e => e.target.style.opacity = '0.88'}
+                onMouseLeave={e => e.target.style.opacity = '1'}
+              >
                 Sign up
               </Link>
             </>
@@ -163,9 +158,10 @@ function DropItem({ to, label, onClick }) {
   return (
     <Link to={to} onClick={onClick} style={{
       display: 'block', padding: '8px 16px',
-      fontSize: 13, color: '#1A1A2E', textDecoration: 'none',
+      fontSize: 13, color: 'var(--text)', textDecoration: 'none',
+      transition: 'background .1s',
     }}
-      onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
       onMouseLeave={e => e.currentTarget.style.background = 'none'}
     >
       {label}

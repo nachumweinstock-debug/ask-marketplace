@@ -3,25 +3,31 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const BLUE = '#2B6CB0';
-
-const INPUT = {
-  width: '100%', border: '1px solid #E2E8F0', borderRadius: 8,
-  padding: '10px 12px', fontSize: 13, outline: 'none',
-  background: '#fff', color: '#1A1A2E',
-};
-const LABEL = { fontSize: 12, fontWeight: 500, color: '#64748B', marginBottom: 5, display: 'block' };
-
 const CATEGORIES = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
 const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
-  confirmed: { label: 'Confirmed', bg: '#F0FFF4', color: '#166534' },
-  completed: { label: 'Completed', bg: '#EBF4FF', color: '#1D4ED8' },
-  cancelled: { label: 'Cancelled', bg: '#FFF0F0', color: '#b91c1c' },
+  confirmed: { label: 'Confirmed', bg: '#F0FDF4', color: '#166534' },
+  completed: { label: 'Completed', bg: 'var(--accent)', color: 'var(--primary)' },
+  cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
+};
+const TABS = ['bookings', 'availability', 'profile'];
+
+const inputStyle = {
+  width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+  padding: '10px 14px', fontSize: 13.5, outline: 'none',
+  background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
+  transition: 'border-color .15s', boxSizing: 'border-box',
 };
 
-const TABS = ['bookings', 'availability', 'profile'];
+const labelStyle = {
+  display: 'block', fontSize: 12, fontWeight: 500,
+  color: 'var(--muted)', marginBottom: 6,
+};
+
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
@@ -45,7 +51,11 @@ export default function ProviderDashboard() {
     Promise.all([
       api.get('/providers/me/profile').then(r => {
         setProfile(r.data);
-        setProfileForm({ bio: r.data.bio || '', category: r.data.category || 'other', price_per_session: r.data.price_per_session || 0, zelle: r.data.zelle || '', venmo: r.data.venmo || '' });
+        setProfileForm({
+          bio: r.data.bio || '', category: r.data.category || 'other',
+          price_per_session: r.data.price_per_session || 0,
+          zelle: r.data.zelle || '', venmo: r.data.venmo || '',
+        });
       }),
       api.get('/bookings/mine').then(r => setBookings(r.data)),
     ]).catch(console.error).finally(() => setLoading(false));
@@ -90,34 +100,43 @@ export default function ProviderDashboard() {
     catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: '#94A3B8', fontSize: 13 }}>Loading...</div>;
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: '80px', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>
+  );
 
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
+    <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
 
       {isNew && (
-        <div style={{ background: '#EBF4FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#1D4ED8' }}>
+        <div style={{
+          background: 'var(--accent)', border: '1px solid #BFDBFE',
+          borderRadius: 10, padding: '14px 18px', marginBottom: 28,
+          fontSize: 13.5, color: 'var(--primary)',
+        }}>
           <strong>You're live!</strong> Add availability below so students can book you.
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>My Services</h1>
-        <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>Manage your bookings, availability, and profile</p>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
+          My Services
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Manage your bookings, availability, and profile.</p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #E2E8F0', marginBottom: 24 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28 }}>
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: tab === t ? 600 : 400,
-            color: tab === t ? BLUE : '#64748B',
-            borderBottom: tab === t ? `2px solid ${BLUE}` : '2px solid transparent',
-            textTransform: 'capitalize',
+            padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 13.5, fontWeight: tab === t ? 600 : 400,
+            color: tab === t ? 'var(--primary)' : 'var(--muted)',
+            borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
+            textTransform: 'capitalize', fontFamily: 'var(--font-ui)',
+            transition: 'color .15s',
           }}>
             {t}
           </button>
@@ -128,38 +147,51 @@ export default function ProviderDashboard() {
       {tab === 'bookings' && (
         <div>
           {bookings.length === 0 ? (
-            <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, textAlign: 'center', padding: '48px 24px' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#1A1A2E', marginBottom: 6 }}>No bookings yet</div>
-              <div style={{ fontSize: 13, color: '#64748B' }}>Complete your profile and add availability to get started.</div>
+            <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>No bookings yet</div>
+              <div style={{ fontSize: 14, color: 'var(--muted)' }}>Complete your profile and add availability to get started.</div>
             </div>
           ) : (
             <div>
               {upcoming.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
                     Upcoming ({upcoming.length})
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {upcoming.map(b => (
-                      <div key={b.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div key={b.id} className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E' }}>{b.student_name}</div>
-                          <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-                            {b.student_email} · {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {b.start_time}–{b.end_time}
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+                            {b.student_email}
+                            {' · '}
+                            {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {' · '}{b.start_time}–{b.end_time}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+                            background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
+                          }}>
                             {STATUS[b.status]?.label}
                           </span>
                           {b.status === 'pending' && (
-                            <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{ background: '#F0FFF4', color: '#166534', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                            <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
+                              background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                              padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: 'var(--font-ui)',
+                            }}>
                               Confirm
                             </button>
                           )}
                           {b.status === 'confirmed' && (
-                            <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{ background: '#EBF4FF', color: '#1D4ED8', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                            <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
+                              background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
+                              padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: 'var(--font-ui)',
+                            }}>
                               Complete
                             </button>
                           )}
@@ -171,15 +203,18 @@ export default function ProviderDashboard() {
               )}
               {past.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 }}>Past Sessions</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Past Sessions</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {past.map(b => (
-                      <div key={b.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.7 }}>
+                      <div key={b.id} className="card" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.72 }}>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E' }}>{b.student_name}</div>
-                          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{b.date} · {b.start_time}</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{b.date} · {b.start_time}</div>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+                          background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
+                        }}>
                           {STATUS[b.status]?.label}
                         </span>
                       </div>
@@ -194,46 +229,69 @@ export default function ProviderDashboard() {
 
       {/* Availability */}
       {tab === 'availability' && (
-        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '20px' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Add Availability</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 10, marginBottom: 10, alignItems: 'end' }}>
+        <div className="card" style={{ padding: '28px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 20 }}>Add Availability</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 12, alignItems: 'end' }}>
             <div>
-              <label style={LABEL}>Date</label>
+              <label style={labelStyle}>Date</label>
               <input type="date" value={newSlot.date} min={new Date().toISOString().split('T')[0]}
-                onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))} style={INPUT} />
+                onChange={e => setNewSlot(s => ({ ...s, date: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
             <div>
-              <label style={LABEL}>Start</label>
+              <label style={labelStyle}>Start</label>
               <input type="time" value={newSlot.start_time}
-                onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))} style={INPUT} />
+                onChange={e => setNewSlot(s => ({ ...s, start_time: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
             <div>
-              <label style={LABEL}>End</label>
+              <label style={labelStyle}>End</label>
               <input type="time" value={newSlot.end_time}
-                onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))} style={INPUT} />
+                onChange={e => setNewSlot(s => ({ ...s, end_time: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
             <button onClick={addSlot} disabled={slotLoading} style={{
-              background: BLUE, color: '#fff', border: 'none', borderRadius: 8,
-              padding: '10px 16px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 999,
+              padding: '11px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              whiteSpace: 'nowrap', fontFamily: 'var(--font-ui)',
             }}>
               {slotLoading ? '...' : '+ Add'}
             </button>
           </div>
-          {slotError && <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>{slotError}</div>}
+          {slotError && <div style={{ fontSize: 12, color: '#DC2626', marginBottom: 14 }}>{slotError}</div>}
 
           {availability.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: '#94A3B8' }}>No slots yet — add some above</div>
+            <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 13, color: 'var(--muted)' }}>
+              No slots yet — add some above.
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 20 }}>
               {availability.map(slot => (
-                <div key={slot.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: '1px solid #E2E8F0', borderRadius: 8 }}>
-                  <div style={{ fontSize: 13, color: '#1A1A2E' }}>
+                <div key={slot.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '11px 16px', border: '1px solid var(--border)', borderRadius: 8,
+                  background: 'var(--bg)',
+                }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
                     {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     {' · '}{slot.start_time} – {slot.end_time}
-                    {slot.is_booked && <span style={{ marginLeft: 8, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>Booked</span>}
+                    {slot.is_booked && (
+                      <span style={{ marginLeft: 10, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>Booked</span>
+                    )}
                   </div>
                   {!slot.is_booked && (
-                    <button onClick={() => removeSlot(slot.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#b91c1c' }}>Remove</button>
+                    <button onClick={() => removeSlot(slot.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)' }}>
+                      Remove
+                    </button>
                   )}
                 </div>
               ))}
@@ -244,63 +302,98 @@ export default function ProviderDashboard() {
 
       {/* Profile */}
       {tab === 'profile' && (
-        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '20px' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Edit Profile</div>
+        <div className="card" style={{ padding: '28px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 22 }}>Edit Profile</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
             <div>
-              <label style={LABEL}>Category</label>
-              <select value={profileForm.category} onChange={e => setProfileForm(f => ({ ...f, category: e.target.value }))} style={{ ...INPUT }}>
+              <label style={labelStyle}>Category</label>
+              <select value={profileForm.category} onChange={e => setProfileForm(f => ({ ...f, category: e.target.value }))}
+                style={{ ...inputStyle }}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              >
                 {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
               </select>
             </div>
             <div>
-              <label style={LABEL}>Price per session ($)</label>
-              <input type="number" min="0" value={profileForm.price_per_session}
+              <label style={labelStyle}>Price per session ($)</label>
+              <input type="number" min="0" value={profileForm.price_per_session} placeholder="0"
                 onChange={e => setProfileForm(f => ({ ...f, price_per_session: e.target.value }))}
-                style={INPUT} placeholder="0" />
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={LABEL}>Bio</label>
+          <div style={{ marginBottom: 18 }}>
+            <label style={labelStyle}>Bio</label>
             <textarea value={profileForm.bio} onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
               rows={3} placeholder="Describe what you offer..."
-              style={{ ...INPUT, resize: 'none', lineHeight: 1.5 }} />
+              style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
             <div>
-              <label style={LABEL}>Zelle</label>
-              <input type="text" value={profileForm.zelle} onChange={e => setProfileForm(f => ({ ...f, zelle: e.target.value }))} style={INPUT} placeholder="646-555-1234" />
+              <label style={labelStyle}>Zelle</label>
+              <input type="text" value={profileForm.zelle} placeholder="646-555-1234"
+                onChange={e => setProfileForm(f => ({ ...f, zelle: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
             <div>
-              <label style={LABEL}>Venmo</label>
-              <input type="text" value={profileForm.venmo} onChange={e => setProfileForm(f => ({ ...f, venmo: e.target.value }))} style={INPUT} placeholder="@username" />
+              <label style={labelStyle}>Venmo</label>
+              <input type="text" value={profileForm.venmo} placeholder="@username"
+                onChange={e => setProfileForm(f => ({ ...f, venmo: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={LABEL}>Profile Photo</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ marginBottom: 22 }}>
+            <label style={labelStyle}>Profile Photo</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
+                <img src={profile.avatar_url} alt="Avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
               ) : (
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EBF4FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤</div>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: 'var(--accent)', color: 'var(--primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-ui)',
+                }}>
+                  {initials(user?.name)}
+                </div>
               )}
-              <input type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])} style={{ fontSize: 12, color: '#64748B' }} />
+              <input type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])}
+                style={{ fontSize: 12.5, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }} />
             </div>
           </div>
 
           {profileMsg && (
-            <div style={{ fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 14, background: profileMsg === 'Saved!' ? '#F0FFF4' : '#FFF0F0', color: profileMsg === 'Saved!' ? '#166534' : '#b91c1c' }}>
+            <div style={{
+              fontSize: 12.5, padding: '9px 14px', borderRadius: 8, marginBottom: 16,
+              background: profileMsg === 'Saved!' ? '#F0FDF4' : '#FEF2F2',
+              color: profileMsg === 'Saved!' ? '#166534' : '#DC2626',
+              border: `1px solid ${profileMsg === 'Saved!' ? '#BBF7D0' : '#FECACA'}`,
+            }}>
               {profileMsg}
             </div>
           )}
 
           <button onClick={saveProfile} disabled={profileSaving} style={{
-            background: profileSaving ? '#93C5FD' : BLUE, color: '#fff', border: 'none',
-            borderRadius: 8, padding: '11px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            background: profileSaving ? '#93C5FD' : 'var(--primary)', color: '#fff',
+            border: 'none', borderRadius: 999, padding: '11px 28px',
+            fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'var(--font-ui)', transition: 'opacity .15s',
           }}>
             {profileSaving ? 'Saving...' : 'Save profile'}
           </button>

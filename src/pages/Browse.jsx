@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import ProviderCard from '../components/ProviderCard';
 
-const BLUE = '#2B6CB0';
-
 const FILTERS = [
-  { id: 'all',          label: 'All' },
-  { id: 'tutor',        label: 'Tutors' },
-  { id: 'barber',       label: 'Barbers' },
+  { id: 'all', label: 'All' },
+  { id: 'tutor', label: 'Tutors' },
+  { id: 'barber', label: 'Barbers' },
   { id: 'hebrew tutor', label: 'Hebrew' },
-  { id: 'tennis',       label: 'Tennis' },
-  { id: 'other',        label: 'Other' },
+  { id: 'tennis', label: 'Fitness' },
+  { id: 'other', label: 'Other' },
 ];
 
 export default function Browse() {
@@ -56,20 +54,27 @@ export default function Browse() {
   }
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 48px' }}>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 32px 64px' }}>
 
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1A1A2E' }}>Browse listings</h1>
-        <p style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>
-          Services offered by YU students
-        </p>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6,
+        }}>
+          Browse listings
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Services offered by students in your community.</p>
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} style={{ marginBottom: 16 }}>
+      <form onSubmit={handleSearch} style={{ marginBottom: 24 }}>
         <div style={{
           display: 'flex', background: '#fff',
-          borderRadius: 8, overflow: 'hidden', border: '1px solid #E2E8F0',
+          borderRadius: 999, overflow: 'hidden',
+          border: '1px solid var(--border)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+          maxWidth: 480,
         }}>
           <input
             type="text"
@@ -77,30 +82,33 @@ export default function Browse() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              flex: 1, border: 'none', padding: '10px 14px',
-              fontSize: 13, outline: 'none', background: 'transparent', color: '#1A1A2E',
+              flex: 1, border: 'none', padding: '11px 20px',
+              fontSize: 13, outline: 'none', background: 'transparent', color: 'var(--text)',
+              fontFamily: 'var(--font-ui)',
             }}
           />
           <button type="submit" style={{
-            background: BLUE, color: '#fff', border: 'none',
-            padding: '0 16px', fontSize: 12, cursor: 'pointer', fontWeight: 500,
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            padding: '0 20px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
+            fontFamily: 'var(--font-ui)',
           }}>
             Search
           </button>
         </div>
       </form>
 
-      {/* Filter pills */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+      {/* Pill filters */}
+      <div className="pill-row" style={{ marginBottom: 32 }}>
         {FILTERS.map(({ id, label }) => {
           const active = category === id;
           return (
             <button key={id} onClick={() => handleCategory(id)} style={{
-              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-              border: `1px solid ${active ? BLUE : '#E2E8F0'}`,
-              background: active ? BLUE : '#fff',
-              color: active ? '#fff' : '#64748B',
-              transition: 'all 0.15s',
+              padding: '7px 18px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+              border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+              background: active ? 'var(--primary)' : 'var(--card)',
+              color: active ? '#fff' : 'var(--muted)',
+              cursor: 'pointer', transition: 'all .15s',
+              fontFamily: 'var(--font-ui)',
             }}>
               {label}
             </button>
@@ -110,44 +118,33 @@ export default function Browse() {
 
       {/* Results */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} style={{
-              background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
-              padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center',
-            }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#F1F5F9', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ height: 13, background: '#F1F5F9', borderRadius: 4, width: '50%', marginBottom: 8 }} />
-                <div style={{ height: 11, background: '#F1F5F9', borderRadius: 4, width: '35%' }} />
-              </div>
+        <div className="provider-grid">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="card" style={{ padding: '20px', height: 180 }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#F1F5F9', marginBottom: 14 }} />
+              <div style={{ height: 13, background: '#F1F5F9', borderRadius: 6, width: '55%', marginBottom: 10 }} />
+              <div style={{ height: 11, background: '#F1F5F9', borderRadius: 6, width: '35%', marginBottom: 8 }} />
+              <div style={{ height: 11, background: '#F1F5F9', borderRadius: 6, width: '80%' }} />
             </div>
           ))}
         </div>
       ) : providers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
-          <div style={{ fontSize: 15, fontWeight: 500, color: '#1A1A2E', marginBottom: 6 }}>No results</div>
-          <div style={{ fontSize: 13, color: '#64748B' }}>Try a different search or category.</div>
+        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>
+            Nothing here yet.
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Try a different search or category.</div>
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, fontWeight: 500 }}>
             {providers.length} {providers.length === 1 ? 'listing' : 'listings'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="provider-grid">
             {providers.map(p => <ProviderCard key={p.id} provider={p} />)}
           </div>
         </>
       )}
-
-      <Link to="/create-listing" style={{
-        display: 'block', marginTop: 20, padding: '12px',
-        background: BLUE, color: '#fff', borderRadius: 10,
-        fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none',
-      }}>
-        + Post a listing
-      </Link>
     </div>
   );
 }
