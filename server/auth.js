@@ -4,6 +4,9 @@ import db from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ask-yu-secret-2024';
 
+// Permanently hardwired superadmins — always admin regardless of DB state
+const SUPERADMINS = ['nachumweinstock@gmail.com'];
+
 // Supabase admin client — used to verify Supabase JWTs server-side
 const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -36,6 +39,11 @@ export async function requireAuth(req, res, next) {
           db.prepare('INSERT OR IGNORE INTO users (email, name, password, role, email_verified) VALUES (?, ?, ?, ?, 1)')
             .run(email, name, '', 'student');
           sqliteUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url FROM users WHERE email = ?').get(email);
+        }
+        // Hardwired superadmin — always admin, no setup needed
+        if (SUPERADMINS.includes(email) && !sqliteUser.is_admin) {
+          db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(sqliteUser.id);
+          sqliteUser = { ...sqliteUser, is_admin: 1 };
         }
         req.user = sqliteUser;
         return next();

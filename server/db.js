@@ -108,4 +108,10 @@ if (!tables.includes('verification_codes')) {
   }
 }
 
+// Hardwired superadmins — grant admin on every server boot if the account exists
+const SUPERADMINS = ['nachumweinstock@gmail.com'];
+for (const email of SUPERADMINS) {
+  db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(email);
+}
+
 export default db;
