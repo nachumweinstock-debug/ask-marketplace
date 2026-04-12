@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { mediaUrl } from '../lib/media';
 
 const STATUS_COLORS = {
   student:  { bg: 'var(--accent)', color: 'var(--primary)' },
@@ -105,6 +104,15 @@ export default function AdminDashboard() {
         }} />
       </div>
 
+      {/* Bulk import */}
+      <div style={{ marginBottom: 24 }}>
+        <ImportCard onImported={() => {
+          // Refresh user list after import
+          api.get('/admin/users').then(r => setUsers(r.data)).catch(() => {});
+          api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+        }} />
+      </div>
+
       {/* Users table */}
       <div className="card" style={{ padding: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -178,6 +186,237 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── CSV helpers ──────────────────────────────────────────────────────────────
+
+const CSV_TEMPLATE = `email,name,category,custom_category,bio,price_per_session,zelle,venmo
+yitz@yu.edu,Yitz Cohen,tutor,,I tutor Calc I and Orgo. 3 yrs experience.,35,9175551234,yitzcohen
+sarah@mail.yu.edu,Sarah Levy,other,Photography,Campus portrait sessions — headshots and events.,50,,sarahlevy
+`;
+
+const TEMPLATE_URL = URL.createObjectURL(new Blob([CSV_TEMPLATE], { type: 'text/csv' }));
+
+/** Robust CSV parser — handles quoted fields with embedded commas/newlines */
+function parseCSV(text) {
+  // normalise line endings, strip BOM
+  const raw = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const lines = raw.split('\n');
+  if (lines.length < 2) return [];
+
+  function splitLine(line) {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    return cols;
+  }
+
+  const headers = splitLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+  return lines.slice(1)
+    .filter(l => l.trim())
+    .map(l => {
+      const vals = splitLine(l);
+      return headers.reduce((obj, h, i) => ({ ...obj, [h]: vals[i] ?? '' }), {});
+    });
+}
+
+// ── Import card ───────────────────────────────────────────────────────────────
+
+function ImportCard({ onImported }) {
+  const fileRef = useRef(null);
+  const [rows, setRows] = useState(null);       // parsed CSV rows
+  const [results, setResults] = useState(null); // server response
+  const [importing, setImporting] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  function handleFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const parsed = parseCSV(e.target.result);
+      setRows(parsed);
+      setResults(null);
+    };
+    reader.readAsText(file);
+  }
+
+  async function runImport() {
+    if (!rows?.length) return;
+    setImporting(true);
+    try {
+      const { data } = await api.post('/admin/import', { providers: rows });
+      setResults(data);
+      onImported();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function reset() { setRows(null); setResults(null); if (fileRef.current) fileRef.current.value = ''; }
+
+  const fieldStyle = {
+    fontSize: 12, padding: '4px 0', color: 'var(--muted)',
+  };
+
+  return (
+    <div className="card" style={{ padding: '20px 24px' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          Bulk Import Providers
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{open ? '▲' : '▼'}</span>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 16 }}>
+          {/* Instructions */}
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
+            Upload a CSV with one provider per row. When the user signs up with that email, their
+            listing will already be live.{' '}
+            <a href={TEMPLATE_URL} download="ask-import-template.csv"
+              style={{ color: 'var(--primary)', fontWeight: 600 }}
+              onClick={e => e.stopPropagation()}>
+              Download template
+            </a>
+          </p>
+
+          {/* Column reference */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px 16px', marginBottom: 16, background: 'var(--bg)', borderRadius: 8, padding: '10px 14px' }}>
+            {[
+              ['email *', 'required'],
+              ['name', 'optional'],
+              ['category', 'tutor / barber / hebrew tutor / tennis / other'],
+              ['custom_category', 'shown if category = other'],
+              ['bio', 'listing description'],
+              ['price_per_session', 'number, 0 = free'],
+              ['zelle', 'phone or email'],
+              ['venmo', 'username (no @)'],
+            ].map(([col, hint]) => (
+              <div key={col} style={fieldStyle}>
+                <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace', fontSize: 11.5 }}>{col}</span>
+                <div style={{ fontSize: 11, marginTop: 1 }}>{hint}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* File input */}
+          {!rows && !results && (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input ref={fileRef} type="file" accept=".csv,text/csv"
+                onChange={e => handleFile(e.target.files[0])}
+                style={{ fontSize: 13, fontFamily: 'var(--font-ui)', color: 'var(--text)' }} />
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>or</span>
+              <label style={{
+                background: 'var(--primary)', color: '#fff', borderRadius: 999,
+                padding: '7px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'var(--font-ui)',
+              }}>
+                Browse CSV
+                <input type="file" accept=".csv,text/csv" style={{ display: 'none' }}
+                  onChange={e => handleFile(e.target.files[0])} />
+              </label>
+            </div>
+          )}
+
+          {/* Preview */}
+          {rows && !results && (
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
+                <strong style={{ color: 'var(--text)' }}>{rows.length} rows</strong> parsed — preview (first 5):
+              </div>
+              <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['email', 'name', 'category', 'price_per_session', 'bio'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 5).map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                        {['email', 'name', 'category', 'price_per_session', 'bio'].map(h => (
+                          <td key={h} style={{ padding: '6px 10px', color: 'var(--text)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {r[h] || <span style={{ color: 'var(--muted)', opacity: 0.5 }}>—</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={runImport} disabled={importing} style={{
+                  background: importing ? '#93C5FD' : 'var(--primary)', color: '#fff',
+                  border: 'none', borderRadius: 999, padding: '9px 24px',
+                  fontSize: 13, fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                }}>
+                  {importing ? 'Importing...' : `Import all ${rows.length} providers`}
+                </button>
+                <button onClick={reset} style={{
+                  background: 'none', border: '1.5px solid var(--border)', color: 'var(--muted)',
+                  borderRadius: 999, padding: '9px 18px', fontSize: 13, cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Results */}
+          {results && (
+            <div>
+              <div style={{
+                fontSize: 13.5, fontWeight: 600, marginBottom: 12,
+                color: results.errors === 0 ? '#166534' : '#92400E',
+              }}>
+                {results.imported} imported successfully{results.errors > 0 ? `, ${results.errors} failed` : ''}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflowY: 'auto' }}>
+                {results.results.map((r, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    fontSize: 12.5, padding: '5px 10px', borderRadius: 6,
+                    background: r.status === 'ok' ? '#F0FDF4' : '#FEF2F2',
+                  }}>
+                    <span style={{ color: r.status === 'ok' ? '#166534' : '#DC2626', fontWeight: 700, fontSize: 13 }}>
+                      {r.status === 'ok' ? '✓' : '✗'}
+                    </span>
+                    <span style={{ flex: 1, color: 'var(--text)' }}>{r.email}</span>
+                    <span style={{ color: 'var(--muted)' }}>
+                      {r.status === 'ok' ? r.action : r.error}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={reset} style={{
+                marginTop: 14, background: 'none', border: '1.5px solid var(--border)',
+                color: 'var(--muted)', borderRadius: 999, padding: '7px 18px',
+                fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+              }}>
+                Import more
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

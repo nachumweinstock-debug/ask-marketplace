@@ -64,6 +64,77 @@ router.delete('/users/:id', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/admin/import — bulk-create provider listings from a JSON array
+// Each item: { email, name?, category?, custom_category?, bio?, price_per_session?, zelle?, venmo? }
+router.post('/import', requireAuth, requireAdmin, (req, res) => {
+  const { providers } = req.body;
+  if (!Array.isArray(providers) || providers.length === 0) {
+    return res.status(400).json({ error: 'providers array required' });
+  }
+
+  const VALID_CATS = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
+  const results = [];
+
+  // Wrap each row in its own transaction so one bad row doesn't block others
+  const importOne = db.transaction(p => {
+    const email = p.email?.toLowerCase().trim();
+    if (!email || !email.includes('@')) throw new Error('Invalid email');
+
+    const name         = p.name?.trim()           || email.split('@')[0];
+    const category     = VALID_CATS.includes(p.category?.toLowerCase())
+                           ? p.category.toLowerCase() : 'other';
+    const custom_cat   = p.custom_category?.trim() || null;
+    const bio          = p.bio?.trim()             || null;
+    const price        = parseFloat(p.price_per_session) || 0;
+    const zelle        = p.zelle?.trim()           || null;
+    const venmo        = p.venmo?.trim()            || null;
+
+    // Find or create the user row
+    let user = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    let action;
+    if (!user) {
+      const r = db.prepare(
+        "INSERT INTO users (email, name, password, role, email_verified) VALUES (?, ?, '', 'provider', 1)"
+      ).run(email, name);
+      user = { id: r.lastInsertRowid };
+      action = 'created';
+    } else {
+      db.prepare("UPDATE users SET role = 'provider', name = CASE WHEN ? != '' THEN ? ELSE name END WHERE id = ?")
+        .run(p.name?.trim() || '', p.name?.trim() || '', user.id);
+      action = 'updated';
+    }
+
+    // Create or update provider profile
+    const existing = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(user.id);
+    if (!existing) {
+      db.prepare(
+        'INSERT INTO provider_profiles (user_id, category, custom_category, bio, price_per_session, zelle, venmo) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).run(user.id, category, custom_cat, bio, price, zelle, venmo);
+    } else {
+      db.prepare(
+        'UPDATE provider_profiles SET category=?, custom_category=?, bio=?, price_per_session=?, zelle=?, venmo=? WHERE user_id=?'
+      ).run(category, custom_cat, bio, price, zelle, venmo, user.id);
+    }
+
+    return { email, name, action };
+  });
+
+  for (const p of providers) {
+    try {
+      const r = importOne(p);
+      results.push({ ...r, status: 'ok' });
+    } catch (err) {
+      results.push({ email: p.email || '(missing)', status: 'error', error: err.message });
+    }
+  }
+
+  res.json({
+    results,
+    imported: results.filter(r => r.status === 'ok').length,
+    errors:   results.filter(r => r.status === 'error').length,
+  });
+});
+
 // GET /api/admin/stats
 router.get('/stats', requireAuth, requireAdmin, (req, res) => {
   const stats = {
