@@ -9,18 +9,21 @@ import ProviderDashboard from './pages/ProviderDashboard';
 import { SignUp, Login, ForgotPassword } from './pages/Auth';
 import CreateListing from './pages/CreateListing';
 import ResetPassword from './pages/ResetPassword';
+import AccountProfile from './pages/AccountProfile';
+import AdminDashboard from './pages/AdminDashboard';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ width: 28, height: 28, border: '2px solid #2B6CB0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <div style={{ width: 28, height: 28, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
       </div>
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (role === 'admin' && !user.is_admin) return <Navigate to="/" replace />;
+  if (role && role !== 'admin' && user.role !== role) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -41,6 +44,22 @@ function AppRoutes() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
         <Route path="/providers/:id" element={<Layout><ProviderProfile /></Layout>} />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Layout><AccountProfile /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><AdminDashboard /></Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard/student"
           element={

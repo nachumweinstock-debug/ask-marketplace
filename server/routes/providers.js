@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.get('/', (req, res) => {
-  const { category, search } = req.query;
+  const { category, search, sort } = req.query;
   let query = `
     SELECT pp.*, u.name, u.email
     FROM provider_profiles pp
@@ -29,10 +29,16 @@ router.get('/', (req, res) => {
     params.push(category);
   }
   if (search) {
-    query += ' AND (u.name LIKE ? OR pp.bio LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    query += ' AND (u.name LIKE ? OR pp.bio LIKE ? OR pp.custom_category LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
-  query += ' ORDER BY pp.rating DESC';
+  if (sort === 'newest') {
+    query += ' ORDER BY pp.id DESC';
+  } else if (sort === 'price_asc') {
+    query += ' ORDER BY pp.price_per_session ASC';
+  } else {
+    query += ' ORDER BY pp.rating DESC, pp.review_count DESC';
+  }
   res.json(db.prepare(query).all(...params));
 });
 
@@ -56,13 +62,13 @@ router.get('/me/profile', requireAuth, (req, res) => {
 router.put('/me', requireAuth, upload.single('avatar'), (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
   if (!profile) return res.status(404).json({ error: 'No provider profile found' });
-  const { bio, category, price_per_session, zelle, venmo } = req.body;
+  const { bio, category, price_per_session, zelle, venmo, custom_category } = req.body;
 
   const avatar_url = req.file ? `/uploads/${req.file.filename}` : profile.avatar_url;
 
   db.prepare(`
     UPDATE provider_profiles
-    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, avatar_url = ?
+    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, avatar_url = ?, custom_category = ?
     WHERE user_id = ?
   `).run(
     bio ?? profile.bio,
@@ -71,6 +77,7 @@ router.put('/me', requireAuth, upload.single('avatar'), (req, res) => {
     zelle ?? profile.zelle,
     venmo ?? profile.venmo,
     avatar_url,
+    custom_category !== undefined ? custom_category : profile.custom_category,
     req.user.id
   );
 

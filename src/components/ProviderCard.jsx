@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const CATEGORY_LABELS = {
-  tutor: 'Tutors',
-  barber: 'Barbers',
-  'hebrew tutor': 'Hebrew',
-  tennis: 'Fitness',
+  tutor: 'Tutor',
+  barber: 'Barber',
+  'hebrew tutor': 'Hebrew Tutor',
+  tennis: 'Tennis',
   other: 'Other',
 };
 
@@ -15,7 +15,7 @@ function initials(name) {
 
 export default function ProviderCard({ provider }) {
   const [hovered, setHovered] = useState(false);
-  const label = CATEGORY_LABELS[provider.category] || 'Other';
+  const label = provider.custom_category || CATEGORY_LABELS[provider.category] || 'Other';
 
   return (
     <Link
@@ -63,6 +63,15 @@ export default function ProviderCard({ provider }) {
       }}>
         {label}
       </span>
+
+      {/* Rating */}
+      {provider.rating > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <span style={{ color: '#F59E0B', fontSize: 12 }}>★</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{provider.rating.toFixed(1)}</span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>({provider.review_count})</span>
+        </div>
+      )}
 
       {/* Bio */}
       <p style={{

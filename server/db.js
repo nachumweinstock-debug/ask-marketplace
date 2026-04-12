@@ -78,9 +78,15 @@ if (!cols.includes('email_verified')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
   db.exec('UPDATE users SET email_verified = 1');
 }
-if (!cols.includes('avatar_url')) {
-  db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
-}
+if (!cols.includes('avatar_url'))     db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
+if (!cols.includes('is_admin'))       db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
+if (!cols.includes('major'))          db.exec('ALTER TABLE users ADD COLUMN major TEXT');
+if (!cols.includes('classes_taking')) db.exec('ALTER TABLE users ADD COLUMN classes_taking TEXT');
+if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa TEXT');
+if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
+
+const ppCols = db.pragma('table_info(provider_profiles)').map(c => c.name);
+if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles ADD COLUMN custom_category TEXT');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

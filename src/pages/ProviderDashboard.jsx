@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
-import { useAuth } from '../context/AuthContext';
 
-const CATEGORIES = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
 const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
@@ -11,7 +9,7 @@ const STATUS = {
   completed: { label: 'Completed', bg: 'var(--accent)', color: 'var(--primary)' },
   cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
 };
-const TABS = ['bookings', 'availability', 'profile'];
+const TABS = ['bookings', 'availability'];
 
 const inputStyle = {
   width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
@@ -19,18 +17,9 @@ const inputStyle = {
   background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
   transition: 'border-color .15s', boxSizing: 'border-box',
 };
-
-const labelStyle = {
-  display: 'block', fontSize: 12, fontWeight: 500,
-  color: 'var(--muted)', marginBottom: 6,
-};
-
-function initials(name) {
-  return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
+const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 };
 
 export default function ProviderDashboard() {
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get('tab') || 'bookings');
   const isNew = searchParams.get('new') === '1';
@@ -39,24 +28,13 @@ export default function ProviderDashboard() {
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [profileForm, setProfileForm] = useState({});
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [profileMsg, setProfileMsg] = useState('');
-  const [avatarFile, setAvatarFile] = useState(null);
   const [newSlot, setNewSlot] = useState({ date: '', start_time: '', end_time: '' });
   const [slotLoading, setSlotLoading] = useState(false);
   const [slotError, setSlotError] = useState('');
 
   useEffect(() => {
     Promise.all([
-      api.get('/providers/me/profile').then(r => {
-        setProfile(r.data);
-        setProfileForm({
-          bio: r.data.bio || '', category: r.data.category || 'other',
-          price_per_session: r.data.price_per_session || 0,
-          zelle: r.data.zelle || '', venmo: r.data.venmo || '',
-        });
-      }),
+      api.get('/providers/me/profile').then(r => setProfile(r.data)),
       api.get('/bookings/mine').then(r => setBookings(r.data)),
     ]).catch(console.error).finally(() => setLoading(false));
   }, []);
@@ -64,19 +42,6 @@ export default function ProviderDashboard() {
   useEffect(() => {
     if (profile?.id) api.get(`/availability/${profile.id}`).then(r => setAvailability(r.data));
   }, [profile?.id]);
-
-  async function saveProfile() {
-    setProfileSaving(true); setProfileMsg('');
-    try {
-      const form = new FormData();
-      Object.entries(profileForm).forEach(([k, v]) => form.append(k, v));
-      if (avatarFile) form.append('avatar', avatarFile);
-      const { data } = await api.put('/providers/me', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setProfile(data); setProfileMsg('Saved!');
-      setTimeout(() => setProfileMsg(''), 3000);
-    } catch (err) { setProfileMsg(err.response?.data?.error || 'Save failed'); }
-    finally { setProfileSaving(false); }
-  }
 
   async function addSlot() {
     setSlotError('');
@@ -106,6 +71,7 @@ export default function ProviderDashboard() {
 
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
+  const displayCat = profile?.custom_category || CAT_LABELS[profile?.category] || 'Other';
 
   return (
     <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
@@ -124,7 +90,11 @@ export default function ProviderDashboard() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
           My Services
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Manage your bookings, availability, and profile.</p>
+        <p style={{ fontSize: 14, color: 'var(--muted)' }}>
+          {displayCat} · Manage bookings and availability.
+          {' '}
+          <a href="/account" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>Edit profile →</a>
+        </p>
       </div>
 
       {/* Tabs */}
@@ -149,7 +119,7 @@ export default function ProviderDashboard() {
           {bookings.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>No bookings yet</div>
-              <div style={{ fontSize: 14, color: 'var(--muted)' }}>Complete your profile and add availability to get started.</div>
+              <div style={{ fontSize: 14, color: 'var(--muted)' }}>Add availability so students can book you.</div>
             </div>
           ) : (
             <div>
@@ -182,18 +152,14 @@ export default function ProviderDashboard() {
                               background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
                               padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                               fontFamily: 'var(--font-ui)',
-                            }}>
-                              Confirm
-                            </button>
+                            }}>Confirm</button>
                           )}
                           {b.status === 'confirmed' && (
                             <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
                               background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
                               padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                               fontFamily: 'var(--font-ui)',
-                            }}>
-                              Complete
-                            </button>
+                            }}>Complete</button>
                           )}
                         </div>
                       </div>
@@ -297,106 +263,6 @@ export default function ProviderDashboard() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Profile */}
-      {tab === 'profile' && (
-        <div className="card" style={{ padding: '28px' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 22 }}>Edit Profile</div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-            <div>
-              <label style={labelStyle}>Category</label>
-              <select value={profileForm.category} onChange={e => setProfileForm(f => ({ ...f, category: e.target.value }))}
-                style={{ ...inputStyle }}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              >
-                {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Price per session ($)</label>
-              <input type="number" min="0" value={profileForm.price_per_session} placeholder="0"
-                onChange={e => setProfileForm(f => ({ ...f, price_per_session: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 18 }}>
-            <label style={labelStyle}>Bio</label>
-            <textarea value={profileForm.bio} onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
-              rows={3} placeholder="Describe what you offer..."
-              style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
-              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-            <div>
-              <label style={labelStyle}>Zelle</label>
-              <input type="text" value={profileForm.zelle} placeholder="646-555-1234"
-                onChange={e => setProfileForm(f => ({ ...f, zelle: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Venmo</label>
-              <input type="text" value={profileForm.venmo} placeholder="@username"
-                onChange={e => setProfileForm(f => ({ ...f, venmo: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 22 }}>
-            <label style={labelStyle}>Profile Photo</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
-              ) : (
-                <div style={{
-                  width: 48, height: 48, borderRadius: '50%',
-                  background: 'var(--accent)', color: 'var(--primary)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-ui)',
-                }}>
-                  {initials(user?.name)}
-                </div>
-              )}
-              <input type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])}
-                style={{ fontSize: 12.5, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }} />
-            </div>
-          </div>
-
-          {profileMsg && (
-            <div style={{
-              fontSize: 12.5, padding: '9px 14px', borderRadius: 8, marginBottom: 16,
-              background: profileMsg === 'Saved!' ? '#F0FDF4' : '#FEF2F2',
-              color: profileMsg === 'Saved!' ? '#166534' : '#DC2626',
-              border: `1px solid ${profileMsg === 'Saved!' ? '#BBF7D0' : '#FECACA'}`,
-            }}>
-              {profileMsg}
-            </div>
-          )}
-
-          <button onClick={saveProfile} disabled={profileSaving} style={{
-            background: profileSaving ? '#93C5FD' : 'var(--primary)', color: '#fff',
-            border: 'none', borderRadius: 999, padding: '11px 28px',
-            fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-            fontFamily: 'var(--font-ui)', transition: 'opacity .15s',
-          }}>
-            {profileSaving ? 'Saving...' : 'Save profile'}
-          </button>
         </div>
       )}
     </div>

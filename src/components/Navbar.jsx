@@ -78,9 +78,11 @@ export default function Navbar() {
                   border: '1px solid var(--border)', cursor: 'pointer',
                   fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-ui)',
+                  fontFamily: 'var(--font-ui)', overflow: 'hidden', padding: 0,
                 }}>
-                  {initials(user.name)}
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : initials(user.name)}
                 </button>
 
                 {open && (
@@ -88,27 +90,38 @@ export default function Navbar() {
                     position: 'absolute', right: 0, top: 40,
                     background: 'var(--card)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: '6px 0',
-                    minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                    minWidth: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
                     zIndex: 100,
                   }}>
-                    <div style={{ padding: '10px 16px 10px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ padding: '10px 16px 12px', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{user.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{user.email}</div>
-                      {user.role === 'provider' && (
-                        <div style={{
-                          display: 'inline-block', marginTop: 6, fontSize: 10, fontWeight: 700,
-                          padding: '2px 8px', borderRadius: 999,
-                          background: 'var(--accent)', color: 'var(--primary)',
-                        }}>
-                          Provider
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
+                        {user.role === 'provider' && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700,
+                            padding: '2px 8px', borderRadius: 999,
+                            background: 'var(--accent)', color: 'var(--primary)',
+                          }}>Provider</span>
+                        )}
+                        {user.is_admin ? (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700,
+                            padding: '2px 8px', borderRadius: 999,
+                            background: '#FEF3C7', color: '#92400E',
+                          }}>Admin</span>
+                        ) : null}
+                      </div>
                     </div>
                     <div style={{ padding: '6px 0' }}>
+                      <DropItem to="/account" label="My Profile" onClick={() => setOpen(false)} />
                       <DropItem to="/dashboard/student" label="My Bookings" onClick={() => setOpen(false)} />
                       {user.role === 'provider' && (
                         <DropItem to="/dashboard/provider" label="My Services" onClick={() => setOpen(false)} />
                       )}
+                      {user.is_admin ? (
+                        <DropItem to="/admin" label="Admin Dashboard" onClick={() => setOpen(false)} />
+                      ) : null}
                     </div>
                     <div style={{ borderTop: '1px solid var(--border)', padding: '6px 0 2px' }}>
                       <button onClick={handleSignOut} style={{

@@ -18,8 +18,9 @@ export default function Browse() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
+  const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
 
-  useEffect(() => { fetchProviders(); }, [category]);
+  useEffect(() => { fetchProviders(); }, [category, sort]);
 
   async function fetchProviders(searchVal) {
     setLoading(true);
@@ -28,6 +29,7 @@ export default function Browse() {
       if (category !== 'all') params.category = category;
       const q = searchVal !== undefined ? searchVal : search;
       if (q) params.search = q;
+      params.sort = sort;
       const { data } = await api.get('/providers', { params });
       setProviders(data);
     } catch (err) {
@@ -43,13 +45,22 @@ export default function Browse() {
     const p = {};
     if (search) p.search = search;
     if (category !== 'all') p.category = category;
+    if (sort !== 'rating') p.sort = sort;
     setSearchParams(p);
   }
 
   function handleCategory(cat) {
     setCategory(cat);
-    const p = { ...(search ? { search } : {}) };
+    const p = { ...(search ? { search } : {}), sort };
     if (cat !== 'all') p.category = cat;
+    setSearchParams(p);
+  }
+
+  function handleSort(s) {
+    setSort(s);
+    const p = { ...(search ? { search } : {}) };
+    if (category !== 'all') p.category = category;
+    if (s !== 'rating') p.sort = s;
     setSearchParams(p);
   }
 
@@ -67,35 +78,56 @@ export default function Browse() {
         <p style={{ fontSize: 14, color: 'var(--muted)' }}>Services offered by students in your community.</p>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} style={{ marginBottom: 24 }}>
-        <div style={{
-          display: 'flex', background: '#fff',
-          borderRadius: 999, overflow: 'hidden',
-          border: '1px solid var(--border)',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-          maxWidth: 480,
-        }}>
-          <input
-            type="text"
-            placeholder="Search by name or description..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              flex: 1, border: 'none', padding: '11px 20px',
-              fontSize: 13, outline: 'none', background: 'transparent', color: 'var(--text)',
-              fontFamily: 'var(--font-ui)',
-            }}
-          />
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            padding: '0 20px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
-            fontFamily: 'var(--font-ui)',
+      {/* Search + Sort row */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 240 }}>
+          <div style={{
+            display: 'flex', background: '#fff',
+            borderRadius: 999, overflow: 'hidden',
+            border: '1px solid var(--border)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            maxWidth: 480,
           }}>
-            Search
-          </button>
+            <input
+              type="text"
+              placeholder="Search by name or description..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                flex: 1, border: 'none', padding: '11px 20px',
+                fontSize: 13, outline: 'none', background: 'transparent', color: 'var(--text)',
+                fontFamily: 'var(--font-ui)',
+              }}
+            />
+            <button type="submit" style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              padding: '0 20px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
+              fontFamily: 'var(--font-ui)',
+            }}>
+              Search
+            </button>
+          </div>
+        </form>
+
+        {/* Sort pills */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[
+            { id: 'rating', label: 'Top Rated' },
+            { id: 'newest', label: 'Newest' },
+            { id: 'price_asc', label: 'Price: Low' },
+          ].map(s => (
+            <button key={s.id} onClick={() => handleSort(s.id)} style={{
+              padding: '7px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+              border: `1px solid ${sort === s.id ? 'var(--primary)' : 'var(--border)'}`,
+              background: sort === s.id ? 'var(--primary)' : 'var(--card)',
+              color: sort === s.id ? '#fff' : 'var(--muted)',
+              cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+            }}>
+              {s.label}
+            </button>
+          ))}
         </div>
-      </form>
+      </div>
 
       {/* Pill filters */}
       <div className="pill-row" style={{ marginBottom: 32 }}>

@@ -30,12 +30,12 @@ export async function requireAuth(req, res, next) {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       if (!error && user?.email) {
         const email = user.email.toLowerCase();
-        let sqliteUser = db.prepare('SELECT id, email, name, role FROM users WHERE email = ?').get(email);
+        let sqliteUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url FROM users WHERE email = ?').get(email);
         if (!sqliteUser) {
           const name = user.user_metadata?.full_name || email.split('@')[0];
           db.prepare('INSERT OR IGNORE INTO users (email, name, password, role, email_verified) VALUES (?, ?, ?, ?, 1)')
             .run(email, name, '', 'student');
-          sqliteUser = db.prepare('SELECT id, email, name, role FROM users WHERE email = ?').get(email);
+          sqliteUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url FROM users WHERE email = ?').get(email);
         }
         req.user = sqliteUser;
         return next();
