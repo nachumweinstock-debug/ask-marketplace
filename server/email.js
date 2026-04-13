@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { buildICS, googleCalendarUrl } from './calendar.js';
 
 function getTransporter() {
   const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env;
@@ -71,12 +72,18 @@ export async function sendBookingNotification({ providerEmail, providerName, stu
   });
 }
 
-export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime }) {
+export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId }) {
   const transporter = getTransporter();
   const timeStr = `${startTime}–${endTime}`;
 
+  const calTitle = `Session with ${providerName}`;
+  const calDesc  = `Booked via uask.live. View details: https://uask.live/dashboard/student`;
+  const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
+  const icsData  = buildICS({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime, uid: `booking-${bookingId}@uask.live`, url: 'https://uask.live/dashboard/student' });
+
   if (!transporter) {
     console.log(`\n✅ BOOKING CONFIRMED for ${studentEmail}: session with ${providerName} on ${date} ${timeStr}\n`);
+    console.log(`   Google Calendar: ${gCalUrl}\n`);
     return;
   }
 
@@ -98,14 +105,32 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
           <div style="font-size:13px;color:#6b7280">${timeStr}</div>
         </div>
       </div>
-      <p style="margin:0;color:#94a3b8;font-size:13px">View your booking at <a href="https://uask.live/dashboard/student" style="color:#3b82f6">uask.live</a></p>
+      <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
+        <a href="${gCalUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
+          <span style="font-size:15px">📅</span> Add to Google Calendar
+        </a>
+        <a href="https://uask.live/api/bookings/${bookingId}/ics" style="display:inline-flex;align-items:center;gap:6px;background:#1a1a1a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
+          <span style="font-size:15px"></span> Add to Apple Calendar
+        </a>
+      </div>
+      <p style="margin:0;color:#94a3b8;font-size:12px">The .ics attachment below also works with Outlook and any other calendar app.</p>
     </div>`,
+    attachments: [{
+      filename: 'session.ics',
+      content: icsData,
+      contentType: 'text/calendar; charset=UTF-8; method=REQUEST',
+    }],
   });
 }
 
-export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime }) {
+export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime, bookingId }) {
   const transporter = getTransporter();
   const timeStr = `${startTime}–${endTime}`;
+
+  const calTitle = `Session with ${studentName}`;
+  const calDesc  = `Student: ${studentName} (${studentEmail}). Manage at https://uask.live/dashboard/provider`;
+  const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
+  const icsData  = buildICS({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime, uid: `booking-${bookingId}-provider@uask.live`, url: 'https://uask.live/dashboard/provider' });
 
   if (!transporter) {
     console.log(`\n📋 CONFIRMATION COPY for provider ${providerEmail}: session with ${studentName} on ${date} ${timeStr}\n`);
@@ -131,8 +156,18 @@ export async function sendProviderConfirmationCopy({ providerEmail, providerName
           <div style="font-size:13px;color:#6b7280">${timeStr}</div>
         </div>
       </div>
-      <p style="margin:0;color:#94a3b8;font-size:13px">Manage your bookings at <a href="https://uask.live/dashboard/provider" style="color:#3b82f6">uask.live</a></p>
+      <div style="margin-bottom:24px">
+        <a href="${gCalUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
+          <span style="font-size:15px">📅</span> Add to Google Calendar
+        </a>
+      </div>
+      <p style="margin:0;color:#94a3b8;font-size:12px">The .ics attachment also adds this to Apple Calendar or Outlook.</p>
     </div>`,
+    attachments: [{
+      filename: 'session.ics',
+      content: icsData,
+      contentType: 'text/calendar; charset=UTF-8; method=REQUEST',
+    }],
   });
 }
 

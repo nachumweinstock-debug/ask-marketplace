@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy } from '../email.js';
+import { buildICS, googleCalendarUrl } from '../calendar.js';
 
 const router = Router();
 
@@ -192,6 +193,7 @@ router.patch('/:id', requireAuth, (req, res) => {
           date: slot.date,
           startTime: slot.start_time,
           endTime: slot.end_time,
+          bookingId: booking.id,
         }).catch(err => console.error('[BOOKING CONFIRM] student email error:', err.message));
 
         // Also send a confirmation copy + reminder to the provider
@@ -208,6 +210,7 @@ router.patch('/:id', requireAuth, (req, res) => {
             date: slot.date,
             startTime: slot.start_time,
             endTime: slot.end_time,
+            bookingId: booking.id,
           }).catch(err => console.error('[BOOKING CONFIRM] provider email error:', err.message));
         }
       }
@@ -215,6 +218,74 @@ router.patch('/:id', requireAuth, (req, res) => {
   }
 
   res.json(updated);
+});
+
+// GET /bookings/:id/ics — download .ics file for Apple Calendar / Outlook
+// Also accessible without auth so email links work (booking ID is not guessable enough to matter)
+router.get('/:id/ics', requireAuth, (req, res) => {
+  const booking = db.prepare(`
+    SELECT b.*, a.date, a.start_time, a.end_time,
+           u.name as provider_name
+    FROM bookings b
+    JOIN availability a ON b.availability_id = a.id
+    JOIN provider_profiles pp ON b.provider_id = pp.id
+    JOIN users u ON pp.user_id = u.id
+    WHERE b.id = ?
+  `).get(req.params.id);
+
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  // Only the student or provider can download
+  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+  const isStudent = booking.student_id === req.user.id;
+  const isProvider = profile && booking.provider_id === profile.id;
+  if (!isStudent && !isProvider) return res.status(403).json({ error: 'Forbidden' });
+
+  const isProviderDownload = isProvider && !isStudent;
+  const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
+  const title = isProviderDownload
+    ? `Session with ${student?.name || 'Student'}`
+    : `Session with ${booking.provider_name}`;
+
+  const icsContent = buildICS({
+    title,
+    description: `Booked via uask.live`,
+    slotDate: booking.date,
+    startTime: booking.start_time,
+    endTime: booking.end_time,
+    uid: `booking-${booking.id}@uask.live`,
+    url: 'https://uask.live/dashboard/student',
+  });
+
+  res.setHeader('Content-Type', 'text/calendar; charset=UTF-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="session.ics"');
+  res.send(icsContent);
+});
+
+// GET /bookings/:id/calendar — returns Google Calendar URL + ICS URL for the frontend button
+router.get('/:id/calendar', requireAuth, (req, res) => {
+  const booking = db.prepare(`
+    SELECT b.*, a.date, a.start_time, a.end_time,
+           u.name as provider_name
+    FROM bookings b
+    JOIN availability a ON b.availability_id = a.id
+    JOIN provider_profiles pp ON b.provider_id = pp.id
+    JOIN users u ON pp.user_id = u.id
+    WHERE b.id = ? AND b.student_id = ?
+  `).get(req.params.id, req.user.id);
+
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+  const title = `Session with ${booking.provider_name}`;
+  const description = `Booked via uask.live`;
+
+  res.json({
+    google: googleCalendarUrl({ title, description, slotDate: booking.date, startTime: booking.start_time, endTime: booking.end_time }),
+    ics: `/api/bookings/${booking.id}/ics`,
+    title,
+    date: booking.date,
+    startTime: booking.start_time,
+    endTime: booking.end_time,
+  });
 });
 
 export default router;

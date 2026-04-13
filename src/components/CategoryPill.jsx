@@ -24,25 +24,16 @@ export default function CategoryPill({ category, customCategory, size = 'sm' }) 
   );
 }
 
-/** Small Zoom/In-Person/Both badge */
+/** Only renders for zoom or both — in-person is the default and needs no badge */
 export function SessionTypePill({ sessionType }) {
-  if (!sessionType || sessionType === 'in-person') {
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3,
-        background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
-        fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-      }}>
-        📍 In-person
-      </span>
-    );
-  }
+  if (!sessionType || sessionType === 'in-person') return null;
   if (sessionType === 'zoom') {
     return (
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: 3,
         background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
         fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+        whiteSpace: 'nowrap',
       }}>
         💻 Zoom
       </span>
@@ -54,6 +45,7 @@ export function SessionTypePill({ sessionType }) {
       display: 'inline-flex', alignItems: 'center', gap: 3,
       background: '#F5F3FF', color: '#6D28D9', border: '1px solid #DDD6FE',
       fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+      whiteSpace: 'nowrap',
     }}>
       🔀 Zoom & in-person
     </span>
