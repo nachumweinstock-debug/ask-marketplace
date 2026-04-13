@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
+import { getCategoryConfig } from '../lib/categories';
 import api from '../api';
 
 function initials(name) {
@@ -18,6 +19,14 @@ export default function Navbar() {
   const [notifCount, setNotifCount] = useState(0);
   const [pendingBookings, setPendingBookings] = useState(0);
   const dropRef = useRef(null);
+  const prevUnreadRef = useRef(0);
+
+  // Request notification permission once on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -35,7 +44,24 @@ export default function Navbar() {
   useEffect(() => {
     if (!user) { setUnread(0); setNotifCount(0); return; }
     function poll() {
-      api.get('/dm/unread').then(({ data }) => setUnread(data.count)).catch(() => {});
+      api.get('/dm/unread').then(({ data }) => {
+        const newCount = data.count;
+        // Fire a browser notification when new messages arrive
+        if (newCount > prevUnreadRef.current && prevUnreadRef.current !== null) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const n = new Notification('New message on ASK', {
+              body: `You have ${newCount} unread message${newCount !== 1 ? 's' : ''}`,
+              icon: '/logo.png',
+              badge: '/logo.png',
+              tag: 'ask-dm',
+              renotify: true,
+            });
+            n.onclick = () => { window.focus(); window.location.href = '/messages'; n.close(); };
+          }
+        }
+        prevUnreadRef.current = newCount;
+        setUnread(newCount);
+      }).catch(() => {});
       api.get('/bookings/notifications').then(({ data }) => {
         setNotifCount(data.total);
         setPendingBookings(data.pending_bookings || 0);
@@ -150,11 +176,20 @@ export default function Navbar() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
-                        {user.role === 'provider' && (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 999, background: 'var(--accent)', color: 'var(--primary)', display: 'inline-block', marginTop: 4 }}>
-                            Provider
-                          </span>
-                        )}
+                        {user.role === 'provider' && (() => {
+                          const cat = user.provider_custom_category || user.provider_category;
+                          if (!cat) return null;
+                          const cfg = getCategoryConfig(user.provider_category, user.provider_custom_category);
+                          return (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 999,
+                              background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+                              display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4,
+                            }}>
+                              {cfg.emoji} {user.provider_custom_category || cfg.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div style={{ padding: '6px 0' }}>

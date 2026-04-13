@@ -19,9 +19,11 @@ router.get('/categories', (req, res) => {
 });
 
 router.get('/', (req, res) => {
-  const { category, search, sort } = req.query;
+  const { category, search, sort, session_type } = req.query;
   let query = `
-    SELECT pp.*, u.name, u.email
+    SELECT pp.*,
+      u.name, u.email,
+      (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE 1=1
@@ -31,10 +33,13 @@ router.get('/', (req, res) => {
     if (STANDARD_CATS.includes(category)) {
       query += ' AND pp.category = ?';
     } else {
-      // Custom category — filter by the text label
       query += ' AND pp.custom_category = ?';
     }
     params.push(category);
+  }
+  if (session_type && session_type !== 'all') {
+    query += " AND (pp.session_type = ? OR pp.session_type = 'both')";
+    params.push(session_type);
   }
   if (search) {
     query += ' AND (u.name LIKE ? OR pp.bio LIKE ? OR pp.custom_category LIKE ?)';
@@ -71,12 +76,15 @@ router.put('/me', requireAuth, async (req, res) => {
   try {
     const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
     if (!profile) return res.status(404).json({ error: 'No provider profile found' });
-    const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url } = req.body;
+    const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url, session_type } = req.body;
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
     if (custom_category && custom_category.length > 50) return res.status(400).json({ error: 'Category name too long (max 50 chars)' });
     if (bio && bio.length > 2000) return res.status(400).json({ error: 'Bio too long (max 2000 chars)' });
+    if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
+      return res.status(400).json({ error: 'Invalid session type' });
+    }
 
     let listing_image = profile.listing_image;
     if (listing_image_data_url === null) {
@@ -89,7 +97,7 @@ router.put('/me', requireAuth, async (req, res) => {
 
     db.prepare(`
       UPDATE provider_profiles
-      SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, custom_category = ?, listing_image = ?
+      SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?, custom_category = ?, listing_image = ?, session_type = ?
       WHERE user_id = ?
     `).run(
       bio ?? profile.bio,
@@ -99,6 +107,7 @@ router.put('/me', requireAuth, async (req, res) => {
       venmo ?? profile.venmo,
       custom_category !== undefined ? custom_category : profile.custom_category,
       listing_image,
+      session_type ?? profile.session_type ?? 'in-person',
       req.user.id
     );
 
@@ -123,7 +132,8 @@ router.delete('/me', requireAuth, (req, res) => {
 
 router.get('/:id', (req, res) => {
   const provider = db.prepare(`
-    SELECT pp.*, u.name, u.email
+    SELECT pp.*, u.name, u.email,
+      (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE pp.id = ?

@@ -1,10 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-
-const CATEGORY_LABELS = {
-  tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
-  tennis: 'Tennis', other: 'Other',
-};
+import { useNavigate } from 'react-router-dom';
+import CategoryPill, { SessionTypePill } from './CategoryPill';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -15,7 +11,6 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
-  const label = provider.custom_category || CATEGORY_LABELS[provider.category] || 'Other';
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -48,7 +43,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
       ) : (
-        <div style={{ height: 8, background: isOwn ? '#86EFAC' : 'var(--accent)' }} />
+        <div style={{ height: 6, background: isOwn ? '#86EFAC' : 'var(--accent)' }} />
       )}
 
       <div style={{ padding: '16px 20px 20px' }}>
@@ -86,23 +81,30 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           </div>
         </div>
 
-        {/* Category */}
-        <span style={{
-          display: 'inline-block', marginBottom: 10,
-          background: 'var(--accent)', color: 'var(--primary)',
-          fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999,
-        }}>
-          {label}
-        </span>
+        {/* Category + session type pills */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+          <CategoryPill category={provider.category} customCategory={provider.custom_category} />
+          <SessionTypePill sessionType={provider.session_type} />
+        </div>
 
-        {/* Rating */}
-        {provider.rating > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
-            <span style={{ color: '#F59E0B', fontSize: 12 }}>★</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{provider.rating.toFixed(1)}</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>({provider.review_count})</span>
-          </div>
-        )}
+        {/* Rating + session count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+          {provider.rating > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color: '#F59E0B', fontSize: 12 }}>★</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{provider.rating.toFixed(1)}</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>({provider.review_count})</span>
+            </div>
+          )}
+          {provider.completed_sessions > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>·</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
+                {provider.completed_sessions} session{provider.completed_sessions !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Bio */}
         <p style={{

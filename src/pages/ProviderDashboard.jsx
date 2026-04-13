@@ -322,6 +322,43 @@ export default function ProviderDashboard() {
             )}
           </div>
 
+        {/* Session type quick edit */}
+        {profile && (
+          <div className="card" style={{ padding: '20px 24px', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 14 }}>
+              How do you meet?
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { id: 'in-person', label: 'In-Person', emoji: '📍' },
+                { id: 'zoom',      label: 'Zoom',      emoji: '💻' },
+                { id: 'both',      label: 'Both',      emoji: '🔀' },
+              ].map(({ id, label, emoji }) => {
+                const active = (profile.session_type || 'in-person') === id;
+                return (
+                  <button key={id} type="button"
+                    onClick={async () => {
+                      try {
+                        await api.put('/providers/me', { session_type: id });
+                        setProfile(p => ({ ...p, session_type: id }));
+                      } catch { alert('Failed to update'); }
+                    }}
+                    style={{
+                      flex: 1, padding: '8px 10px', borderRadius: 10, fontSize: 12.5, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    }}>
+                    <span>{emoji}</span>{label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="card" style={{ padding: '28px' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 20 }}>Add Availability</div>
 

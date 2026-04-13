@@ -9,7 +9,9 @@ const YU_EMAIL = /^[^\s@]+@(mail\.)?yu\.edu$/i;
 
 // GET /auth/me — sync/create SQLite user from Supabase JWT, return user data
 router.get('/me', requireAuth, (req, res) => {
-  res.json(req.user);
+  // Attach provider profile fields so the navbar can show the service type
+  const pp = db.prepare('SELECT id as provider_profile_id, category as provider_category, custom_category as provider_custom_category, session_type as provider_session_type FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+  res.json({ ...req.user, ...(pp || {}) });
 });
 
 function generateCode() {

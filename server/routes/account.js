@@ -8,7 +8,7 @@ const router = Router();
 // GET /api/account — full profile with stats
 router.get('/', requireAuth, (req, res) => {
   const user = db.prepare(
-    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, created_at FROM users WHERE id = ?'
+    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, created_at FROM users WHERE id = ?'
   ).get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -61,7 +61,7 @@ router.get('/', requireAuth, (req, res) => {
 // Avatar is sent as a base64 data URL; server uploads it to Supabase Storage (or keeps base64 as fallback)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo } = req.body;
+    const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref } = req.body;
     const userUpdates = {};
 
     if (name?.trim())                 userUpdates.name           = name.trim();
@@ -71,6 +71,8 @@ router.put('/', requireAuth, async (req, res) => {
     if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
     if (zelle !== undefined)          userUpdates.zelle          = zelle;
     if (venmo !== undefined)          userUpdates.venmo          = venmo;
+    if (phone !== undefined)          userUpdates.phone          = phone;
+    if (contact_pref !== undefined)   userUpdates.contact_pref   = contact_pref;
 
     if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
       // Upload to Supabase Storage if it's a fresh base64 upload; http URLs are already stored
@@ -104,7 +106,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     const updated = db.prepare(
-      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo FROM users WHERE id = ?'
+      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref FROM users WHERE id = ?'
     ).get(req.user.id);
     res.json(updated);
   } catch (err) {

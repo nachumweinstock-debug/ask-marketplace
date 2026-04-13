@@ -4,10 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import { fmtTime, fmtDay } from '../lib/slots';
-
-const CATEGORY_LABELS = {
-  tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other',
-};
+import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -157,12 +154,10 @@ export default function ProviderProfile() {
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.3px' }}>
                   {provider.name}
                 </h1>
-                <span style={{
-                  display: 'inline-block', background: 'var(--accent)', color: 'var(--primary)',
-                  fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999,
-                }}>
-                  {CATEGORY_LABELS[provider.category] || provider.category}
-                </span>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <CategoryPill category={provider.category} customCategory={provider.custom_category} size="md" />
+                  <SessionTypePill sessionType={provider.session_type} />
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)' }}>
@@ -172,13 +167,18 @@ export default function ProviderProfile() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <Stars rating={Math.round(provider.rating)} />
               <span style={{ fontSize: 13, color: 'var(--muted)' }}>
                 {provider.rating > 0 ? provider.rating.toFixed(1) : 'No reviews yet'}
               </span>
               {provider.review_count > 0 && (
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {provider.review_count} review{provider.review_count !== 1 ? 's' : ''}</span>
+              )}
+              {provider.completed_sessions > 0 && (
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  · <strong style={{ color: 'var(--text)' }}>{provider.completed_sessions}</strong> session{provider.completed_sessions !== 1 ? 's' : ''} completed
+                </span>
               )}
             </div>
 

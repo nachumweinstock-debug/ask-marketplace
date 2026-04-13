@@ -126,6 +126,7 @@ export default function CreateListing() {
 
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
+  const [sessionType, setSessionType] = useState('in-person');
   const [bio, setBio] = useState('');
   const [price, setPrice] = useState('');
   const [zelle, setZelle] = useState('');
@@ -152,6 +153,7 @@ export default function CreateListing() {
       await api.put('/providers/me', {
         category,
         custom_category: category === 'other' ? customCategory : '',
+        session_type: sessionType,
         bio,
         price_per_session: price || 0,
         zelle,
@@ -221,8 +223,35 @@ export default function CreateListing() {
             </div>
           )}
 
-          {/* Listing image */}
+          {/* Session type */}
           <div style={{ marginBottom: 20, marginTop: 16 }}>
+            <label style={labelStyle}>How do you meet?</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { id: 'in-person', label: 'In-Person', emoji: '📍' },
+                { id: 'zoom',      label: 'Zoom',      emoji: '💻' },
+                { id: 'both',      label: 'Both',      emoji: '🔀' },
+              ].map(({ id, label, emoji }) => {
+                const active = sessionType === id;
+                return (
+                  <button key={id} type="button" onClick={() => setSessionType(id)}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}>
+                    <span>{emoji}</span>{label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Listing image */}
+          <div style={{ marginBottom: 20, marginTop: 0 }}>
             <label style={labelStyle}>Cover photo <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
             <ImageDrop value={listingImage} onChange={setListingImage} />
           </div>

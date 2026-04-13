@@ -20,6 +20,7 @@ export default function Browse() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
+  const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
   const [customCats, setCustomCats] = useState([]);
 
   // Fetch live custom categories once on mount
@@ -29,13 +30,14 @@ export default function Browse() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchProviders(); }, [category, sort]);
+  useEffect(() => { fetchProviders(); }, [category, sort, sessionType]);
 
   async function fetchProviders(searchVal) {
     setLoading(true);
     try {
       const params = {};
       if (category !== 'all') params.category = category;
+      if (sessionType !== 'all') params.session_type = sessionType;
       const q = searchVal !== undefined ? searchVal : search;
       if (q) params.search = q;
       params.sort = sort;
@@ -73,6 +75,15 @@ export default function Browse() {
     setCategory(cat);
     const p = { ...(search ? { search } : {}), sort };
     if (cat !== 'all') p.category = cat;
+    if (sessionType !== 'all') p.session_type = sessionType;
+    setSearchParams(p);
+  }
+
+  function handleSessionType(st) {
+    setSessionType(st);
+    const p = { ...(search ? { search } : {}), sort };
+    if (category !== 'all') p.category = category;
+    if (st !== 'all') p.session_type = st;
     setSearchParams(p);
   }
 
@@ -147,6 +158,30 @@ export default function Browse() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Session type filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginRight: 4 }}>Format</span>
+        {[
+          { id: 'all',       label: 'All',       emoji: '·' },
+          { id: 'in-person', label: 'In-Person',  emoji: '📍' },
+          { id: 'zoom',      label: 'Zoom',       emoji: '💻' },
+        ].map(({ id, label, emoji }) => {
+          const active = sessionType === id;
+          return (
+            <button key={id} onClick={() => handleSessionType(id)} style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+              border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+              background: active ? 'var(--primary)' : 'var(--card)',
+              color: active ? '#fff' : 'var(--muted)',
+              cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              {id !== 'all' && <span>{emoji}</span>}{label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Pill filters — base categories + any live custom categories */}

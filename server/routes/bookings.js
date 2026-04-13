@@ -120,7 +120,14 @@ router.post('/', requireAuth, async (req, res) => {
 
       if (providerInfo && providerInfo.user_id !== req.user.id) {
         const catLabel = providerInfo.custom_category || providerInfo.category || 'session';
-        const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}. Looking forward to it!`;
+        // Include student contact info if they have a phone number saved
+        const studentContact = db.prepare('SELECT phone, contact_pref FROM users WHERE id = ?').get(req.user.id);
+        let contactLine = '';
+        if (studentContact?.phone) {
+          const app = studentContact.contact_pref === 'whatsapp' ? 'WhatsApp' : 'iMessage';
+          contactLine = ` You can reach me at ${studentContact.phone} on ${app}.`;
+        }
+        const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}.${contactLine} Looking forward to it!`;
         db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body) VALUES (?, ?, ?)')
           .run(req.user.id, providerInfo.user_id, msg);
         console.log('[BOOKING] auto-DM sent from', req.user.id, 'to', providerInfo.user_id);

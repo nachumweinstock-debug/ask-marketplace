@@ -91,6 +91,10 @@ if (!cols.includes('venmo')) db.exec('ALTER TABLE users ADD COLUMN venmo TEXT');
 const ppCols = db.pragma('table_info(provider_profiles)').map(c => c.name);
 if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles ADD COLUMN custom_category TEXT');
 if (!ppCols.includes('listing_image'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN listing_image TEXT');
+if (!ppCols.includes('session_type'))    db.exec("ALTER TABLE provider_profiles ADD COLUMN session_type TEXT NOT NULL DEFAULT 'in-person'");
+
+if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
+if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

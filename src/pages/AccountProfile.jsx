@@ -4,11 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import { supabase } from '../lib/supabase';
-
-const CATEGORY_LABELS = {
-  tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor',
-  tennis: 'Tennis', other: 'Other',
-};
+import CategoryPill from '../components/CategoryPill';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -60,7 +56,7 @@ export default function AccountProfile() {
 
   const [form, setForm] = useState({
     name: '', user_bio: '', major: '', classes_taking: '', gpa: '',
-    zelle: '', venmo: '',
+    zelle: '', venmo: '', phone: '', contact_pref: 'imessage',
   });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
@@ -78,6 +74,8 @@ export default function AccountProfile() {
         gpa:            data.gpa || '',
         zelle:          data.zelle || '',
         venmo:          data.venmo || '',
+        phone:          data.phone || '',
+        contact_pref:   data.contact_pref || 'imessage',
       });
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
@@ -156,6 +154,8 @@ export default function AccountProfile() {
         gpa:            updated.gpa             ?? f.gpa,
         zelle:          updated.zelle           ?? f.zelle,
         venmo:          updated.venmo           ?? f.venmo,
+        phone:          updated.phone           ?? f.phone,
+        contact_pref:   updated.contact_pref    ?? f.contact_pref,
       }));
       setAvatarPreview(null);
       if (avatarRef.current) avatarRef.current.value = '';
@@ -176,7 +176,7 @@ export default function AccountProfile() {
     </div>
   );
 
-  const displayCategory = profile?.custom_category || CATEGORY_LABELS[profile?.category] || null;
+  const displayCategory = profile?.custom_category || profile?.category || null;
 
   return (
     <div className="page" style={{ maxWidth: 680 }}>
@@ -241,9 +241,7 @@ export default function AccountProfile() {
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{profile?.email}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                 {profile?.role === 'provider' && displayCategory && (
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 999, background: 'var(--accent)', color: 'var(--primary)' }}>
-                    {displayCategory}
-                  </span>
+                  <CategoryPill category={profile.category} customCategory={profile.custom_category} />
                 )}
                 {authUser?.is_admin ? (
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
@@ -328,6 +326,46 @@ export default function AccountProfile() {
                   onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Contact — phone for booking auto-messages */}
+        <Section title="Contact Preferences">
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+            When you book a session, your phone number is included in the intro message so the provider can reach you.
+          </p>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Phone number <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+            <input value={form.phone} onChange={e => set('phone')(e.target.value)}
+              placeholder="e.g. 646-555-1234"
+              style={fieldStyle}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Preferred contact app</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { id: 'imessage',  label: 'iMessage',  emoji: '💬' },
+                { id: 'whatsapp',  label: 'WhatsApp',  emoji: '🟢' },
+              ].map(({ id, label, emoji }) => {
+                const active = form.contact_pref === id;
+                return (
+                  <button key={id} type="button" onClick={() => set('contact_pref')(id)}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                      background: active ? 'var(--primary)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}>
+                    <span>{emoji}</span>{label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </Section>
