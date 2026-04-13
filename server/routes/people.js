@@ -12,7 +12,7 @@ router.get('/', optionalAuth, (req, res) => {
   let query, params;
   if (me) {
     query = `
-      SELECT u.id, u.name, u.email, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
+      SELECT u.id, u.name, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
              pp.id    as provider_profile_id,
              pp.category, pp.custom_category, pp.price_per_session, pp.rating, pp.review_count,
              c.id     as connection_id,
@@ -29,7 +29,7 @@ router.get('/', optionalAuth, (req, res) => {
     params = [me, me, me];
   } else {
     query = `
-      SELECT u.id, u.name, u.email, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
+      SELECT u.id, u.name, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
              pp.id    as provider_profile_id,
              pp.category, pp.custom_category, pp.price_per_session, pp.rating, pp.review_count,
              NULL as connection_id,

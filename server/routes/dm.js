@@ -78,6 +78,7 @@ router.post('/:userId', requireAuth, (req, res) => {
   const { body } = req.body;
 
   if (!body?.trim()) return res.status(400).json({ error: 'Message body required' });
+  if (body.length > 2000) return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
   if (other === me) return res.status(400).json({ error: 'Cannot message yourself' });
 
   const receiver = db.prepare('SELECT id FROM users WHERE id = ?').get(other);

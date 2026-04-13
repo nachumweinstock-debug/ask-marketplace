@@ -28,6 +28,10 @@ router.post('/', requireAuth, (req, res) => {
 
   const { date, start_time, end_time } = req.body;
   if (!date || !start_time || !end_time) return res.status(400).json({ error: 'date, start_time, end_time required' });
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  if (!DAYS.includes(date)) return res.status(400).json({ error: 'date must be a day name (Monday–Sunday)' });
+  if (!/^\d{2}:\d{2}$/.test(start_time) || !/^\d{2}:\d{2}$/.test(end_time)) return res.status(400).json({ error: 'times must be HH:MM format' });
+  if (start_time >= end_time) return res.status(400).json({ error: 'end_time must be after start_time' });
 
   const result = db.prepare(
     'INSERT INTO availability (provider_id, date, start_time, end_time) VALUES (?, ?, ?, ?)'

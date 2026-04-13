@@ -120,10 +120,14 @@ export default function DirectMessages() {
   }
 
   const hasConvo = userId && otherUser;
+  // On mobile: show list when no convo selected, show chat when convo selected
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const showList = !isMobile || !hasConvo;
+  const showChat = !isMobile || hasConvo;
 
   return (
-    <div className="page" style={{ maxWidth: 900, paddingTop: 32 }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 20 }}>
+    <div className="page" style={{ maxWidth: 900, paddingTop: 32, paddingLeft: 0, paddingRight: 0 }}>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--text)', letterSpacing: '-0.3px', marginBottom: 20, padding: '0 16px' }}>
         Messages
       </h1>
 
@@ -134,8 +138,9 @@ export default function DirectMessages() {
 
         {/* Left panel — conversation list */}
         <div style={{
-          width: 260, flexShrink: 0, borderRight: '1px solid var(--border)',
-          overflowY: 'auto', display: 'flex', flexDirection: 'column',
+          width: showChat && !isMobile ? 260 : '100%',
+          flexShrink: 0, borderRight: isMobile ? 'none' : '1px solid var(--border)',
+          overflowY: 'auto', display: showList ? 'flex' : 'none', flexDirection: 'column',
         }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
             Conversations
@@ -179,10 +184,15 @@ export default function DirectMessages() {
 
         {/* Right panel — chat or placeholder */}
         {hasConvo ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <div style={{ flex: 1, display: showChat ? 'flex' : 'none', flexDirection: 'column', minWidth: 0 }}>
 
             {/* Chat header */}
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              {isMobile && (
+                <button onClick={() => navigate('/messages')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0', color: 'var(--primary)', fontSize: 20, lineHeight: 1, flexShrink: 0 }}>
+                  ←
+                </button>
+              )}
               <Avatar name={otherUser.name} avatar_url={otherUser.avatar_url} size={36} />
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{otherUser.name}</div>
             </div>

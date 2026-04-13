@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdirSync } from 'fs';
@@ -31,6 +33,32 @@ const allowedOrigins = [
   'https://www.uask.live',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
+
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow image loads from Vercel
+  contentSecurityPolicy: false, // handled by Vercel on the frontend
+}));
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { error: 'Too many attempts — please wait 15 minutes and try again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,
+  message: { error: 'Too many requests — slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
 
 app.use(cors({
   origin: (origin, cb) => {

@@ -7,6 +7,8 @@ const router = Router();
 router.post('/', requireAuth, (req, res) => {
   const { booking_id, rating, comment } = req.body;
   if (!booking_id || !rating) return res.status(400).json({ error: 'booking_id and rating required' });
+  if (!Number.isInteger(Number(rating)) || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1–5' });
+  if (comment && comment.length > 1000) return res.status(400).json({ error: 'Comment too long (max 1000 chars)' });
 
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND student_id = ?').get(booking_id, req.user.id);
   if (!booking) return res.status(404).json({ error: 'Booking not found' });

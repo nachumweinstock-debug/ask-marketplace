@@ -72,6 +72,11 @@ router.put('/me', requireAuth, async (req, res) => {
     const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
     if (!profile) return res.status(404).json({ error: 'No provider profile found' });
     const { bio, category, price_per_session, zelle, venmo, custom_category, listing_image_data_url } = req.body;
+    if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
+      return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
+    }
+    if (custom_category && custom_category.length > 50) return res.status(400).json({ error: 'Category name too long (max 50 chars)' });
+    if (bio && bio.length > 2000) return res.status(400).json({ error: 'Bio too long (max 2000 chars)' });
 
     let listing_image = profile.listing_image;
     if (listing_image_data_url === null) {
