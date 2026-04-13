@@ -7,6 +7,25 @@ const router = Router();
 
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
 
+// GET /providers/price-stats?category=tutor — market price range for a category
+router.get('/price-stats', (req, res) => {
+  const { category } = req.query;
+  if (!category) return res.status(400).json({ error: 'category required' });
+
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) as count,
+      MIN(price_per_session) as min,
+      MAX(price_per_session) as max,
+      ROUND(AVG(price_per_session)) as avg
+    FROM provider_profiles
+    WHERE price_per_session > 0
+      AND (category = ? OR custom_category = ?)
+  `).get(category, category);
+
+  res.json(stats);
+});
+
 // GET /providers/categories — distinct custom category labels (must be before /:id)
 router.get('/categories', (req, res) => {
   const rows = db.prepare(`

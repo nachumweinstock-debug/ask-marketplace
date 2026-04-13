@@ -316,12 +316,12 @@ export default function Navbar() {
 
       {/* ── MOBILE BOTTOM TAB BAR ── */}
       {user && (
-        <div className="nav-mobile" style={{
+        <div className="nav-mobile nav-bottom-bar" style={{
           position:'fixed', bottom:0, left:0, right:0,
           background:'rgba(255,255,255,0.97)',
           backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
           borderTop:'1.5px solid var(--border)',
-          display:'flex', zIndex:40,
+          zIndex:40,
           paddingBottom:'env(safe-area-inset-bottom,0px)',
         }}>
           {[

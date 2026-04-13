@@ -81,6 +81,7 @@ body {
   .nav-desktop { display: none; }
   .nav-mobile  { display: flex; margin-left: auto; }
   .nav-drawer.open { display: flex; }
+  .nav-bottom-bar { display: flex; } /* bottom tab bar only on mobile */
 }
 
 /* ── Hero layout ──────────────────────────────────────────── */

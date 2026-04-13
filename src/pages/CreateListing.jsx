@@ -135,6 +135,7 @@ export default function CreateListing() {
   const [slots, setSlots] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [priceStats, setPriceStats] = useState(null);
 
   // Pre-fill payment info from saved account profile
   useEffect(() => {
@@ -143,6 +144,16 @@ export default function CreateListing() {
       if (data.venmo) setVenmo(data.venmo);
     }).catch(() => {});
   }, []);
+
+  // Fetch market price data when category changes
+  useEffect(() => {
+    if (!category) { setPriceStats(null); return; }
+    const cat = category === 'other' ? customCategory : category;
+    if (!cat) { setPriceStats(null); return; }
+    api.get('/providers/price-stats', { params: { category: cat } })
+      .then(({ data }) => setPriceStats(data.count > 0 ? data : null))
+      .catch(() => setPriceStats(null));
+  }, [category, customCategory]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -194,7 +205,7 @@ export default function CreateListing() {
                 return (
                   <button key={id} type="button" onClick={() => setCategory(id)}
                     style={{
-                      padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+                      padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
                       border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
                       background: active ? 'var(--primary)' : 'var(--card)',
                       color: active ? '#fff' : 'var(--muted)',
@@ -270,6 +281,44 @@ export default function CreateListing() {
           {/* Price */}
           <div style={{ marginBottom: 20 }}>
             <label style={labelStyle}>Price per session</label>
+
+            {/* Market price suggestion banner */}
+            {priceStats && (
+              <div style={{
+                background: '#F0FDF4', border: '1.5px solid #86EFAC',
+                borderRadius: 9, padding: '10px 14px', marginBottom: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: 8,
+              }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 2 }}>
+                    Market rate for this category
+                  </div>
+                  <div style={{ fontSize: 12, color: '#15803D' }}>
+                    {priceStats.count} provider{priceStats.count !== 1 ? 's' : ''} charging{' '}
+                    <strong>${priceStats.min}–${priceStats.max}</strong>
+                    {' '}· avg <strong>${priceStats.avg}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[priceStats.min, priceStats.avg, priceStats.max].filter((v, i, a) => a.indexOf(v) === i).map(v => (
+                    <button key={v} type="button"
+                      onClick={() => setPrice(String(v))}
+                      style={{
+                        padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+                        border: price === String(v) ? '1.5px solid #166534' : '1.5px solid #86EFAC',
+                        background: price === String(v) ? '#166534' : '#DCFCE7',
+                        color: price === String(v) ? '#fff' : '#166534',
+                        cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                      }}
+                    >
+                      ${v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13.5, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>$</span>
               <input type="number" min="0" placeholder="0" value={price}
@@ -338,7 +387,7 @@ export default function CreateListing() {
 
           <button type="submit" disabled={loading || !category} style={{
             width: '100%', background: loading || !category ? '#93C5FD' : 'var(--primary)',
-            color: '#fff', border: 'none', borderRadius: 999,
+            color: '#fff', border: 'none', borderRadius: 9,
             padding: '13px', fontSize: 14, fontWeight: 600,
             cursor: loading || !category ? 'not-allowed' : 'pointer',
             fontFamily: 'var(--font-ui)', transition: 'opacity .15s', marginTop: 8,
