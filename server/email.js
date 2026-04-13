@@ -38,6 +38,71 @@ export async function sendVerificationCode(toEmail, code) {
   });
 }
 
+export async function sendBookingNotification({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime }) {
+  const transporter = getTransporter();
+  const timeStr = `${startTime}–${endTime}`;
+
+  if (!transporter) {
+    console.log(`\n📅 NEW BOOKING for ${providerEmail}: ${studentName} (${studentEmail}) booked ${date} ${timeStr}\n`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: providerEmail,
+    subject: `🎉 New booking from ${studentName}`,
+    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
+      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">You got a booking, mazel tov!</h2>
+      <p style="margin:0 0 24px;color:#64748b;font-size:15px">Someone just booked a session with you on ASK.</p>
+      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+        <div style="margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Student</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${studentName}</div>
+          <div style="font-size:13px;color:#6b7280">${studentEmail}</div>
+        </div>
+        <div>
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
+          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
+        </div>
+      </div>
+      <p style="margin:0;color:#94a3b8;font-size:13px">Log in to <a href="https://uask.live" style="color:#3b82f6">uask.live</a> to confirm or message the student.</p>
+    </div>`,
+  });
+}
+
+export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime }) {
+  const transporter = getTransporter();
+  const timeStr = `${startTime}–${endTime}`;
+
+  if (!transporter) {
+    console.log(`\n✅ BOOKING CONFIRMED for ${studentEmail}: session with ${providerName} on ${date} ${timeStr}\n`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: studentEmail,
+    subject: `✅ Your session with ${providerName} is confirmed`,
+    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
+      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">You're all set!</h2>
+      <p style="margin:0 0 24px;color:#64748b;font-size:15px">${providerName} confirmed your session.</p>
+      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+        <div style="margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Provider</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${providerName}</div>
+        </div>
+        <div>
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
+          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
+        </div>
+      </div>
+      <p style="margin:0;color:#94a3b8;font-size:13px">View your booking at <a href="https://uask.live/dashboard/student" style="color:#3b82f6">uask.live</a></p>
+    </div>`,
+  });
+}
+
 export async function sendPasswordResetCode(toEmail, code) {
   const transporter = getTransporter();
   if (!transporter) {

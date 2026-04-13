@@ -1,8 +1,30 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { sendBookingNotification, sendBookingConfirmation } from '../email.js';
 
 const router = Router();
+
+async function sendBookingEmails(booking, slot, student) {
+  // Look up provider's email
+  const providerInfo = db.prepare(`
+    SELECT u.email, u.name as provider_name
+    FROM provider_profiles pp
+    JOIN users u ON pp.user_id = u.id
+    WHERE pp.id = ?
+  `).get(booking.provider_id);
+  if (!providerInfo) return;
+
+  await sendBookingNotification({
+    providerEmail: providerInfo.email,
+    providerName: providerInfo.provider_name,
+    studentName: student.name,
+    studentEmail: student.email,
+    date: slot.date,
+    startTime: slot.start_time,
+    endTime: slot.end_time,
+  });
+}
 
 router.get('/mine', requireAuth, (req, res) => {
   // Provider view: sessions booked with me
@@ -38,32 +60,49 @@ router.get('/mine', requireAuth, (req, res) => {
   return res.json(bookings);
 });
 
-router.post('/', requireAuth, (req, res) => {
-  const { availability_id } = req.body;
-  if (!availability_id) return res.status(400).json({ error: 'availability_id required' });
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { availability_id } = req.body;
+    console.log('[BOOKING] POST by user', req.user.id, 'availability_id:', availability_id, typeof availability_id);
 
-  const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(availability_id);
-  if (!slot) return res.status(404).json({ error: 'Slot not found' });
-  if (slot.is_booked) return res.status(400).json({ error: 'Slot already booked' });
+    if (!availability_id) return res.status(400).json({ error: 'availability_id required' });
 
-  // Can't book your own slot
-  const ownProfile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-  if (ownProfile && ownProfile.id === slot.provider_id) {
-    return res.status(400).json({ error: "You can't book your own slot" });
+    const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(availability_id);
+    console.log('[BOOKING] slot lookup:', slot ? `found (provider_id=${slot.provider_id}, is_booked=${slot.is_booked})` : 'NOT FOUND');
+    if (!slot) return res.status(404).json({ error: 'Slot not found' });
+    if (slot.is_booked) return res.status(400).json({ error: 'Slot already booked' });
+
+    // Can't book your own slot
+    const ownProfile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+    console.log('[BOOKING] ownProfile:', ownProfile ? `id=${ownProfile.id}` : 'none');
+    if (ownProfile && ownProfile.id === slot.provider_id) {
+      return res.status(400).json({ error: "You can't book your own slot" });
+    }
+
+    const existing = db.prepare(
+      "SELECT id FROM bookings WHERE student_id = ? AND availability_id = ? AND status != 'cancelled'"
+    ).get(req.user.id, availability_id);
+    if (existing) return res.status(400).json({ error: 'Already booked' });
+
+    const result = db.prepare(
+      'INSERT INTO bookings (student_id, provider_id, availability_id) VALUES (?, ?, ?)'
+    ).run(req.user.id, slot.provider_id, availability_id);
+    console.log('[BOOKING] inserted booking id:', result.lastInsertRowid);
+
+    db.prepare('UPDATE availability SET is_booked = 1 WHERE id = ?').run(availability_id);
+
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
+
+    // Send email notifications (non-blocking)
+    sendBookingEmails(booking, slot, req.user).catch(err =>
+      console.error('[BOOKING] email error:', err.message)
+    );
+
+    res.json(booking);
+  } catch (err) {
+    console.error('[BOOKING] ERROR:', err.message, err.stack);
+    res.status(500).json({ error: err.message || 'Booking failed — please try again.' });
   }
-
-  const existing = db.prepare(
-    'SELECT id FROM bookings WHERE student_id = ? AND availability_id = ? AND status != "cancelled"'
-  ).get(req.user.id, availability_id);
-  if (existing) return res.status(400).json({ error: 'Already booked' });
-
-  const result = db.prepare(
-    'INSERT INTO bookings (student_id, provider_id, availability_id) VALUES (?, ?, ?)'
-  ).run(req.user.id, slot.provider_id, availability_id);
-
-  db.prepare('UPDATE availability SET is_booked = 1 WHERE id = ?').run(availability_id);
-
-  res.json(db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid));
 });
 
 router.patch('/:id', requireAuth, (req, res) => {
@@ -83,7 +122,31 @@ router.patch('/:id', requireAuth, (req, res) => {
   }
 
   db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
-  res.json(db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id));
+  const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+
+  // Email student when provider confirms
+  if (status === 'confirmed') {
+    try {
+      const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(booking.availability_id);
+      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const provider = db.prepare(`
+        SELECT u.name as provider_name FROM provider_profiles pp
+        JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      if (student && provider && slot) {
+        sendBookingConfirmation({
+          studentEmail: student.email,
+          studentName: student.name,
+          providerName: provider.provider_name,
+          date: slot.date,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+        }).catch(err => console.error('[BOOKING CONFIRM] email error:', err.message));
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
+  res.json(updated);
 });
 
 export default router;

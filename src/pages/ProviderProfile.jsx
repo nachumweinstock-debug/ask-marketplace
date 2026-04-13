@@ -70,7 +70,8 @@ export default function ProviderProfile() {
       setProvider(p => ({ ...p, availability: p.availability.filter(s => s.id !== booking) }));
       setBooking(null);
     } catch (err) {
-      setBookingError(err.response?.data?.error || 'Booking failed');
+      console.error('[booking]', err.response?.status, err.response?.data);
+      setBookingError(err.response?.data?.error || `Booking failed (${err.response?.status || 'network error'})`);
     } finally {
       setBookingLoading(false);
     }
