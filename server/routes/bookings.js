@@ -93,6 +93,26 @@ router.post('/', requireAuth, async (req, res) => {
 
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
 
+    // Auto-send a DM from student to provider so both have a message thread
+    try {
+      const providerInfo = db.prepare(`
+        SELECT u.id as user_id, u.name, pp.category, pp.custom_category
+        FROM provider_profiles pp
+        JOIN users u ON pp.user_id = u.id
+        WHERE pp.id = ?
+      `).get(slot.provider_id);
+
+      if (providerInfo && providerInfo.user_id !== req.user.id) {
+        const catLabel = providerInfo.custom_category || providerInfo.category || 'session';
+        const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}. Looking forward to it!`;
+        db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body) VALUES (?, ?, ?)')
+          .run(req.user.id, providerInfo.user_id, msg);
+        console.log('[BOOKING] auto-DM sent from', req.user.id, 'to', providerInfo.user_id);
+      }
+    } catch (dmErr) {
+      console.error('[BOOKING] auto-DM error:', dmErr.message);
+    }
+
     // Send email notifications (non-blocking)
     sendBookingEmails(booking, slot, req.user).catch(err =>
       console.error('[BOOKING] email error:', err.message)
