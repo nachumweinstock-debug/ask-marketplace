@@ -91,6 +91,7 @@ export default function Browse() {
     setSort(s);
     const p = { ...(search ? { search } : {}) };
     if (category !== 'all') p.category = category;
+    if (sessionType !== 'all') p.session_type = sessionType;
     if (s !== 'rating') p.sort = s;
     setSearchParams(p);
   }
@@ -114,7 +115,7 @@ export default function Browse() {
         <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 240 }}>
           <div style={{
             display: 'flex', background: '#fff',
-            borderRadius: 999, overflow: 'hidden',
+            borderRadius: 8, overflow: 'hidden',
             border: '1px solid var(--border)',
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             maxWidth: 480,
@@ -148,7 +149,7 @@ export default function Browse() {
             { id: 'price_asc', label: 'Price: Low' },
           ].map(s => (
             <button key={s.id} onClick={() => handleSort(s.id)} style={{
-              padding: '7px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+              padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
               border: `1px solid ${sort === s.id ? 'var(--primary)' : 'var(--border)'}`,
               background: sort === s.id ? 'var(--primary)' : 'var(--card)',
               color: sort === s.id ? '#fff' : 'var(--muted)',
@@ -171,7 +172,7 @@ export default function Browse() {
           const active = sessionType === id;
           return (
             <button key={id} onClick={() => handleSessionType(id)} style={{
-              padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
               border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
               background: active ? 'var(--primary)' : 'var(--card)',
               color: active ? '#fff' : 'var(--muted)',
@@ -190,7 +191,7 @@ export default function Browse() {
           const active = category === id;
           return (
             <button key={id} onClick={() => handleCategory(id)} style={{
-              padding: '7px 18px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+              padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
               border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
               background: active ? 'var(--primary)' : 'var(--card)',
               color: active ? '#fff' : 'var(--muted)',

@@ -5,7 +5,6 @@ import { signToken, requireAuth } from '../auth.js';
 import { sendVerificationCode, sendPasswordResetCode } from '../email.js';
 
 const router = Router();
-const YU_EMAIL = /^[^\s@]+@(mail\.)?yu\.edu$/i;
 
 // GET /auth/me — sync/create SQLite user from Supabase JWT, return user data
 router.get('/me', requireAuth, (req, res) => {
@@ -32,8 +31,8 @@ router.post('/signup', async (req, res) => {
   if (!email || !name || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-  if (!YU_EMAIL.test(email)) {
-    return res.status(400).json({ error: 'Must use a @yu.edu or @mail.yu.edu email' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -77,7 +76,7 @@ router.post('/verify', (req, res) => {
   if (!userId || !code) return res.status(400).json({ error: 'userId and code required' });
 
   const row = db.prepare(
-    'SELECT * FROM verification_codes WHERE user_id = ? AND used = 0 ORDER BY id DESC LIMIT 1'
+    "SELECT * FROM verification_codes WHERE user_id = ? AND type = 'verify' AND used = 0 ORDER BY id DESC LIMIT 1"
   ).get(userId);
 
   if (!row) return res.status(400).json({ error: 'No code found. Request a new one.' });

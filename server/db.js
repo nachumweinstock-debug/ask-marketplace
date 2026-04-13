@@ -95,6 +95,7 @@ if (!ppCols.includes('session_type'))    db.exec("ALTER TABLE provider_profiles 
 
 if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
 if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
+if (!cols.includes('pubkey'))       db.exec('ALTER TABLE users ADD COLUMN pubkey TEXT');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {
@@ -155,10 +156,15 @@ if (!tables.includes('direct_messages')) {
       sender_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       body        TEXT NOT NULL,
+      is_system   INTEGER DEFAULT 0,
       read_at     DATETIME,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+} else {
+  // Safe migration: add is_system column for existing installs
+  const dmCols = db.pragma('table_info(direct_messages)').map(c => c.name);
+  if (!dmCols.includes('is_system')) db.exec('ALTER TABLE direct_messages ADD COLUMN is_system INTEGER DEFAULT 0');
 }
 
 // Hardwired superadmins — grant admin on every server boot if the account exists

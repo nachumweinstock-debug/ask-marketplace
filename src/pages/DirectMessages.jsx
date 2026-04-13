@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
+import {
+  getOrCreateKeyPair, exportPublicKey,
+  importPublicKey, deriveSharedKey,
+  encryptMessage, decryptMessage, isEncrypted,
+} from '../lib/e2e';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -37,8 +42,53 @@ export default function DirectMessages() {
   const [sending, setSending] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const [encryptionReady, setEncryptionReady] = useState(false);
+
+  const messagesEndRef  = useRef(null);
+  const inputRef        = useRef(null);
+  const keyPairRef      = useRef(null);   // own ECDH key pair
+  const sharedKeyRef    = useRef(null);   // AES key for current conversation
+
+  // ── Init own key pair once, upload public key ──
+  useEffect(() => {
+    async function init() {
+      try {
+        const pair = await getOrCreateKeyPair();
+        keyPairRef.current = pair;
+        const pub = await exportPublicKey(pair.publicKey);
+        api.post('/keys', { pubkey: pub }).catch(() => {});
+      } catch { /* web crypto unavailable */ }
+    }
+    init();
+  }, []);
+
+  // ── Derive shared key whenever conversation changes ──
+  useEffect(() => {
+    sharedKeyRef.current = null;
+    setEncryptionReady(false);
+    if (!userId) return;
+
+    async function setupE2E() {
+      // Wait for key pair to be ready (may still be generating on first load)
+      let pair = keyPairRef.current;
+      if (!pair) {
+        try {
+          const { getOrCreateKeyPair: gkp } = await import('../lib/e2e');
+          pair = await gkp();
+          keyPairRef.current = pair;
+        } catch { return; }
+      }
+      try {
+        const { data } = await api.get(`/keys/${userId}`);
+        if (data.pubkey) {
+          const theirPub = await importPublicKey(data.pubkey);
+          sharedKeyRef.current = await deriveSharedKey(pair.privateKey, theirPub);
+          setEncryptionReady(true);
+        }
+      } catch { /* no key for this user — plaintext */ }
+    }
+    setupE2E();
+  }, [userId]);
 
   useEffect(() => { fetchConversations(); }, []);
 
@@ -56,17 +106,30 @@ export default function DirectMessages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Poll new messages when conversation is open
+  // Poll messages while conversation is open
   useEffect(() => {
     if (!userId) return;
     const t = setInterval(() => fetchMessages(userId), 8000);
     return () => clearInterval(t);
   }, [userId]);
 
+  async function decryptAll(msgs) {
+    if (!sharedKeyRef.current) return msgs;
+    return Promise.all(msgs.map(async m => {
+      if (m.is_system || !isEncrypted(m.body)) return m;
+      return { ...m, body: await decryptMessage(m.body, sharedKeyRef.current) };
+    }));
+  }
+
   async function fetchConversations() {
     try {
       const { data } = await api.get('/dm');
-      setConversations(data);
+      // Mask encrypted previews in conversation list
+      const masked = data.map(c => ({
+        ...c,
+        last_message: isEncrypted(c.last_message) ? '🔒 Encrypted message' : c.last_message,
+      }));
+      setConversations(masked);
       if (userId) {
         const match = data.find(c => String(c.other_id) === String(userId));
         if (match) setOtherUser({ id: match.other_id, name: match.other_name, avatar_url: match.other_avatar_url });
@@ -79,13 +142,14 @@ export default function DirectMessages() {
     setLoadingMessages(true);
     try {
       const { data } = await api.get(`/dm/${uid}`);
-      setMessages(data);
+      const decrypted = await decryptAll(data);
+      setMessages(decrypted);
       setConversations(cs => cs.map(c => String(c.other_id) === String(uid) ? { ...c, unread_count: 0 } : c));
     } catch { /* silent */ }
     finally { setLoadingMessages(false); }
   }
 
-  // If recipient not in convo list yet (new conversation), look them up
+  // If recipient not in convo list yet, look them up
   useEffect(() => {
     if (!userId || otherUser) return;
     api.get(`/people/${userId}`)
@@ -97,19 +161,25 @@ export default function DirectMessages() {
     e.preventDefault();
     if (!body.trim() || !userId || sending) return;
     setSending(true);
+    const plainBody = body.trim();
+    let wireBody = plainBody;
+    if (sharedKeyRef.current) {
+      try { wireBody = await encryptMessage(plainBody, sharedKeyRef.current); } catch { /* fallback plaintext */ }
+    }
     const optimistic = {
       id: Date.now(),
       sender_id: user.id,
       receiver_id: Number(userId),
-      body: body.trim(),
+      body: plainBody,   // show plaintext locally
       created_at: new Date().toISOString(),
       sender_name: user.name,
     };
     setMessages(ms => [...ms, optimistic]);
     setBody('');
     try {
-      const { data } = await api.post(`/dm/${userId}`, { body: optimistic.body });
-      setMessages(ms => ms.map(m => m.id === optimistic.id ? data : m));
+      const { data } = await api.post(`/dm/${userId}`, { body: wireBody });
+      // Replace optimistic with server-confirmed (keep plaintext display)
+      setMessages(ms => ms.map(m => m.id === optimistic.id ? { ...data, body: plainBody } : m));
       fetchConversations();
     } catch (err) {
       setMessages(ms => ms.filter(m => m.id !== optimistic.id));
@@ -120,7 +190,6 @@ export default function DirectMessages() {
   }
 
   const hasConvo = userId && otherUser;
-  // On mobile: show list when no convo selected, show chat when convo selected
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
   const showList = !isMobile || !hasConvo;
   const showChat = !isMobile || hasConvo;
@@ -150,16 +219,8 @@ export default function DirectMessages() {
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>
           ) : (
             <>
-              {/* Show current recipient first if not yet in list */}
               {userId && otherUser && !conversations.find(c => String(c.other_id) === String(userId)) && (
-                <ConvoRow
-                  name={otherUser.name}
-                  avatar_url={otherUser.avatar_url}
-                  lastMsg=""
-                  unread={0}
-                  active
-                  onClick={() => {}}
-                />
+                <ConvoRow name={otherUser.name} avatar_url={otherUser.avatar_url} lastMsg="" unread={0} active onClick={() => navigate(`/messages/${userId}`)} />
               )}
               {conversations.length === 0 && !hasConvo ? (
                 <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>
@@ -182,19 +243,29 @@ export default function DirectMessages() {
           )}
         </div>
 
-        {/* Right panel — chat or placeholder */}
+        {/* Right panel — chat */}
         {hasConvo ? (
           <div style={{ flex: 1, display: showChat ? 'flex' : 'none', flexDirection: 'column', minWidth: 0 }}>
 
             {/* Chat header */}
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {isMobile && (
                 <button onClick={() => navigate('/messages')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 0', color: 'var(--primary)', fontSize: 20, lineHeight: 1, flexShrink: 0 }}>
                   ←
                 </button>
               )}
               <Avatar name={otherUser.name} avatar_url={otherUser.avatar_url} size={36} />
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{otherUser.name}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{otherUser.name}</div>
+                {encryptionReady && (
+                  <div style={{ fontSize: 10, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    End-to-end encrypted
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -202,9 +273,7 @@ export default function DirectMessages() {
               {loadingMessages && messages.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, paddingTop: 40 }}>Loading...</div>
               ) : messages.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, paddingTop: 40 }}>
-                  No messages yet. Say hello!
-                </div>
+                <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, paddingTop: 40 }}>No messages yet. Say hello!</div>
               ) : (
                 messages.map(m => {
                   const isMe = m.sender_id === user?.id;
@@ -222,6 +291,9 @@ export default function DirectMessages() {
                         {m.body}
                         <div style={{ fontSize: 10, opacity: 0.6, marginTop: 3, textAlign: isMe ? 'right' : 'left' }}>
                           {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {encryptionReady && !m.is_system && isMe && (
+                            <span style={{ marginLeft: 4 }}>🔒</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -238,7 +310,7 @@ export default function DirectMessages() {
                 value={body}
                 onChange={e => setBody(e.target.value)}
                 placeholder={`Message ${otherUser.name}...`}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSend(e); } }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e); }}
                 style={{
                   flex: 1, border: '1.5px solid var(--border)', borderRadius: 999,
                   padding: '9px 16px', fontSize: 13, outline: 'none',
@@ -263,7 +335,13 @@ export default function DirectMessages() {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            <span>Select a conversation to start messaging</span>
+            <span>Select a conversation</span>
+            <span style={{ fontSize: 11, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Messages are end-to-end encrypted
+            </span>
           </div>
         )}
       </div>

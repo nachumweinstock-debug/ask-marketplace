@@ -129,7 +129,7 @@ router.post('/', requireAuth, async (req, res) => {
           contactLine = ` You can reach me at ${studentContact.phone} on ${app}.`;
         }
         const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}.${contactLine} Looking forward to it!`;
-        db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body) VALUES (?, ?, ?)')
+        db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body, is_system) VALUES (?, ?, ?, 1)')
           .run(req.user.id, providerInfo.user_id, msg);
         console.log('[BOOKING] auto-DM sent from', req.user.id, 'to', providerInfo.user_id);
       }
@@ -262,20 +262,30 @@ router.get('/:id/ics', requireAuth, (req, res) => {
 });
 
 // GET /bookings/:id/calendar — returns Google Calendar URL + ICS URL for the frontend button
+// Works for both student and provider
 router.get('/:id/calendar', requireAuth, (req, res) => {
   const booking = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
-           u.name as provider_name
+           pu.name as provider_name,
+           su.name as student_name
     FROM bookings b
     JOIN availability a ON b.availability_id = a.id
     JOIN provider_profiles pp ON b.provider_id = pp.id
-    JOIN users u ON pp.user_id = u.id
-    WHERE b.id = ? AND b.student_id = ?
-  `).get(req.params.id, req.user.id);
+    JOIN users pu ON pp.user_id = pu.id
+    JOIN users su ON b.student_id = su.id
+    WHERE b.id = ?
+  `).get(req.params.id);
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-  const title = `Session with ${booking.provider_name}`;
+  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+  const isStudent = booking.student_id === req.user.id;
+  const isProvider = profile && booking.provider_id === profile.id;
+  if (!isStudent && !isProvider) return res.status(403).json({ error: 'Forbidden' });
+
+  const title = isProvider && !isStudent
+    ? `Session with ${booking.student_name}`
+    : `Session with ${booking.provider_name}`;
   const description = `Booked via uask.live`;
 
   res.json({

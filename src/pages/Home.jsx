@@ -84,10 +84,10 @@ export default function Home() {
                   onClick={() => navigate('/browse')}
                   style={{
                     background: 'var(--primary)', color: '#fff',
-                    border: 'none', borderRadius: 999,
-                    padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                    border: 'none', borderRadius: 9,
+                    padding: '13px 28px', fontSize: 14, fontWeight: 700,
                     cursor: 'pointer', transition: 'opacity .15s',
-                    fontFamily: 'var(--font-ui)',
+                    fontFamily: 'var(--font-ui)', letterSpacing: '0.1px',
                   }}
                   onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
                   onMouseLeave={e => e.currentTarget.style.opacity = '1'}
@@ -98,12 +98,12 @@ export default function Home() {
                   onClick={() => navigate(user ? '/create-listing' : '/signup')}
                   style={{
                     background: 'transparent', color: 'var(--text)',
-                    border: '1px solid var(--border)', borderRadius: 999,
-                    padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                    border: '1.5px solid var(--border)', borderRadius: 9,
+                    padding: '13px 28px', fontSize: 14, fontWeight: 600,
                     cursor: 'pointer', transition: 'border-color .15s',
                     fontFamily: 'var(--font-ui)',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#9CA3AF'}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text)'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   Post a service
@@ -139,8 +139,8 @@ export default function Home() {
                 key={id}
                 onClick={() => navigate(id === 'all' ? '/browse' : `/browse?category=${id}`)}
                 style={{
-                  padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500,
-                  border: '1px solid var(--border)',
+                  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  border: '1.5px solid var(--border)',
                   background: 'var(--card)', color: 'var(--muted)',
                   cursor: 'pointer', transition: 'all .15s',
                   fontFamily: 'var(--font-ui)',

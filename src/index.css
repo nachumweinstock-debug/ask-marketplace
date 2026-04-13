@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #FAF8F5;
-  --primary: #3B82F6;
-  --accent:  #EFF6FF;
-  --card: #FFFFFF;
-  --border: #E5E0D8;
-  --text: #1A1A1A;
-  --muted: #6B7280;
+  --bg:      #F6F3EF;
+  --primary: #1B4FD8;
+  --accent:  #EBF0FF;
+  --card:    #FFFFFF;
+  --border:  #DDD8D0;
+  --text:    #111111;
+  --muted:   #71717A;
   --font-display: 'DM Serif Display', Georgia, serif;
   --font-ui: 'Outfit', system-ui, sans-serif;
 }
@@ -39,6 +39,11 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .fade-up { animation: fadeUp 0.4s ease both; }
 
 /* ── Responsive page wrapper ──────────────────────────────── */
@@ -47,44 +52,34 @@ body {
   margin: 0 auto;
   padding: 48px 32px 80px;
 }
-@media (max-width: 640px) {
-  .page { padding: 24px 16px 60px; }
+@media (max-width: 860px) {
+  /* Extra bottom padding so content clears the fixed bottom tab bar */
+  .page { padding: 28px 20px 90px; }
 }
 
 /* ── Navbar ───────────────────────────────────────────────── */
-/* Desktop nav links — hide on mobile */
-.nav-desktop { display: flex; align-items: center; gap: 20px; }
-/* Mobile actions (messages + avatar + hamburger) — only on mobile */
-.nav-mobile  { display: none; align-items: center; gap: 10px; }
-/* Mobile drawer */
+.nav-desktop {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  height: 54px;
+  gap: 0;
+}
+.nav-mobile  { display: none; align-items: center; gap: 8px; }
 .nav-drawer {
   display: none;
   flex-direction: column;
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  padding: 8px 0 20px;
+  background: #fff;
+  border-top: 1.5px solid var(--border);
+  padding: 0 0 16px;
   animation: slideDown 0.15s ease both;
+  max-height: calc(100vh - 54px);
+  overflow-y: auto;
 }
-.nav-drawer a, .nav-drawer button {
-  display: block;
-  padding: 13px 20px;
-  font-size: 15px;
-  font-family: var(--font-ui);
-  color: var(--text);
-  text-decoration: none;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  border-bottom: 1px solid var(--border);
-}
-.nav-drawer a:last-child, .nav-drawer button:last-child { border-bottom: none; }
-.nav-drawer a:active, .nav-drawer button:active { background: var(--bg); }
 
-@media (max-width: 700px) {
+@media (max-width: 860px) {
   .nav-desktop { display: none; }
-  .nav-mobile  { display: flex; }
+  .nav-mobile  { display: flex; margin-left: auto; }
   .nav-drawer.open { display: flex; }
 }
 
@@ -119,9 +114,9 @@ body {
 /* ── Shared card ──────────────────────────────────────────── */
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 /* ── Two-column grids that stack on mobile ────────────────── */

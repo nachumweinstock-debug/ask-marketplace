@@ -348,9 +348,33 @@ export default function AccountProfile() {
             <label style={labelStyle}>Preferred contact app</label>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { id: 'imessage',  label: 'iMessage',  emoji: '💬' },
-                { id: 'whatsapp',  label: 'WhatsApp',  emoji: '🟢' },
-              ].map(({ id, label, emoji }) => {
+                {
+                  id: 'imessage',
+                  label: 'iMessage',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="60" height="60" rx="13" fill="#1B8EF2"/>
+                      {/* Back bubble (slightly lighter) */}
+                      <path d="M38 10H22C16.477 10 12 14.477 12 20v10c0 5.523 4.477 10 10 10h2v7l7-7h7c5.523 0 10-4.477 10-10V20c0-5.523-4.477-10-10-10z" fill="rgba(255,255,255,0.35)"/>
+                      {/* Front bubble */}
+                      <path d="M42 16H26c-4.418 0-8 3.582-8 8v9c0 4.418 3.582 8 8 8h2v6l6-6h8c4.418 0 8-3.582 8-8v-9c0-4.418-3.582-8-8-8z" fill="white"/>
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'whatsapp',
+                  label: 'WhatsApp',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="60" height="60" rx="13" fill="#25D366"/>
+                      {/* WhatsApp speech bubble outline */}
+                      <path d="M30 8C17.85 8 8 17.85 8 30c0 3.9 1.05 7.55 2.88 10.68L8 52l11.65-2.85A21.87 21.87 0 0 0 30 52c12.15 0 22-9.85 22-22S42.15 8 30 8z" fill="rgba(255,255,255,0.2)"/>
+                      {/* Phone handset */}
+                      <path d="M43.8 36.23c-.74-.37-4.38-2.16-5.06-2.41-.68-.25-1.17-.37-1.67.37-.49.74-1.91 2.41-2.34 2.9-.43.49-.86.55-1.6.18-4.32-2.16-7.16-3.86-10.02-8.78-.75-1.3.75-1.2 2.15-4 .24-.49.12-.92-.06-1.3-.19-.37-1.67-4.02-2.28-5.5-.6-1.44-1.22-1.24-1.67-1.27-.43-.02-.92-.02-1.42-.02-.49 0-1.3.18-1.98.92-.68.74-2.6 2.54-2.6 6.2 0 3.65 2.66 7.17 3.03 7.67.37.49 5.21 7.95 12.63 11.16 4.69 2.02 6.53 2.19 8.87 1.84 1.42-.21 4.38-1.79 5-3.52.62-1.72.62-3.2.43-3.52-.18-.31-.68-.49-1.42-.86z" fill="white"/>
+                    </svg>
+                  ),
+                },
+              ].map(({ id, label, icon }) => {
                 const active = form.contact_pref === id;
                 return (
                   <button key={id} type="button" onClick={() => set('contact_pref')(id)}
@@ -360,9 +384,9 @@ export default function AccountProfile() {
                       background: active ? 'var(--primary)' : 'var(--card)',
                       color: active ? '#fff' : 'var(--muted)',
                       cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                     }}>
-                    <span>{emoji}</span>{label}
+                    {icon}{label}
                   </button>
                 );
               })}

@@ -4,12 +4,22 @@ import { requireAuth } from '../auth.js';
 
 const router = Router();
 
-// GET /dm/unread — unread DM count (for navbar badge)
+// GET /dm/unread — unread DM count + latest sender info (for navbar badge + toast)
 router.get('/unread', requireAuth, (req, res) => {
   const row = db.prepare(
     'SELECT COUNT(*) as count FROM direct_messages WHERE receiver_id = ? AND read_at IS NULL'
   ).get(req.user.id);
-  res.json({ count: row.count });
+
+  // Latest unread for in-app toast notification
+  const latest = db.prepare(`
+    SELECT dm.body, dm.sender_id, dm.is_system, u.name as sender_name, u.avatar_url as sender_avatar
+    FROM direct_messages dm
+    JOIN users u ON u.id = dm.sender_id
+    WHERE dm.receiver_id = ? AND dm.read_at IS NULL
+    ORDER BY dm.created_at DESC LIMIT 1
+  `).get(req.user.id);
+
+  res.json({ count: row.count, latest: latest || null });
 });
 
 // GET /dm — list conversations (latest message per partner)

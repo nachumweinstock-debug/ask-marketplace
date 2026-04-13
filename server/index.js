@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.js';
 import messageRoutes from './routes/messages.js';
 import dmRoutes from './routes/dm.js';
 import peopleRoutes from './routes/people.js';
+import keysRoutes from './routes/keys.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -83,5 +84,15 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/dm', dmRoutes);
 app.use('/api/people', peopleRoutes);
+app.use('/api/keys', keysRoutes);
 
-app.listen(PORT, () => console.log(`ASK API running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`ASK API running on http://localhost:${PORT}`);
+  // Email health check — visible in Railway logs
+  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS } = process.env;
+  if (EMAIL_HOST && EMAIL_USER && EMAIL_PASS) {
+    console.log(`✅ Email configured: ${EMAIL_USER} via ${EMAIL_HOST}`);
+  } else {
+    console.warn(`⚠️  Email NOT configured — set EMAIL_HOST, EMAIL_USER, EMAIL_PASS in env vars to enable notifications`);
+  }
+});

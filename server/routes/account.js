@@ -64,15 +64,18 @@ router.put('/', requireAuth, async (req, res) => {
     const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref } = req.body;
     const userUpdates = {};
 
-    if (name?.trim())                 userUpdates.name           = name.trim();
-    if (major !== undefined)          userUpdates.major          = major;
-    if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
-    if (gpa !== undefined)            userUpdates.gpa            = gpa;
-    if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
-    if (zelle !== undefined)          userUpdates.zelle          = zelle;
-    if (venmo !== undefined)          userUpdates.venmo          = venmo;
-    if (phone !== undefined)          userUpdates.phone          = phone;
-    if (contact_pref !== undefined)   userUpdates.contact_pref   = contact_pref;
+    if (name?.trim())                 userUpdates.name           = name.trim().slice(0, 100);
+    if (major !== undefined)          userUpdates.major          = String(major || '').slice(0, 100);
+    if (classes_taking !== undefined) userUpdates.classes_taking = String(classes_taking || '').slice(0, 500);
+    if (gpa !== undefined)            userUpdates.gpa            = gpa ? Math.min(Math.max(parseFloat(gpa) || 0, 0), 4.0) : null;
+    if (user_bio !== undefined)       userUpdates.user_bio       = String(user_bio || '').slice(0, 1000);
+    if (zelle !== undefined)          userUpdates.zelle          = String(zelle || '').slice(0, 100);
+    if (venmo !== undefined)          userUpdates.venmo          = String(venmo || '').slice(0, 100);
+    if (phone !== undefined)          userUpdates.phone          = String(phone || '').slice(0, 20);
+    if (contact_pref !== undefined) {
+      const allowed = ['imessage', 'whatsapp', ''];
+      userUpdates.contact_pref = allowed.includes(contact_pref) ? contact_pref : '';
+    }
 
     if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
       // Upload to Supabase Storage if it's a fresh base64 upload; http URLs are already stored

@@ -5,6 +5,85 @@ import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
+function AddToCalendarButton({ bookingId }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState(null);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  async function handleOpen() {
+    if (!data) {
+      try {
+        const { data: d } = await api.get(`/bookings/${bookingId}/calendar`);
+        setData(d);
+      } catch { return; }
+    }
+    setOpen(o => !o);
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={handleOpen} style={{
+        fontSize: 12, color: 'var(--primary)', background: 'var(--accent)',
+        border: '1px solid #BFDBFE', borderRadius: 999, padding: '4px 10px',
+        cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600,
+        display: 'flex', alignItems: 'center', gap: 4,
+      }}>
+        📅 Calendar
+      </button>
+      {open && data && (
+        <div style={{
+          position: 'absolute', right: 0, top: 32, zIndex: 100,
+          background: 'var(--card)', border: '1px solid var(--border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          minWidth: 200, overflow: 'hidden',
+          animation: 'slideDown 0.15s ease both',
+        }}>
+          <a href={data.google} target="_blank" rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 16px', textDecoration: 'none',
+              fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)',
+              borderBottom: '1px solid var(--border)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
+            <span style={{ fontSize: 18 }}>📅</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>Google Calendar</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>Opens in browser</div>
+            </div>
+          </a>
+          <a href={data.ics}
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 16px', textDecoration: 'none',
+              fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
+            <span style={{ fontSize: 18 }}></span>
+            <div>
+              <div style={{ fontWeight: 600 }}>Apple Calendar</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>Downloads .ics · also works with Outlook</div>
+            </div>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
@@ -214,11 +293,14 @@ export default function ProviderDashboard() {
                               }}>Confirm</button>
                             )}
                             {b.status === 'confirmed' && (
-                              <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
-                                background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
-                                padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                fontFamily: 'var(--font-ui)',
-                              }}>Complete</button>
+                              <>
+                                <AddToCalendarButton bookingId={b.id} />
+                                <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
+                                  background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
+                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                  fontFamily: 'var(--font-ui)',
+                                }}>Complete</button>
+                              </>
                             )}
                           </div>
                         </div>

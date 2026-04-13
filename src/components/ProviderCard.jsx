@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CategoryPill, { SessionTypePill } from './CategoryPill';
+import { mediaUrl } from '../lib/media';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -61,8 +62,8 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
 
         {/* Avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          {provider.avatar_url ? (
-            <img src={provider.avatar_url} alt={provider.name} style={{
+          {mediaUrl(provider.avatar_url) ? (
+            <img src={mediaUrl(provider.avatar_url)} alt={provider.name} style={{
               width: 36, height: 36, borderRadius: '50%', objectFit: 'cover',
               border: '1px solid var(--border)', flexShrink: 0,
             }} />

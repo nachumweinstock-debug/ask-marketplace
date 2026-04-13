@@ -75,7 +75,7 @@ function Btn({ loading, label, loadingLabel }) {
   return (
     <button type="submit" disabled={loading} style={{
       width: '100%', background: loading ? '#93C5FD' : 'var(--primary)',
-      color: '#fff', border: 'none', borderRadius: 999,
+      color: '#fff', border: 'none', borderRadius: 9,
       padding: '12px', fontSize: 14, fontWeight: 600,
       cursor: loading ? 'not-allowed' : 'pointer',
       fontFamily: 'var(--font-ui)', marginTop: 6,
@@ -195,7 +195,7 @@ export function Login() {
         password: form.password,
       });
       if (error) throw error;
-      navigate('/');
+      navigate('/dashboard/student');
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
