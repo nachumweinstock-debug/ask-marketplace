@@ -85,6 +85,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(null);
+  const [doneLoading, setDoneLoading] = useState(null);
 
   useEffect(() => { fetchBookings(); }, []);
 
@@ -102,6 +103,16 @@ export default function StudentDashboard() {
       setBookings(bs => bs.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
     finally { setCancelLoading(null); }
+  }
+
+  async function handleMarkDone(id) {
+    if (!confirm('Mark this session as completed? You\'ll be able to leave a review after.')) return;
+    setDoneLoading(id);
+    try {
+      await api.patch(`/bookings/${id}`, { status: 'completed' });
+      setBookings(bs => bs.map(b => b.id === id ? { ...b, status: 'completed' } : b));
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setDoneLoading(null); }
   }
 
   async function handleReview(data) { await api.post('/reviews', data); fetchBookings(); }
@@ -151,7 +162,8 @@ export default function StudentDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {upcoming.map(b => (
                   <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} showChat
-                    onReview={b.status === 'confirmed' && !b.review_id ? () => setReviewTarget(b) : null} />
+                    onMarkDone={b.status === 'confirmed' ? () => handleMarkDone(b.id) : null}
+                    doneLoading={doneLoading === b.id} />
                 ))}
               </div>
             </div>
@@ -161,9 +173,8 @@ export default function StudentDashboard() {
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Past Sessions</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {past.map(b => (
-                  <BookingRow key={b.id} booking={b}
-                    onReview={b.status === 'completed' && !b.review_id ? () => setReviewTarget(b) : null}
-                    showChat />
+                  <BookingRow key={b.id} booking={b} showChat
+                    onReview={b.status === 'completed' && !b.review_id ? () => setReviewTarget(b) : null} />
                 ))}
               </div>
             </div>
@@ -178,7 +189,7 @@ export default function StudentDashboard() {
   );
 }
 
-function BookingRow({ booking, onCancel, cancelLoading, onReview, showChat }) {
+function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, doneLoading, showChat }) {
   const s = STATUS[booking.status] || STATUS.pending;
   return (
     <div className="card" style={{ padding: '16px 20px' }}>
@@ -200,7 +211,7 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, showChat }) {
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <span style={{
             display: 'inline-block', fontSize: 11, fontWeight: 600,
             padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color,
@@ -213,6 +224,12 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, showChat }) {
               Chat
             </Link>
           )}
+          {onMarkDone && (
+            <button onClick={onMarkDone} disabled={doneLoading}
+              style={{ fontSize: 12, color: '#166534', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 999, padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>
+              {doneLoading ? '...' : 'Done ✓'}
+            </button>
+          )}
           {onCancel && booking.status !== 'cancelled' && (
             <button onClick={() => onCancel(booking.id)} disabled={cancelLoading === booking.id}
               style={{ fontSize: 12, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)' }}>
@@ -221,9 +238,12 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, showChat }) {
           )}
           {onReview && (
             <button onClick={onReview}
-              style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)' }}>
-              Review
+              style={{ fontSize: 12, color: '#fff', background: 'var(--primary)', border: 'none', borderRadius: 999, padding: '4px 12px', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>
+              Leave a Review
             </button>
+          )}
+          {booking.status === 'completed' && booking.review_id && (
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>Reviewed ★</span>
           )}
         </div>
       </div>

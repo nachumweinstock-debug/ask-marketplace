@@ -12,7 +12,7 @@ router.post('/', requireAuth, (req, res) => {
 
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND student_id = ?').get(booking_id, req.user.id);
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  if (!['completed', 'confirmed'].includes(booking.status)) return res.status(400).json({ error: 'Can only review confirmed or completed bookings' });
+  if (booking.status !== 'completed') return res.status(400).json({ error: 'Mark the session as done before leaving a review' });
 
   const existing = db.prepare('SELECT id FROM reviews WHERE booking_id = ?').get(booking_id);
   if (existing) return res.status(400).json({ error: 'Already reviewed' });

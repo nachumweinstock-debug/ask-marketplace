@@ -26,6 +26,22 @@ async function sendBookingEmails(booking, slot, student) {
   });
 }
 
+// GET /bookings/notifications — unread counts for the navbar badge
+router.get('/notifications', requireAuth, (req, res) => {
+  // Pending bookings for providers (waiting to confirm)
+  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
+  const pending_bookings = profile
+    ? db.prepare("SELECT COUNT(*) as n FROM bookings WHERE provider_id = ? AND status = 'pending'").get(profile.id).n
+    : 0;
+
+  // Unread DMs
+  const dm_unread = db.prepare(
+    'SELECT COUNT(*) as n FROM direct_messages WHERE receiver_id = ? AND read_at IS NULL'
+  ).get(req.user.id).n;
+
+  res.json({ pending_bookings, dm_unread, total: pending_bookings + dm_unread });
+});
+
 router.get('/mine', requireAuth, (req, res) => {
   // Provider view: sessions booked with me
   if (req.query.as === 'provider') {
@@ -131,14 +147,22 @@ router.patch('/:id', requireAuth, (req, res) => {
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
   if (booking.student_id === req.user.id) {
-    // Any user can cancel their own booking
-    if (status !== 'cancelled') return res.status(400).json({ error: 'You can only cancel your own bookings' });
-    db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
+    // Student can cancel (any status) or mark as completed (only from confirmed)
+    if (status === 'cancelled') {
+      db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
+    } else if (status === 'completed') {
+      if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Can only mark a confirmed booking as done' });
+    } else {
+      return res.status(400).json({ error: 'Invalid status change' });
+    }
   } else {
     // Must be the provider on this booking
     const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
     if (!profile || booking.provider_id !== profile.id) return res.status(403).json({ error: 'Forbidden' });
-    if (!['confirmed', 'completed'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (!['confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (status === 'cancelled') {
+      db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
+    }
   }
 
   db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);

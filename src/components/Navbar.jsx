@@ -15,6 +15,7 @@ export default function Navbar() {
   const [dropOpen, setDropOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
   const dropRef = useRef(null);
 
   // Close dropdown on outside click
@@ -29,11 +30,12 @@ export default function Navbar() {
   // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false); setDropOpen(false); }, [location.pathname]);
 
-  // Poll unread message count
+  // Poll unread message count + notification badge
   useEffect(() => {
-    if (!user) { setUnread(0); return; }
+    if (!user) { setUnread(0); setNotifCount(0); return; }
     function poll() {
       api.get('/dm/unread').then(({ data }) => setUnread(data.count)).catch(() => {});
+      api.get('/bookings/notifications').then(({ data }) => setNotifCount(data.total)).catch(() => {});
     }
     poll();
     const t = setInterval(poll, 30000);
@@ -106,11 +108,20 @@ export default function Navbar() {
                   fontSize: 12, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-ui)', overflow: 'hidden', padding: 0,
+                  position: 'relative',
                 }}>
                   {mediaUrl(user.avatar_url)
                     ? <img src={mediaUrl(user.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : initials(user.name)}
                 </button>
+                {notifCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: -2,
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: '#EF4444', border: '2px solid var(--bg)',
+                    pointerEvents: 'none',
+                  }} />
+                )}
 
                 {dropOpen && (
                   <div style={{
@@ -201,17 +212,26 @@ export default function Navbar() {
           )}
 
           {user && (
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: 'var(--accent)', color: 'var(--primary)',
-              border: '1px solid var(--border)', overflow: 'hidden',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: 11, fontFamily: 'var(--font-ui)',
-              flexShrink: 0,
-            }}>
-              {mediaUrl(user.avatar_url)
-                ? <img src={mediaUrl(user.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : initials(user.name)}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%',
+                background: 'var(--accent)', color: 'var(--primary)',
+                border: '1px solid var(--border)', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: 11, fontFamily: 'var(--font-ui)',
+              }}>
+                {mediaUrl(user.avatar_url)
+                  ? <img src={mediaUrl(user.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : initials(user.name)}
+              </div>
+              {notifCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -1, right: -1,
+                  width: 9, height: 9, borderRadius: '50%',
+                  background: '#EF4444', border: '2px solid var(--bg)',
+                  pointerEvents: 'none',
+                }} />
+              )}
             </div>
           )}
 
