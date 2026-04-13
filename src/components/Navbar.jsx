@@ -16,6 +16,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
+  const [pendingBookings, setPendingBookings] = useState(0);
   const dropRef = useRef(null);
 
   // Close dropdown on outside click
@@ -35,7 +36,10 @@ export default function Navbar() {
     if (!user) { setUnread(0); setNotifCount(0); return; }
     function poll() {
       api.get('/dm/unread').then(({ data }) => setUnread(data.count)).catch(() => {});
-      api.get('/bookings/notifications').then(({ data }) => setNotifCount(data.total)).catch(() => {});
+      api.get('/bookings/notifications').then(({ data }) => {
+        setNotifCount(data.total);
+        setPendingBookings(data.pending_bookings || 0);
+      }).catch(() => {});
     }
     poll();
     const t = setInterval(poll, 30000);
@@ -158,6 +162,26 @@ export default function Navbar() {
                       <DropItem to="/people" label="People" onClick={() => setDropOpen(false)} />
                       <DropItem to="/messages" label="Messages" onClick={() => setDropOpen(false)} />
                       <DropItem to="/dashboard/student" label="My Bookings" onClick={() => setDropOpen(false)} />
+                      {user.role === 'provider' && pendingBookings > 0 && (
+                        <Link to="/dashboard/provider" onClick={() => setDropOpen(false)} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '8px 16px', fontSize: 13, color: '#92400E', textDecoration: 'none',
+                          background: '#FFFBEB',
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#FEF3C7'}
+                          onMouseLeave={e => e.currentTarget.style.background = '#FFFBEB'}
+                        >
+                          <span>Pending Requests</span>
+                          <span style={{
+                            background: '#F59E0B', color: '#fff', fontSize: 10, fontWeight: 700,
+                            minWidth: 18, height: 18, borderRadius: 999,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '0 4px',
+                          }}>
+                            {pendingBookings}
+                          </span>
+                        </Link>
+                      )}
                       {user.role === 'provider' && (
                         <DropItem to="/dashboard/provider" label="My Services" onClick={() => setDropOpen(false)} />
                       )}

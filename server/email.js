@@ -103,6 +103,39 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
   });
 }
 
+export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime }) {
+  const transporter = getTransporter();
+  const timeStr = `${startTime}–${endTime}`;
+
+  if (!transporter) {
+    console.log(`\n📋 CONFIRMATION COPY for provider ${providerEmail}: session with ${studentName} on ${date} ${timeStr}\n`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: providerEmail,
+    subject: `📋 Session confirmed with ${studentName} — ${date} ${timeStr}`,
+    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
+      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">Session confirmed!</h2>
+      <p style="margin:0 0 24px;color:#64748b;font-size:15px">Here's a reminder of your upcoming session.</p>
+      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+        <div style="margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Student</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${studentName}</div>
+          <div style="font-size:13px;color:#6b7280">${studentEmail}</div>
+        </div>
+        <div>
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
+          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
+          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
+        </div>
+      </div>
+      <p style="margin:0;color:#94a3b8;font-size:13px">Manage your bookings at <a href="https://uask.live/dashboard/provider" style="color:#3b82f6">uask.live</a></p>
+    </div>`,
+  });
+}
+
 export async function sendPasswordResetCode(toEmail, code) {
   const transporter = getTransporter();
   if (!transporter) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
-import { sendBookingNotification, sendBookingConfirmation } from '../email.js';
+import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy } from '../email.js';
 
 const router = Router();
 
@@ -185,7 +185,24 @@ router.patch('/:id', requireAuth, (req, res) => {
           date: slot.date,
           startTime: slot.start_time,
           endTime: slot.end_time,
-        }).catch(err => console.error('[BOOKING CONFIRM] email error:', err.message));
+        }).catch(err => console.error('[BOOKING CONFIRM] student email error:', err.message));
+
+        // Also send a confirmation copy + reminder to the provider
+        const providerUser = db.prepare(`
+          SELECT u.email FROM provider_profiles pp
+          JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+        `).get(booking.provider_id);
+        if (providerUser) {
+          sendProviderConfirmationCopy({
+            providerEmail: providerUser.email,
+            providerName: provider.provider_name,
+            studentName: student.name,
+            studentEmail: student.email,
+            date: slot.date,
+            startTime: slot.start_time,
+            endTime: slot.end_time,
+          }).catch(err => console.error('[BOOKING CONFIRM] provider email error:', err.message));
+        }
       }
     } catch (e) { /* non-fatal */ }
   }
