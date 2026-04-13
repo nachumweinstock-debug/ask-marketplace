@@ -145,13 +145,23 @@ export default function AccountProfile() {
       const payload = { ...form };
       if (avatarPreview) payload.avatar_data_url = avatarPreview;
       const { data: updated } = await api.put('/account', payload);
-      // Merge all updated user fields into local profile state
+      // Sync profile and form with server-confirmed values
       setProfile(p => ({ ...p, ...updated }));
+      setForm(f => ({
+        ...f,
+        name:           updated.name           ?? f.name,
+        user_bio:       updated.user_bio        ?? f.user_bio,
+        major:          updated.major           ?? f.major,
+        classes_taking: updated.classes_taking  ?? f.classes_taking,
+        gpa:            updated.gpa             ?? f.gpa,
+        zelle:          updated.zelle           ?? f.zelle,
+        venmo:          updated.venmo           ?? f.venmo,
+      }));
       setAvatarPreview(null);
       if (avatarRef.current) avatarRef.current.value = '';
       setMsg('Saved!');
       setTimeout(() => setMsg(''), 3000);
-      // Refresh auth context in background (updates Navbar avatar etc.)
+      // Refresh auth context in background (e.g. update Navbar avatar)
       refreshUser().catch(() => {});
     } catch (err) {
       setMsg(err.response?.data?.error || 'Save failed');
@@ -169,7 +179,7 @@ export default function AccountProfile() {
   const displayCategory = profile?.custom_category || CATEGORY_LABELS[profile?.category] || null;
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 32px 80px' }}>
+    <div className="page" style={{ maxWidth: 680 }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
         My Profile
       </h1>
@@ -258,7 +268,7 @@ export default function AccountProfile() {
 
         {/* Academics */}
         <Section title="Academics">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className="grid-2col" style={{ gap: 14, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>Major</label>
               <input value={form.major} onChange={e => set('major')(e.target.value)}
@@ -290,37 +300,37 @@ export default function AccountProfile() {
           </div>
         </Section>
 
-        {/* Payment — providers only */}
-        {profile?.role === 'provider' && (
-          <Section title="Payment Info">
-            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-              Students will use these to pay you after sessions.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div>
-                <label style={labelStyle}>Zelle (phone or email)</label>
-                <input value={form.zelle} onChange={e => set('zelle')(e.target.value)}
-                  placeholder="646-555-1234"
-                  style={fieldStyle}
+        {/* Payment — shown for all users so it's remembered before/after becoming a provider */}
+        <Section title="Payment Info">
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+            {profile?.role === 'provider'
+              ? 'Shown on your listing so students know how to pay you.'
+              : 'Save your Zelle/Venmo now — auto-filled when you post a listing.'}
+          </p>
+          <div className="grid-2col" style={{ gap: 14 }}>
+            <div>
+              <label style={labelStyle}>Zelle (phone or email)</label>
+              <input value={form.zelle} onChange={e => set('zelle')(e.target.value)}
+                placeholder="646-555-1234"
+                style={fieldStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Venmo username</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>@</span>
+                <input value={form.venmo} onChange={e => set('venmo')(e.target.value)}
+                  placeholder="username"
+                  style={{ ...fieldStyle, paddingLeft: 26 }}
                   onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>Venmo username</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>@</span>
-                  <input value={form.venmo} onChange={e => set('venmo')(e.target.value)}
-                    placeholder="username"
-                    style={{ ...fieldStyle, paddingLeft: 26 }}
-                    onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                  />
-                </div>
-              </div>
             </div>
-          </Section>
-        )}
+          </div>
+        </Section>
 
         {/* Ratings — providers only */}
         {profile?.role === 'provider' && (
@@ -415,7 +425,7 @@ export default function AccountProfile() {
           Security
         </div>
         <form onSubmit={handlePasswordChange}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className="grid-2col" style={{ gap: 14, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>New Password</label>
               <input

@@ -85,6 +85,9 @@ if (!cols.includes('classes_taking')) db.exec('ALTER TABLE users ADD COLUMN clas
 if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa TEXT');
 if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
 
+if (!cols.includes('zelle')) db.exec('ALTER TABLE users ADD COLUMN zelle TEXT');
+if (!cols.includes('venmo')) db.exec('ALTER TABLE users ADD COLUMN venmo TEXT');
+
 const ppCols = db.pragma('table_info(provider_profiles)').map(c => c.name);
 if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles ADD COLUMN custom_category TEXT');
 if (!ppCols.includes('listing_image'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN listing_image TEXT');
@@ -107,6 +110,51 @@ if (!tables.includes('verification_codes')) {
   if (!vcCols.includes('type')) {
     db.exec("ALTER TABLE verification_codes ADD COLUMN type TEXT NOT NULL DEFAULT 'verify'");
   }
+}
+
+// Connections (friend requests)
+if (!tables.includes('connections')) {
+  db.exec(`
+    CREATE TABLE connections (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receiver_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status       TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted')),
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(requester_id, receiver_id)
+    )
+  `);
+}
+
+// Messages table (booking-scoped chat)
+if (!tables.includes('messages')) {
+  db.exec(`
+    CREATE TABLE messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      sender_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body       TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      read_at    DATETIME
+    )
+  `);
+} else {
+  const msgCols = db.pragma('table_info(messages)').map(c => c.name);
+  if (!msgCols.includes('read_at')) db.exec('ALTER TABLE messages ADD COLUMN read_at DATETIME');
+}
+
+// Direct messages (user-to-user, not booking-scoped)
+if (!tables.includes('direct_messages')) {
+  db.exec(`
+    CREATE TABLE direct_messages (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body        TEXT NOT NULL,
+      read_at     DATETIME,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 // Hardwired superadmins — grant admin on every server boot if the account exists

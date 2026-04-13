@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
@@ -114,7 +114,7 @@ export default function ProviderDashboard() {
   const displayCat = profile?.custom_category || CAT_LABELS[profile?.category] || 'Other';
 
   return (
-    <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
+    <div className="page" style={{ maxWidth: 840 }}>
 
       {isNew && (
         <div style={{
@@ -183,37 +183,44 @@ export default function ProviderDashboard() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {upcoming.map(b => (
-                      <div key={b.id} className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-                            {b.student_email}
-                            {' · '}
-                            {fmtDay(b.date)}
-                            {' · '}{fmtTime(b.start_time)}–{fmtTime(b.end_time)}
+                      <div key={b.id} className="card" style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: 200 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+                              {b.student_email}
+                              {' · '}
+                              {fmtDay(b.date)}
+                              {' · '}{fmtTime(b.start_time)}–{fmtTime(b.end_time)}
+                            </div>
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
-                            background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
-                          }}>
-                            {STATUS[b.status]?.label}
-                          </span>
-                          {b.status === 'pending' && (
-                            <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
-                              background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
-                              padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                              fontFamily: 'var(--font-ui)',
-                            }}>Confirm</button>
-                          )}
-                          {b.status === 'confirmed' && (
-                            <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
-                              background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
-                              padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                              fontFamily: 'var(--font-ui)',
-                            }}>Complete</button>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+                              background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
+                            }}>
+                              {STATUS[b.status]?.label}
+                            </span>
+                            <Link to={`/chat/${b.id}`} style={{
+                              fontSize: 12, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none',
+                              padding: '5px 12px', borderRadius: 999, border: '1px solid #BFDBFE',
+                              background: 'var(--accent)',
+                            }}>Chat</Link>
+                            {b.status === 'pending' && (
+                              <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
+                                background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                                padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                fontFamily: 'var(--font-ui)',
+                              }}>Confirm</button>
+                            )}
+                            {b.status === 'confirmed' && (
+                              <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
+                                background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
+                                padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                fontFamily: 'var(--font-ui)',
+                              }}>Complete</button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -225,17 +232,24 @@ export default function ProviderDashboard() {
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Past Sessions</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {past.map(b => (
-                      <div key={b.id} className="card" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.72 }}>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fmtDay(b.date)} · {fmtTime(b.start_time)}</div>
+                      <div key={b.id} className="card" style={{ padding: '14px 20px', opacity: 0.72 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: 180 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fmtDay(b.date)} · {fmtTime(b.start_time)}</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                            <Link to={`/chat/${b.id}`} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+                              Chat
+                            </Link>
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+                              background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
+                            }}>
+                              {STATUS[b.status]?.label}
+                            </span>
+                          </div>
                         </div>
-                        <span style={{
-                          fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
-                          background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
-                        }}>
-                          {STATUS[b.status]?.label}
-                        </span>
                       </div>
                     ))}
                   </div>

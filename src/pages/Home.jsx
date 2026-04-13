@@ -60,8 +60,8 @@ export default function Home() {
   return (
     <div>
       {/* Hero */}
-      <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 56px)', display: 'flex', alignItems: 'center', padding: '0 32px' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%', padding: '64px 0' }}>
+      <div style={{ background: 'var(--bg)', minHeight: 'calc(100vh - 56px)', display: 'flex', alignItems: 'center', padding: '0 20px' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%', padding: '48px 0' }}>
           <div className="hero-grid">
             {/* Left */}
             <div className="fade-up">
@@ -128,7 +128,7 @@ export default function Home() {
       </div>
 
       {/* Category pills */}
-      <div style={{ background: 'var(--bg)', borderTop: '1px solid var(--border)', padding: '28px 32px' }}>
+      <div style={{ background: 'var(--bg)', borderTop: '1px solid var(--border)', padding: '28px 20px' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 14 }}>
             Browse by category
@@ -164,7 +164,7 @@ export default function Home() {
       </div>
 
       {/* Bottom CTA */}
-      <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '80px 32px' }}>
+      <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '60px 20px' }}>
         <div style={{ maxWidth: 540, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{
             fontFamily: 'var(--font-display)',
@@ -197,7 +197,7 @@ export default function Home() {
       {/* Footer */}
       <footer style={{
         borderTop: '1px solid var(--border)', background: 'var(--bg)',
-        padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
       }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)' }}>ASK</span>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>Yeshiva University Student Marketplace</span>

@@ -11,6 +11,9 @@ import bookingRoutes from './routes/bookings.js';
 import reviewRoutes from './routes/reviews.js';
 import accountRoutes from './routes/account.js';
 import adminRoutes from './routes/admin.js';
+import messageRoutes from './routes/messages.js';
+import dmRoutes from './routes/dm.js';
+import peopleRoutes from './routes/people.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -24,6 +27,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'https://uask.live',
+  'https://www.uask.live',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -47,5 +52,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/dm', dmRoutes);
+app.use('/api/people', peopleRoutes);
 
 app.listen(PORT, () => console.log(`ASK API running on http://localhost:${PORT}`));

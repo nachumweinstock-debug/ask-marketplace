@@ -11,4 +11,21 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true;
+      try {
+        const { data: { session } } = await supabase.auth.refreshSession();
+        if (session?.access_token) {
+          error.config.headers.Authorization = `Bearer ${session.access_token}`;
+          return api.request(error.config);
+        }
+      } catch {}
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

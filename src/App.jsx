@@ -11,6 +11,10 @@ import CreateListing from './pages/CreateListing';
 import ResetPassword from './pages/ResetPassword';
 import AccountProfile from './pages/AccountProfile';
 import AdminDashboard from './pages/AdminDashboard';
+import Chat from './pages/Chat';
+import People from './pages/People';
+import UserProfile from './pages/UserProfile';
+import DirectMessages from './pages/DirectMessages';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -43,6 +47,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
+        <Route path="/people" element={<Layout><People /></Layout>} />
+        <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />
         <Route path="/providers/:id" element={<Layout><ProviderProfile /></Layout>} />
         <Route
           path="/account"
@@ -94,6 +100,30 @@ function AppRoutes() {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/chat/:bookingId"
+          element={
+            <ProtectedRoute>
+              <Layout><Chat /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <Layout><DirectMessages /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages/:userId"
+          element={
+            <ProtectedRoute>
+              <Layout><DirectMessages /></Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

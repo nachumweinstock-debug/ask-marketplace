@@ -12,13 +12,15 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const syncUser = useCallback(async (fallbackSession) => {
+  // keepExisting: if true, a failed API call keeps the current user instead of logging out.
+  // Use keepExisting=true for background refreshes (e.g. after saving profile).
+  // Use keepExisting=false (default) for the initial auth check on app load.
+  const syncUser = useCallback(async (fallbackSession, keepExisting = false) => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
     } catch {
-      // Backend unreachable — keep user logged in with Supabase session data
-      // so the app doesn't silently log them out on a transient error
+      // Backend unreachable — try to stay logged in
       if (fallbackSession?.user) {
         const u = fallbackSession.user;
         const email = u.email?.toLowerCase() || '';
@@ -29,9 +31,11 @@ export function AuthProvider({ children }) {
           role: 'student',
           is_admin: SUPERADMINS.includes(email) ? 1 : 0,
         });
-      } else {
+      } else if (!keepExisting) {
+        // Only clear user on initial load failures, not on explicit refreshes
         setUser(null);
       }
+      // If keepExisting=true and no fallback, silently retain current user state
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,7 @@ export function AuthProvider({ children }) {
   }, [syncUser]);
 
   async function refreshUser() {
-    await syncUser();
+    await syncUser(undefined, true); // keepExisting — never log out on a background refresh
   }
 
   async function signOut() {

@@ -34,9 +34,61 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .fade-up { animation: fadeUp 0.4s ease both; }
 
-/* Hero layout */
+/* ── Responsive page wrapper ──────────────────────────────── */
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 48px 32px 80px;
+}
+@media (max-width: 640px) {
+  .page { padding: 24px 16px 60px; }
+}
+
+/* ── Navbar ───────────────────────────────────────────────── */
+/* Desktop nav links — hide on mobile */
+.nav-desktop { display: flex; align-items: center; gap: 20px; }
+/* Mobile actions (messages + avatar + hamburger) — only on mobile */
+.nav-mobile  { display: none; align-items: center; gap: 10px; }
+/* Mobile drawer */
+.nav-drawer {
+  display: none;
+  flex-direction: column;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 8px 0 20px;
+  animation: slideDown 0.15s ease both;
+}
+.nav-drawer a, .nav-drawer button {
+  display: block;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  text-decoration: none;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.nav-drawer a:last-child, .nav-drawer button:last-child { border-bottom: none; }
+.nav-drawer a:active, .nav-drawer button:active { background: var(--bg); }
+
+@media (max-width: 700px) {
+  .nav-desktop { display: none; }
+  .nav-mobile  { display: flex; }
+  .nav-drawer.open { display: flex; }
+}
+
+/* ── Hero layout ──────────────────────────────────────────── */
 .hero-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -48,7 +100,7 @@ body {
   .hero-cards { display: none; }
 }
 
-/* Provider card grid */
+/* ── Provider card grid ───────────────────────────────────── */
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -57,14 +109,14 @@ body {
 @media (max-width: 900px) { .provider-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .provider-grid { grid-template-columns: 1fr; } }
 
-/* Pill filter row */
+/* ── Pill filter row ──────────────────────────────────────── */
 .pill-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-/* Shared card */
+/* ── Shared card ──────────────────────────────────────────── */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -72,7 +124,58 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-/* Scrollbar */
+/* ── Two-column grids that stack on mobile ────────────────── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 560px) {
+  .grid-2col { grid-template-columns: 1fr; }
+}
+
+.grid-3-2 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+@media (max-width: 700px) {
+  .grid-3-2 { grid-template-columns: 1fr; }
+}
+
+/* ── Booking row ──────────────────────────────────────────── */
+.booking-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+@media (max-width: 560px) {
+  .booking-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .booking-row-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
+/* ── Search bar full-width on mobile ─────────────────────── */
+@media (max-width: 560px) {
+  form .search-bar { max-width: 100% !important; }
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Touch targets ────────────────────────────────────────── */
+@media (max-width: 700px) {
+  button, a { -webkit-tap-highlight-color: transparent; }
+  /* Larger touch targets for action buttons */
+  button { min-height: 36px; }
+}

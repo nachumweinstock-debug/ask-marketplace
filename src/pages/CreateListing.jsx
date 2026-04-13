@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -134,6 +134,14 @@ export default function CreateListing() {
   const [slots, setSlots] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Pre-fill payment info from saved account profile
+  useEffect(() => {
+    api.get('/account').then(({ data }) => {
+      if (data.zelle) setZelle(data.zelle);
+      if (data.venmo) setVenmo(data.venmo);
+    }).catch(() => {});
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();

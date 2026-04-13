@@ -110,7 +110,7 @@ export default function StudentDashboard() {
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
 
   return (
-    <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
+    <div className="page" style={{ maxWidth: 840 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 36, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
@@ -150,7 +150,8 @@ export default function StudentDashboard() {
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>Upcoming</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {upcoming.map(b => (
-                  <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} />
+                  <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} showChat
+                    onReview={b.status === 'confirmed' && !b.review_id ? () => setReviewTarget(b) : null} />
                 ))}
               </div>
             </div>
@@ -161,7 +162,8 @@ export default function StudentDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {past.map(b => (
                   <BookingRow key={b.id} booking={b}
-                    onReview={b.status === 'completed' && !b.review_id ? () => setReviewTarget(b) : null} />
+                    onReview={b.status === 'completed' && !b.review_id ? () => setReviewTarget(b) : null}
+                    showChat />
                 ))}
               </div>
             </div>
@@ -176,35 +178,41 @@ export default function StudentDashboard() {
   );
 }
 
-function BookingRow({ booking, onCancel, cancelLoading, onReview }) {
+function BookingRow({ booking, onCancel, cancelLoading, onReview, showChat }) {
   const s = STATUS[booking.status] || STATUS.pending;
   return (
-    <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Link to={`/providers/${booking.provider_profile_id}`}
-          style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}>
-          {booking.provider_name}
-        </Link>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-          {CAT_LABELS[booking.category] || booking.category}
-          {' · '}
-          {fmtDay(booking.date)}
-          {' · '}{fmtTime(booking.start_time)}–{fmtTime(booking.end_time)}
-        </div>
-        {booking.price_per_session > 0 && (
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.8 }}>
-            Pay ${booking.price_per_session} via Zelle/Venmo
+    <div className="card" style={{ padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <Link to={`/providers/${booking.provider_profile_id}`}
+            style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}>
+            {booking.provider_name}
+          </Link>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+            {CAT_LABELS[booking.category] || booking.category}
+            {' · '}
+            {fmtDay(booking.date)}
+            {' · '}{fmtTime(booking.start_time)}–{fmtTime(booking.end_time)}
           </div>
-        )}
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <span style={{
-          display: 'inline-block', fontSize: 11, fontWeight: 600,
-          padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color,
-        }}>
-          {s.label}
-        </span>
-        <div style={{ marginTop: 8, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          {booking.price_per_session > 0 && (
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.8 }}>
+              Pay ${booking.price_per_session} via Zelle/Venmo
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span style={{
+            display: 'inline-block', fontSize: 11, fontWeight: 600,
+            padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color,
+          }}>
+            {s.label}
+          </span>
+          {showChat && booking.status !== 'cancelled' && (
+            <Link to={`/chat/${booking.id}`}
+              style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+              Chat
+            </Link>
+          )}
           {onCancel && booking.status !== 'cancelled' && (
             <button onClick={() => onCancel(booking.id)} disabled={cancelLoading === booking.id}
               style={{ fontSize: 12, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)' }}>

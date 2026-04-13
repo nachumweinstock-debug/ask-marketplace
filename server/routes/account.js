@@ -8,7 +8,7 @@ const router = Router();
 // GET /api/account — full profile with stats
 router.get('/', requireAuth, (req, res) => {
   const user = db.prepare(
-    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, created_at FROM users WHERE id = ?'
+    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, created_at FROM users WHERE id = ?'
   ).get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -40,11 +40,20 @@ router.get('/', requireAuth, (req, res) => {
     }
   }
 
+  // Prefer provider_profile zelle/venmo if set, otherwise fall back to user-level
+  const zelle = providerData?.zelle ?? user.zelle;
+  const venmo = providerData?.venmo ?? user.venmo;
+
+  // Spread providerData first so user-level fields (name, email, etc.) from `user` take precedence,
+  // then explicitly set the resolved zelle/venmo so neither spread can overwrite them with null.
   res.json({
+    ...(providerData || {}),
     ...user,
+    zelle,
+    venmo,
     total_bookings: bookingStats?.total || 0,
     completed_bookings: bookingStats?.completed || 0,
-    ...(providerData || {}),
+    recent_reviews: providerData?.recent_reviews ?? [],
   });
 });
 
@@ -60,6 +69,8 @@ router.put('/', requireAuth, async (req, res) => {
     if (classes_taking !== undefined) userUpdates.classes_taking = classes_taking;
     if (gpa !== undefined)            userUpdates.gpa            = gpa;
     if (user_bio !== undefined)       userUpdates.user_bio       = user_bio;
+    if (zelle !== undefined)          userUpdates.zelle          = zelle;
+    if (venmo !== undefined)          userUpdates.venmo          = venmo;
 
     if (avatar_data_url && (avatar_data_url.startsWith('data:image/') || avatar_data_url.startsWith('http'))) {
       // Upload to Supabase Storage if it's a fresh base64 upload; http URLs are already stored
@@ -80,7 +91,7 @@ router.put('/', requireAuth, async (req, res) => {
         .run(userUpdates.avatar_url, req.user.id);
     }
 
-    // Update provider-specific payment fields
+    // Sync zelle/venmo to provider_profile if one exists
     if (zelle !== undefined || venmo !== undefined) {
       const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ?').get(req.user.id);
       if (profile) {
@@ -93,7 +104,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     const updated = db.prepare(
-      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio FROM users WHERE id = ?'
+      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo FROM users WHERE id = ?'
     ).get(req.user.id);
     res.json(updated);
   } catch (err) {

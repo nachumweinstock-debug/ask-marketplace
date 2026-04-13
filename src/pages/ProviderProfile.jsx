@@ -55,6 +55,11 @@ export default function ProviderProfile() {
     }
   }
 
+  function handleMessage() {
+    if (!user) return navigate('/login');
+    navigate(`/messages/${provider.user_id}`);
+  }
+
   async function handleBook() {
     if (!user) return navigate('/login');
     if (!booking) return setBookingError('Please select a time slot.');
@@ -88,7 +93,7 @@ export default function ProviderProfile() {
   }, {});
 
   return (
-    <div style={{ maxWidth: 840, margin: '0 auto', padding: '48px 32px 80px' }}>
+    <div className="page" style={{ maxWidth: 840 }}>
 
       {/* Back */}
       <Link to="/browse" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none', display: 'inline-block', marginBottom: 28 }}
@@ -182,6 +187,18 @@ export default function ProviderProfile() {
               </p>
             )}
 
+            {!isOwner && (
+              <div style={{ marginTop: 16 }}>
+                <button onClick={handleMessage} style={{
+                  padding: '9px 22px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                  background: 'var(--primary)', color: '#fff', border: 'none',
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                }}>
+                  Message {provider.name.split(' ')[0]}
+                </button>
+              </div>
+            )}
+
             {(provider.zelle || provider.venmo) && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
                 {provider.zelle && (
@@ -202,7 +219,7 @@ export default function ProviderProfile() {
       </div>
 
       {/* Slots + Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16 }}>
+      <div className="grid-3-2">
 
         {/* Availability */}
         <div className="card" style={{ padding: '24px' }}>

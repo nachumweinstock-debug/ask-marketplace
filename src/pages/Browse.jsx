@@ -85,7 +85,7 @@ export default function Browse() {
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 32px 64px' }}>
+    <div className="page" style={{ paddingTop: 40 }}>
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
