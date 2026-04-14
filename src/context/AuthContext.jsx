@@ -51,9 +51,14 @@ export function AuthProvider({ children }) {
   }, [syncUser]);
 
   // Called after our own login/verify to store token and set user
-  function loginWithToken(token, userData) {
+  async function loginWithToken(token, userData) {
     localStorage.setItem('ask_token', token);
-    setUser(userData);
+    setUser(userData); // set immediately so navigation works right away
+    // then replace with the full record (includes is_admin, provider_profile_id, etc.)
+    try {
+      const { data } = await api.get('/auth/me');
+      setUser(data);
+    } catch { /* leave userData in place */ }
   }
 
   async function refreshUser() {

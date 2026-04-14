@@ -117,6 +117,10 @@ router.post('/login', async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
+  // Legacy Supabase accounts have no password — prompt reset
+  if (!user.password) {
+    return res.status(401).json({ error: 'No password set for this account. Use "Forgot password" to create one.' });
+  }
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 

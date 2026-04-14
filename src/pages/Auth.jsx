@@ -102,11 +102,21 @@ function Err({ msg }) {
 
 // ── Verification code input ────────────────────────────────────────────────────
 
-function CodeInput({ onComplete }) {
+function CodeInput({ onComplete, resetKey }) {
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
-  const refs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const r0 = useRef(); const r1 = useRef(); const r2 = useRef();
+  const r3 = useRef(); const r4 = useRef(); const r5 = useRef();
+  const refs = [r0, r1, r2, r3, r4, r5];
 
   useEffect(() => { refs[0].current?.focus(); }, []);
+
+  // Reset boxes when parent signals an error (resetKey changes)
+  useEffect(() => {
+    if (resetKey) {
+      setDigits(['', '', '', '', '', '']);
+      setTimeout(() => refs[0].current?.focus(), 0);
+    }
+  }, [resetKey]);
 
   function handleChange(i, val) {
     const d = val.replace(/\D/g, '').slice(-1);
@@ -171,6 +181,7 @@ export function SignUp() {
   const [verifyEmail, setVerifyEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [codeResetKey, setCodeResetKey] = useState(0);
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
@@ -197,10 +208,11 @@ export function SignUp() {
     setError(''); setLoading(true);
     try {
       const { data } = await api.post('/auth/verify', { userId, code });
-      loginWithToken(data.token, data.user);
+      await loginWithToken(data.token, data.user);
       navigate('/dashboard/student');
     } catch (err) {
       setError(err.response?.data?.error || 'Incorrect code');
+      setCodeResetKey(k => k + 1); // clear the boxes
       setLoading(false);
     }
   }
@@ -228,7 +240,7 @@ export function SignUp() {
           <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
         </div>
         <Err msg={error} />
-        <CodeInput onComplete={handleCode} />
+        <CodeInput onComplete={handleCode} resetKey={codeResetKey} />
         {loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Verifying…</div>}
         <div style={{ marginTop: 16 }}>
           <button type="button" onClick={handleResend} disabled={resendLoading} style={{
@@ -284,6 +296,7 @@ export function Login() {
   const [verifyEmail, setVerifyEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [codeResetKey, setCodeResetKey] = useState(0);
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
@@ -294,8 +307,8 @@ export function Login() {
         email: form.email.toLowerCase(),
         password: form.password,
       });
-      loginWithToken(data.token, data.user);
-      navigate('/dashboard/student');
+      await loginWithToken(data.token, data.user);
+      navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
     } catch (err) {
       const d = err.response?.data;
       if (d?.needsVerification) {
@@ -314,10 +327,11 @@ export function Login() {
     setError(''); setLoading(true);
     try {
       const { data } = await api.post('/auth/verify', { userId, code });
-      loginWithToken(data.token, data.user);
-      navigate('/dashboard/student');
+      await loginWithToken(data.token, data.user);
+      navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
     } catch (err) {
       setError(err.response?.data?.error || 'Incorrect code');
+      setCodeResetKey(k => k + 1);
       setLoading(false);
     }
   }
@@ -344,7 +358,7 @@ export function Login() {
           We sent a code to <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
         </div>
         <Err msg={error} />
-        <CodeInput onComplete={handleCode} />
+        <CodeInput onComplete={handleCode} resetKey={codeResetKey} />
         {loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Verifying…</div>}
         <div style={{ marginTop: 16 }}>
           <button type="button" onClick={handleResend} disabled={resendLoading} style={{
