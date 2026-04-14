@@ -60,36 +60,52 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           </div>
         )}
 
-        {/* Avatar + name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        {/* Avatar + name row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
           {mediaUrl(provider.avatar_url) ? (
             <img src={mediaUrl(provider.avatar_url)} alt={provider.name} style={{
-              width: 36, height: 36, borderRadius: '50%', objectFit: 'cover',
+              width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
               border: '1px solid var(--border)', flexShrink: 0,
             }} />
           ) : (
             <div style={{
-              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               background: 'var(--accent)', color: 'var(--primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: 12, fontFamily: 'var(--font-ui)',
+              fontWeight: 700, fontSize: 11, fontFamily: 'var(--font-ui)',
             }}>
               {initials(provider.name)}
             </div>
           )}
-          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', lineHeight: 1.3, minWidth: 0 }}>
-            {provider.name}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, lineHeight: 1.2,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {provider.name}
+            </div>
           </div>
         </div>
 
-        {/* Category + session type pills */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-          <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
-          <SessionTypePill sessionType={provider.session_type} />
+        {/* Offering headline — the most important thing on the card */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{
+            fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
+            marginBottom: 5,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {provider.title || provider.subcategory || provider.custom_category ||
+              { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring',
+                fitness: 'Fitness', tennis: 'Fitness' }[provider.category] ||
+              provider.category}
+          </div>
+          {/* Session type + category as secondary tags */}
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+            <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
+            <SessionTypePill sessionType={provider.session_type} />
+          </div>
         </div>
 
         {/* Rating + session count */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
           {provider.rating > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ color: '#F59E0B', fontSize: 12 }}>★</span>
@@ -99,7 +115,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           )}
           {provider.completed_sessions > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>·</span>
+              {provider.rating > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>·</span>}
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
                 {provider.completed_sessions} session{provider.completed_sessions !== 1 ? 's' : ''}
               </span>
@@ -110,7 +126,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
         {/* Bio */}
         <p style={{
           fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.55,
-          marginBottom: 14, minHeight: 36,
+          marginBottom: 14, minHeight: 32,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {provider.bio || 'No description provided.'}
