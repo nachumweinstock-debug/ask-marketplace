@@ -23,10 +23,19 @@ router.get('/:providerId', (req, res) => {
 
 router.post('/', requireAuth, (req, res) => {
   if (req.user.role !== 'provider') return res.status(403).json({ error: 'Providers only' });
-  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-  if (!profile) return res.status(404).json({ error: 'No profile found' });
 
-  const { date, start_time, end_time } = req.body;
+  const { date, start_time, end_time, provider_id } = req.body;
+
+  // If provider_id supplied, verify ownership; otherwise fall back to most recent profile
+  let profile;
+  if (provider_id) {
+    profile = db.prepare('SELECT id FROM provider_profiles WHERE id = ? AND user_id = ?').get(provider_id, req.user.id);
+    if (!profile) return res.status(404).json({ error: 'Listing not found' });
+  } else {
+    profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
+    if (!profile) return res.status(404).json({ error: 'No profile found' });
+  }
+
   if (!date || !start_time || !end_time) return res.status(400).json({ error: 'date, start_time, end_time required' });
   const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   if (!DAYS.includes(date)) return res.status(400).json({ error: 'date must be a day name (Monday–Sunday)' });

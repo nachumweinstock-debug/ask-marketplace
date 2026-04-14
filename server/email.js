@@ -1,10 +1,18 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import { buildICS, googleCalendarUrl } from './calendar.js';
 
-function getTransporter() {
+// ── Transport selection ────────────────────────────────────────────────────────
+// Priority: Resend (RESEND_API_KEY) → Gmail/SMTP (EMAIL_HOST + creds) → console log
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+function getSmtpTransporter() {
   const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env;
   if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS) return null;
-
   return nodemailer.createTransport({
     host: EMAIL_HOST,
     port: parseInt(EMAIL_PORT || '587'),
@@ -13,108 +21,135 @@ function getTransporter() {
   });
 }
 
-function codeBlock(code) {
-  return `<div style="font-size:40px;font-weight:700;letter-spacing:10px;text-align:center;color:#1e293b;background:#fff;border:2px solid #fde68a;border-radius:12px;padding:20px 0;margin:24px 0">${code}</div>`;
-}
+const FROM_ADDRESS = process.env.EMAIL_FROM || 'ASK Marketplace <noreply@uask.live>';
 
-export async function sendVerificationCode(toEmail, code) {
-  const transporter = getTransporter();
+async function sendEmail({ to, subject, html, attachments }) {
+  const resend = getResend();
 
-  if (!transporter) {
-    // Dev fallback — print to console
-    console.log(`\n📧 VERIFICATION CODE for ${toEmail}: ${code}\n`);
+  if (resend) {
+    const payload = { from: FROM_ADDRESS, to, subject, html };
+    if (attachments?.length) {
+      payload.attachments = attachments.map(a => ({
+        filename: a.filename,
+        content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+      }));
+    }
+    await resend.emails.send(payload);
     return;
   }
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+  const smtp = getSmtpTransporter();
+  if (smtp) {
+    await smtp.sendMail({ from: FROM_ADDRESS, to, subject, html, attachments });
+    return;
+  }
+
+  // Dev fallback
+  console.log(`\n📧 [EMAIL] To: ${to} | Subject: ${subject}\n`);
+}
+
+// ── Shared HTML helpers ────────────────────────────────────────────────────────
+function emailWrap(content) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#F6F3EF;font-family:system-ui,sans-serif">
+    <div style="max-width:520px;margin:40px auto;background:#fff;border:1.5px solid #DDD8D0;border-radius:12px;overflow:hidden">
+      <div style="background:#1B4FD8;padding:20px 28px;display:flex;align-items:center;gap:10px">
+        <span style="color:#fff;font-size:20px;font-weight:800;letter-spacing:1px">ASK</span>
+        <span style="color:rgba(255,255,255,0.6);font-size:13px">Marketplace</span>
+      </div>
+      <div style="padding:28px 28px 32px">${content}</div>
+      <div style="padding:16px 28px;background:#F6F3EF;border-top:1px solid #DDD8D0;font-size:11px;color:#9ca3af">
+        You're receiving this because you have an account on <a href="https://uask.live" style="color:#1B4FD8;text-decoration:none">uask.live</a>.
+      </div>
+    </div>
+  </body></html>`;
+}
+
+function codeBlock(code) {
+  return `<div style="font-size:42px;font-weight:800;letter-spacing:12px;text-align:center;color:#111;background:#F6F3EF;border:1.5px solid #DDD8D0;border-radius:10px;padding:22px 0;margin:24px 0;font-family:monospace">${code}</div>`;
+}
+
+function infoRow(label, value, sub) {
+  return `<div style="margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#9ca3af;margin-bottom:3px">${label}</div>
+    <div style="font-size:15px;font-weight:600;color:#111">${value}</div>
+    ${sub ? `<div style="font-size:12px;color:#6b7280;margin-top:1px">${sub}</div>` : ''}
+  </div>`;
+}
+
+function infoCard(...rows) {
+  return `<div style="background:#F6F3EF;border:1.5px solid #DDD8D0;border-radius:10px;padding:18px 20px;margin:20px 0">${rows.join('')}</div>`;
+}
+
+function btn(href, label, color = '#1B4FD8') {
+  return `<a href="${href}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:${color};color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;margin-bottom:8px">${label}</a>`;
+}
+
+// ── Email functions ────────────────────────────────────────────────────────────
+
+export async function sendVerificationCode(toEmail, code) {
+  await sendEmail({
     to: toEmail,
     subject: 'Your ASK verification code',
-    html: `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
-      <h2 style="margin:0 0 8px;color:#1e293b;font-size:22px">Verify your YU email</h2>
-      <p style="margin:0;color:#64748b;font-size:15px">Enter this code to complete your sign-up.</p>
+    html: emailWrap(`
+      <h2 style="margin:0 0 6px;font-size:22px;color:#111">Verify your email</h2>
+      <p style="margin:0 0 4px;color:#6b7280;font-size:14px">Enter this code to complete your sign-up.</p>
       ${codeBlock(code)}
-      <p style="margin:0;color:#94a3b8;font-size:13px">Expires in 10 minutes. Didn't request this? Ignore it.</p>
-    </div>`,
+      <p style="margin:0;color:#9ca3af;font-size:12px">Expires in 10 minutes. Didn't request this? Ignore it.</p>
+    `),
+  });
+}
+
+export async function sendPasswordResetCode(toEmail, code) {
+  await sendEmail({
+    to: toEmail,
+    subject: 'Reset your ASK password',
+    html: emailWrap(`
+      <h2 style="margin:0 0 6px;font-size:22px;color:#111">Reset your password</h2>
+      <p style="margin:0 0 4px;color:#6b7280;font-size:14px">Enter this code to set a new password.</p>
+      ${codeBlock(code)}
+      <p style="margin:0;color:#9ca3af;font-size:12px">Expires in 10 minutes. Didn't request this? Ignore it.</p>
+    `),
   });
 }
 
 export async function sendBookingNotification({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime }) {
-  const transporter = getTransporter();
-  const timeStr = `${startTime}–${endTime}`;
-
-  if (!transporter) {
-    console.log(`\n📅 NEW BOOKING for ${providerEmail}: ${studentName} (${studentEmail}) booked ${date} ${timeStr}\n`);
-    return;
-  }
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+  await sendEmail({
     to: providerEmail,
-    subject: `🎉 New booking from ${studentName}`,
-    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
-      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">You got a booking, mazel tov!</h2>
-      <p style="margin:0 0 24px;color:#64748b;font-size:15px">Someone just booked a session with you on ASK.</p>
-      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
-        <div style="margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Student</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${studentName}</div>
-          <div style="font-size:13px;color:#6b7280">${studentEmail}</div>
-        </div>
-        <div>
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
-          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
-        </div>
-      </div>
-      <p style="margin:0;color:#94a3b8;font-size:13px">Log in to <a href="https://uask.live" style="color:#3b82f6">uask.live</a> to confirm or message the student.</p>
-    </div>`,
+    subject: `New booking from ${studentName}`,
+    html: emailWrap(`
+      <h2 style="margin:0 0 6px;font-size:22px;color:#111">You got a booking!</h2>
+      <p style="margin:0 0 4px;color:#6b7280;font-size:14px">Someone just booked a session with you on ASK.</p>
+      ${infoCard(
+        infoRow('Student', studentName, studentEmail),
+        infoRow('Session', date, `${startTime}–${endTime}`)
+      )}
+      ${btn('https://uask.live/dashboard/provider', 'View in Dashboard')}
+    `),
   });
 }
 
 export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId }) {
-  const transporter = getTransporter();
-  const timeStr = `${startTime}–${endTime}`;
-
   const calTitle = `Session with ${providerName}`;
-  const calDesc  = `Booked via uask.live. View details: https://uask.live/dashboard/student`;
+  const calDesc  = `Booked via uask.live.`;
   const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
   const icsData  = buildICS({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime, uid: `booking-${bookingId}@uask.live`, url: 'https://uask.live/dashboard/student' });
 
-  if (!transporter) {
-    console.log(`\n✅ BOOKING CONFIRMED for ${studentEmail}: session with ${providerName} on ${date} ${timeStr}\n`);
-    console.log(`   Google Calendar: ${gCalUrl}\n`);
-    return;
-  }
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+  await sendEmail({
     to: studentEmail,
-    subject: `✅ Your session with ${providerName} is confirmed`,
-    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
-      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">You're all set!</h2>
-      <p style="margin:0 0 24px;color:#64748b;font-size:15px">${providerName} confirmed your session.</p>
-      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
-        <div style="margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Provider</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${providerName}</div>
-        </div>
-        <div>
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
-          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
-        </div>
+    subject: `Your session with ${providerName} is confirmed`,
+    html: emailWrap(`
+      <h2 style="margin:0 0 6px;font-size:22px;color:#111">You're all set!</h2>
+      <p style="margin:0 0 4px;color:#6b7280;font-size:14px">${providerName} confirmed your session.</p>
+      ${infoCard(
+        infoRow('Provider', providerName),
+        infoRow('Session', date, `${startTime}–${endTime}`)
+      )}
+      <div style="margin-bottom:16px">
+        ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
+        ${btn(`https://uask.live/api/bookings/${bookingId}/ics`, ' Apple Calendar', '#111')}
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
-        <a href="${gCalUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
-          <span style="font-size:15px">📅</span> Add to Google Calendar
-        </a>
-        <a href="https://uask.live/api/bookings/${bookingId}/ics" style="display:inline-flex;align-items:center;gap:6px;background:#1a1a1a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
-          <span style="font-size:15px"></span> Add to Apple Calendar
-        </a>
-      </div>
-      <p style="margin:0;color:#94a3b8;font-size:12px">The .ics attachment below also works with Outlook and any other calendar app.</p>
-    </div>`,
+      <p style="margin:0;color:#9ca3af;font-size:12px">The .ics file attached also works with Outlook and any calendar app.</p>
+    `),
     attachments: [{
       filename: 'session.ics',
       content: icsData,
@@ -124,68 +159,27 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
 }
 
 export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime, bookingId }) {
-  const transporter = getTransporter();
-  const timeStr = `${startTime}–${endTime}`;
-
   const calTitle = `Session with ${studentName}`;
   const calDesc  = `Student: ${studentName} (${studentEmail}). Manage at https://uask.live/dashboard/provider`;
   const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
   const icsData  = buildICS({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime, uid: `booking-${bookingId}-provider@uask.live`, url: 'https://uask.live/dashboard/provider' });
 
-  if (!transporter) {
-    console.log(`\n📋 CONFIRMATION COPY for provider ${providerEmail}: session with ${studentName} on ${date} ${timeStr}\n`);
-    return;
-  }
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+  await sendEmail({
     to: providerEmail,
-    subject: `📋 Session confirmed with ${studentName} — ${date} ${timeStr}`,
-    html: `<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
-      <h2 style="margin:0 0 6px;color:#1e293b;font-size:22px">Session confirmed!</h2>
-      <p style="margin:0 0 24px;color:#64748b;font-size:15px">Here's a reminder of your upcoming session.</p>
-      <div style="background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:20px 24px;margin-bottom:24px">
-        <div style="margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Student</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${studentName}</div>
-          <div style="font-size:13px;color:#6b7280">${studentEmail}</div>
-        </div>
-        <div>
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#9ca3af">Session</span>
-          <div style="font-size:16px;font-weight:600;color:#1a1a1a;margin-top:2px">${date}</div>
-          <div style="font-size:13px;color:#6b7280">${timeStr}</div>
-        </div>
-      </div>
-      <div style="margin-bottom:24px">
-        <a href="${gCalUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600">
-          <span style="font-size:15px">📅</span> Add to Google Calendar
-        </a>
-      </div>
-      <p style="margin:0;color:#94a3b8;font-size:12px">The .ics attachment also adds this to Apple Calendar or Outlook.</p>
-    </div>`,
+    subject: `Session confirmed with ${studentName} — ${date} ${startTime}–${endTime}`,
+    html: emailWrap(`
+      <h2 style="margin:0 0 6px;font-size:22px;color:#111">Session confirmed!</h2>
+      <p style="margin:0 0 4px;color:#6b7280;font-size:14px">Here's a reminder of your upcoming session.</p>
+      ${infoCard(
+        infoRow('Student', studentName, studentEmail),
+        infoRow('Session', date, `${startTime}–${endTime}`)
+      )}
+      ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
+    `),
     attachments: [{
       filename: 'session.ics',
       content: icsData,
       contentType: 'text/calendar; charset=UTF-8; method=REQUEST',
     }],
-  });
-}
-
-export async function sendPasswordResetCode(toEmail, code) {
-  const transporter = getTransporter();
-  if (!transporter) {
-    console.log(`\n🔑 PASSWORD RESET CODE for ${toEmail}: ${code}\n`);
-    return;
-  }
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to: toEmail,
-    subject: 'Reset your ASK password',
-    html: `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:32px 24px;background:#fdf9f2;border-radius:16px">
-      <h2 style="margin:0 0 8px;color:#1e293b;font-size:22px">Reset your password</h2>
-      <p style="margin:0;color:#64748b;font-size:15px">Enter this code to set a new password.</p>
-      ${codeBlock(code)}
-      <p style="margin:0;color:#94a3b8;font-size:13px">Expires in 10 minutes. Didn't request this? Ignore it.</p>
-    </div>`,
   });
 }

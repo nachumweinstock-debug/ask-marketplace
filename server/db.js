@@ -167,6 +167,45 @@ if (!tables.includes('direct_messages')) {
   if (!dmCols.includes('is_system')) db.exec('ALTER TABLE direct_messages ADD COLUMN is_system INTEGER DEFAULT 0');
 }
 
+// ── Multiple listings: drop UNIQUE constraint on provider_profiles.user_id ────
+// SQLite can't ALTER TABLE DROP CONSTRAINT, so we recreate the table.
+// This runs only if user_id is still UNIQUE (fresh or old single-listing installs).
+const ppSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='provider_profiles'").get();
+if (ppSchema && /user_id\s+INTEGER\s+UNIQUE/i.test(ppSchema.sql)) {
+  db.exec(`
+    PRAGMA foreign_keys = OFF;
+    BEGIN;
+    CREATE TABLE provider_profiles_new (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      bio               TEXT,
+      category          TEXT NOT NULL DEFAULT 'other',
+      price_per_session REAL DEFAULT 0,
+      rating            REAL DEFAULT 0,
+      review_count      INTEGER DEFAULT 0,
+      zelle             TEXT,
+      venmo             TEXT,
+      avatar_url        TEXT,
+      custom_category   TEXT,
+      listing_image     TEXT,
+      session_type      TEXT NOT NULL DEFAULT 'in-person',
+      title             TEXT
+    );
+    INSERT INTO provider_profiles_new
+      SELECT id, user_id, bio, category, price_per_session, rating, review_count,
+             zelle, venmo, avatar_url, custom_category, listing_image, session_type, NULL
+      FROM provider_profiles;
+    DROP TABLE provider_profiles;
+    ALTER TABLE provider_profiles_new RENAME TO provider_profiles;
+    COMMIT;
+    PRAGMA foreign_keys = ON;
+  `);
+} else {
+  // Already multi-listing schema — just ensure title column exists
+  const pp2 = db.pragma('table_info(provider_profiles)').map(c => c.name);
+  if (!pp2.includes('title')) db.exec('ALTER TABLE provider_profiles ADD COLUMN title TEXT');
+}
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {

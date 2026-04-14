@@ -160,8 +160,9 @@ export default function CreateListing() {
     if (!category) { setError('Select a category first'); return; }
     setError(''); setLoading(true);
     try {
-      await api.post('/providers/become');
-      await api.put('/providers/me', {
+      const { data: becomeData } = await api.post('/providers/become');
+      const profileId = becomeData.profile_id;
+      await api.put(`/providers/${profileId}`, {
         category,
         custom_category: category === 'other' ? customCategory : '',
         session_type: sessionType,
@@ -173,7 +174,7 @@ export default function CreateListing() {
       });
 
       await Promise.all(slots.map(sl =>
-        api.post('/availability', { date: sl.date, start_time: sl.start_time, end_time: sl.end_time })
+        api.post('/availability', { date: sl.date, start_time: sl.start_time, end_time: sl.end_time, provider_id: profileId })
       ));
 
       await refreshUser();

@@ -53,7 +53,7 @@ export default function Browse() {
   async function handleDeleteOwn(providerId) {
     if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
     try {
-      await api.delete('/providers/me');
+      await api.delete(`/providers/${providerId}`);
       await refreshUser();
       setProviders(ps => ps.filter(p => p.id !== providerId));
     } catch (err) {

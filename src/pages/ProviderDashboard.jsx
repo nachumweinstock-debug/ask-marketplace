@@ -112,9 +112,12 @@ export default function ProviderDashboard() {
   const imageInputRef = useRef(null);
   const [imgDragging, setImgDragging] = useState(false);
 
+  const [myListings, setMyListings] = useState([]);
+
   useEffect(() => {
     Promise.all([
       api.get('/providers/me/profile').then(r => setProfile(r.data)),
+      api.get('/providers/mine').then(r => setMyListings(r.data)),
       api.get('/bookings/mine?as=provider').then(r => setBookings(r.data)),
     ]).catch(console.error).finally(() => setLoading(false));
   }, []);
@@ -159,7 +162,7 @@ export default function ProviderDashboard() {
   async function saveListingImage(url) {
     setImageSaving(true);
     try {
-      await api.put('/providers/me', { listing_image_data_url: url ?? null });
+      await api.put(`/providers/${profile.id}`, { listing_image_data_url: url ?? null });
       setProfile(p => ({ ...p, listing_image: url ?? null }));
       setImagePreview(null);
     } catch (err) { alert(err.response?.data?.error || 'Failed to save image'); }
@@ -170,7 +173,7 @@ export default function ProviderDashboard() {
     if (!confirm('Delete your listing? This removes all your availability slots and booking history. This cannot be undone.')) return;
     setDeleteLoading(true);
     try {
-      await api.delete('/providers/me');
+      await api.delete(`/providers/${profile.id}`);
       await refreshUser();
       navigate('/dashboard/student');
     } catch (err) {
@@ -205,7 +208,7 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
             My Services
@@ -216,18 +219,68 @@ export default function ProviderDashboard() {
             <a href="/account" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>Edit profile →</a>
           </p>
         </div>
-        <button onClick={deleteListing} disabled={deleteLoading} style={{
-          background: 'none', border: '1.5px solid #FECACA', color: '#DC2626',
-          borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 600,
-          cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
-          opacity: deleteLoading ? 0.6 : 1, transition: 'all .15s', whiteSpace: 'nowrap',
-        }}
-          onMouseEnter={e => { if (!deleteLoading) e.currentTarget.style.background = '#FEF2F2'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-        >
-          {deleteLoading ? 'Deleting...' : 'Delete listing'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href="/create-listing" style={{
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'var(--font-ui)', textDecoration: 'none',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>
+            + Add another listing
+          </a>
+          <button onClick={deleteListing} disabled={deleteLoading} style={{
+            background: 'none', border: '1.5px solid #FECACA', color: '#DC2626',
+            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600,
+            cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+            opacity: deleteLoading ? 0.6 : 1, transition: 'all .15s', whiteSpace: 'nowrap',
+          }}
+            onMouseEnter={e => { if (!deleteLoading) e.currentTarget.style.background = '#FEF2F2'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete this listing'}
+          </button>
+        </div>
       </div>
+
+      {/* All listings overview */}
+      {myListings.length > 1 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 10 }}>
+            Your {myListings.length} listings
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {myListings.map(l => {
+              const isActive = l.id === profile?.id;
+              const cat = l.custom_category || l.category;
+              return (
+                <div key={l.id} style={{
+                  padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  border: `1.5px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+                  background: isActive ? 'var(--accent)' : 'var(--card)',
+                  color: isActive ? 'var(--primary)' : 'var(--text)',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                  <span style={{ textTransform: 'capitalize' }}>{cat}</span>
+                  {l.price_per_session > 0 && <span style={{ color: 'var(--muted)', fontSize: 12 }}>${l.price_per_session}</span>}
+                  {l.pending_bookings > 0 && (
+                    <span style={{ background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, minWidth: 16, height: 16, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                      {l.pending_bookings}
+                    </span>
+                  )}
+                  {!isActive && (
+                    <button onClick={() => { setProfile(l); }} style={{
+                      background: 'none', border: 'none', fontSize: 11, color: 'var(--primary)',
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600, padding: 0,
+                    }}>
+                      Manage
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28 }}>
