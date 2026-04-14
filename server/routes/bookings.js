@@ -29,11 +29,12 @@ async function sendBookingEmails(booking, slot, student) {
 
 // GET /bookings/notifications — unread counts for the navbar badge
 router.get('/notifications', requireAuth, (req, res) => {
-  // Pending bookings for providers (waiting to confirm)
-  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-  const pending_bookings = profile
-    ? db.prepare("SELECT COUNT(*) as n FROM bookings WHERE provider_id = ? AND status = 'pending'").get(profile.id).n
-    : 0;
+  // Pending bookings across ALL of the user's listings
+  const pending_bookings = db.prepare(`
+    SELECT COUNT(*) as n FROM bookings b
+    JOIN provider_profiles pp ON b.provider_id = pp.id
+    WHERE pp.user_id = ? AND b.status = 'pending'
+  `).get(req.user.id).n;
 
   // Unread DMs
   const dm_unread = db.prepare(
@@ -44,19 +45,19 @@ router.get('/notifications', requireAuth, (req, res) => {
 });
 
 router.get('/mine', requireAuth, (req, res) => {
-  // Provider view: sessions booked with me
+  // Provider view: sessions booked with me — across all listings
   if (req.query.as === 'provider') {
-    const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-    if (!profile) return res.json([]);
     const bookings = db.prepare(`
       SELECT b.*, a.date, a.start_time, a.end_time,
-             u.name as student_name, u.email as student_email
+             u.name as student_name, u.email as student_email,
+             pp.category, pp.custom_category, pp.title as listing_title
       FROM bookings b
       JOIN availability a ON b.availability_id = a.id
       JOIN users u ON b.student_id = u.id
-      WHERE b.provider_id = ?
+      JOIN provider_profiles pp ON b.provider_id = pp.id
+      WHERE pp.user_id = ?
       ORDER BY a.date DESC, a.start_time DESC
-    `).all(profile.id);
+    `).all(req.user.id);
     return res.json(bookings);
   }
 
@@ -89,17 +90,36 @@ router.post('/', requireAuth, async (req, res) => {
     if (!slot) return res.status(404).json({ error: 'Slot not found' });
     if (slot.is_booked) return res.status(400).json({ error: 'Slot already booked' });
 
-    // Can't book your own slot
-    const ownProfile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-    console.log('[BOOKING] ownProfile:', ownProfile ? `id=${ownProfile.id}` : 'none');
-    if (ownProfile && ownProfile.id === slot.provider_id) {
-      return res.status(400).json({ error: "You can't book your own slot" });
-    }
+    // Can't book your own slot (check all of the student's listings)
+    const isOwnSlot = db.prepare(
+      'SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?'
+    ).get(req.user.id, slot.provider_id);
+    console.log('[BOOKING] isOwnSlot:', !!isOwnSlot);
+    if (isOwnSlot) return res.status(400).json({ error: "You can't book your own slot" });
 
     const existing = db.prepare(
       "SELECT id FROM bookings WHERE student_id = ? AND availability_id = ? AND status != 'cancelled'"
     ).get(req.user.id, availability_id);
     if (existing) return res.status(400).json({ error: 'Already booked' });
+
+    // Cross-listing conflict check: provider must be free on ALL their listings at this time
+    const providerUserId = db.prepare(
+      'SELECT user_id FROM provider_profiles WHERE id = ?'
+    ).get(slot.provider_id)?.user_id;
+    if (providerUserId) {
+      const conflict = db.prepare(`
+        SELECT 1
+        FROM availability a
+        JOIN provider_profiles pp ON a.provider_id = pp.id
+        JOIN bookings b ON b.availability_id = a.id
+        WHERE pp.user_id = ?
+          AND a.date = ?
+          AND a.start_time < ?
+          AND a.end_time > ?
+          AND b.status NOT IN ('cancelled')
+      `).get(providerUserId, slot.date, slot.end_time, slot.start_time);
+      if (conflict) return res.status(400).json({ error: 'Provider is already booked at this time' });
+    }
 
     const result = db.prepare(
       'INSERT INTO bookings (student_id, provider_id, availability_id) VALUES (?, ?, ?)'
@@ -164,9 +184,11 @@ router.patch('/:id', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Invalid status change' });
     }
   } else {
-    // Must be the provider on this booking
-    const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-    if (!profile || booking.provider_id !== profile.id) return res.status(403).json({ error: 'Forbidden' });
+    // Must be the provider on this booking (check all their listings)
+    const isOwner = db.prepare(
+      'SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?'
+    ).get(req.user.id, booking.provider_id);
+    if (!isOwner) return res.status(403).json({ error: 'Forbidden' });
     if (!['confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     if (status === 'cancelled') {
       db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
@@ -234,10 +256,8 @@ router.get('/:id/ics', requireAuth, (req, res) => {
   `).get(req.params.id);
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  // Only the student or provider can download
-  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
   const isStudent = booking.student_id === req.user.id;
-  const isProvider = profile && booking.provider_id === profile.id;
+  const isProvider = !!db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?').get(req.user.id, booking.provider_id);
   if (!isStudent && !isProvider) return res.status(403).json({ error: 'Forbidden' });
 
   const isProviderDownload = isProvider && !isStudent;
@@ -278,9 +298,8 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
   const isStudent = booking.student_id === req.user.id;
-  const isProvider = profile && booking.provider_id === profile.id;
+  const isProvider = !!db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?').get(req.user.id, booking.provider_id);
   if (!isStudent && !isProvider) return res.status(403).json({ error: 'Forbidden' });
 
   const title = isProvider && !isStudent

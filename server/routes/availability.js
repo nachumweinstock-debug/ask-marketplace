@@ -15,9 +15,27 @@ const DAY_ORDER = `CASE date
   ELSE 8 END`;
 
 router.get('/:providerId', (req, res) => {
-  const slots = db.prepare(
-    `SELECT * FROM availability WHERE provider_id = ? AND is_booked = 0 ORDER BY ${DAY_ORDER}, start_time`
-  ).all(req.params.providerId);
+  // Exclude slots where the provider is already booked on *any* of their listings at the same time.
+  // This prevents double-booking across multiple services offered by the same person.
+  const slots = db.prepare(`
+    SELECT a.*
+    FROM availability a
+    JOIN provider_profiles pp ON a.provider_id = pp.id
+    WHERE a.provider_id = ?
+      AND a.is_booked = 0
+      AND NOT EXISTS (
+        SELECT 1
+        FROM availability a2
+        JOIN provider_profiles pp2 ON a2.provider_id = pp2.id
+        JOIN bookings b ON b.availability_id = a2.id
+        WHERE pp2.user_id = pp.user_id
+          AND a2.date = a.date
+          AND a2.start_time < a.end_time
+          AND a2.end_time > a.start_time
+          AND b.status NOT IN ('cancelled')
+      )
+    ORDER BY ${DAY_ORDER}, a.start_time
+  `).all(req.params.providerId);
   res.json(slots);
 });
 
@@ -51,9 +69,13 @@ router.post('/', requireAuth, (req, res) => {
 
 router.delete('/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'provider') return res.status(403).json({ error: 'Providers only' });
-  const profile = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(req.user.id);
-  const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(req.params.id);
-  if (!slot || slot.provider_id !== profile.id) return res.status(404).json({ error: 'Slot not found' });
+  // Check ownership across all of the user's listings
+  const slot = db.prepare(`
+    SELECT a.* FROM availability a
+    JOIN provider_profiles pp ON a.provider_id = pp.id
+    WHERE a.id = ? AND pp.user_id = ?
+  `).get(req.params.id, req.user.id);
+  if (!slot) return res.status(404).json({ error: 'Slot not found' });
   if (slot.is_booked) return res.status(400).json({ error: 'Cannot delete booked slot' });
   db.prepare('DELETE FROM availability WHERE id = ?').run(req.params.id);
   res.json({ success: true });
