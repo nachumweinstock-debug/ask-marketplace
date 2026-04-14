@@ -179,6 +179,7 @@ export function SignUp() {
   const [verifying, setVerifying] = useState(false);
   const [userId, setUserId] = useState(null);
   const [verifyEmail, setVerifyEmail] = useState('');
+  const [emailOk, setEmailOk] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [codeResetKey, setCodeResetKey] = useState(0);
@@ -196,6 +197,7 @@ export function SignUp() {
       });
       setUserId(data.userId);
       setVerifyEmail(data.email);
+      setEmailOk(data.emailOk !== false);
       setVerifying(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Sign up failed');
@@ -235,10 +237,20 @@ export function SignUp() {
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>
           Check your email
         </div>
-        <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 4 }}>
-          We sent a 6-digit code to<br />
-          <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
-        </div>
+        {emailOk ? (
+          <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 4 }}>
+            We sent a 6-digit code to<br />
+            <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
+          </div>
+        ) : (
+          <div style={{
+            background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8,
+            padding: '10px 14px', fontSize: 12.5, color: '#9A3412', marginBottom: 8, textAlign: 'left',
+          }}>
+            Couldn't send the email — check your spam folder or use "Resend code" below.
+            If it still doesn't arrive, contact support.
+          </div>
+        )}
         <Err msg={error} />
         <CodeInput onComplete={handleCode} resetKey={codeResetKey} />
         {loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Verifying…</div>}

@@ -7,17 +7,21 @@ import SlotPicker, { SlotList } from '../components/SlotPicker';
 const CATEGORIES = [
   { id: 'tutor',        label: 'Tutors'   },
   { id: 'barber',       label: 'Barbers'  },
-  { id: 'hebrew tutor', label: 'Hebrew'   },
-  { id: 'tennis',       label: 'Fitness'  },
+  { id: 'fitness',      label: 'Fitness'  },
   { id: 'other',        label: 'Other'    },
 ];
 
 const BIO_PLACEHOLDERS = {
   tutor: 'e.g. I tutor Calc 1 & 2 and Orgo. 3 years experience, patient.',
   barber: 'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
-  'hebrew tutor': 'e.g. Rashi, Gemara, conversational Hebrew — all levels.',
-  tennis: 'e.g. USTA rated player, great with beginners and intermediates.',
+  fitness: 'e.g. USTA rated player, great with beginners and intermediates.',
   other: "Describe what you offer and who it's for...",
+};
+
+// Specialty suggestions shown as quick-pick pills
+const SUBCATEGORY_SUGGESTIONS = {
+  tutor: ['Math', 'Chemistry', 'Biology', 'Physics', 'Excel', 'Coding', 'English', 'History', 'Economics', 'SAT/ACT', 'Calculus', 'Statistics', 'Gemara', 'Hebrew'],
+  fitness: ['Tennis', 'Golf', 'Basketball', 'Soccer', 'Baseball', 'Swimming', 'Squash', 'Yoga', 'Weightlifting', 'Running', 'Boxing', 'Volleyball'],
 };
 
 const inputStyle = {
@@ -125,6 +129,7 @@ export default function CreateListing() {
   const navigate = useNavigate();
 
   const [category, setCategory] = useState('');
+  const [subcategory, setSubcategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [sessionType, setSessionType] = useState('in-person');
   const [bio, setBio] = useState('');
@@ -145,15 +150,20 @@ export default function CreateListing() {
     }).catch(() => {});
   }, []);
 
-  // Fetch market price data when category changes
+  // Reset subcategory when category changes
+  useEffect(() => { setSubcategory(''); }, [category]);
+
+  // Fetch market price data when category or subcategory changes
   useEffect(() => {
     if (!category) { setPriceStats(null); return; }
     const cat = category === 'other' ? customCategory : category;
     if (!cat) { setPriceStats(null); return; }
-    api.get('/providers/price-stats', { params: { category: cat } })
+    const params = { category: cat };
+    if (subcategory) params.subcategory = subcategory;
+    api.get('/providers/price-stats', { params })
       .then(({ data }) => setPriceStats(data.count > 0 ? data : null))
       .catch(() => setPriceStats(null));
-  }, [category, customCategory]);
+  }, [category, customCategory, subcategory]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -165,6 +175,7 @@ export default function CreateListing() {
       await api.put(`/providers/${profileId}`, {
         category,
         custom_category: category === 'other' ? customCategory : '',
+        subcategory: ['tutor', 'fitness'].includes(category) ? subcategory : '',
         session_type: sessionType,
         bio,
         price_per_session: price || 0,
@@ -218,6 +229,43 @@ export default function CreateListing() {
               })}
             </div>
           </div>
+
+          {/* Specialty / subcategory — shown for tutor and fitness */}
+          {SUBCATEGORY_SUGGESTIONS[category] && (
+            <div style={{ marginBottom: 20, marginTop: 14 }}>
+              <label style={labelStyle}>
+                {category === 'tutor' ? 'What subject?' : 'What sport or activity?'}
+                <span style={{ fontWeight: 400, opacity: 0.7, marginLeft: 4 }}>(pick one or type your own)</span>
+              </label>
+              {/* Quick-pick suggestion pills */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {SUBCATEGORY_SUGGESTIONS[category].map(s => {
+                  const active = subcategory === s;
+                  return (
+                    <button key={s} type="button" onClick={() => setSubcategory(active ? '' : s)}
+                      style={{
+                        padding: '5px 13px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                        border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                        background: active ? 'var(--primary)' : 'var(--card)',
+                        color: active ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
+                      }}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Free-text override */}
+              <input
+                value={subcategory}
+                onChange={e => setSubcategory(e.target.value)}
+                placeholder={category === 'tutor' ? 'Or type your own: Organic Chemistry, LSAT...' : 'Or type your own: Pickleball, Crossfit...'}
+                style={{ ...inputStyle, marginTop: 2 }}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+          )}
 
           {/* Custom category */}
           {category === 'other' && (

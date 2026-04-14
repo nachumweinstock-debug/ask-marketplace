@@ -84,7 +84,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
 
         {/* Category + session type pills */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-          <CategoryPill category={provider.category} customCategory={provider.custom_category} />
+          <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
           <SessionTypePill sessionType={provider.session_type} />
         </div>
 

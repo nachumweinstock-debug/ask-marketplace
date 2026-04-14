@@ -1,9 +1,10 @@
 import { getCategoryConfig } from '../lib/categories';
 
 /** size: 'sm' | 'md' */
-export default function CategoryPill({ category, customCategory, size = 'sm' }) {
+export default function CategoryPill({ category, customCategory, subcategory, size = 'sm' }) {
   const cfg = getCategoryConfig(category, customCategory);
-  const label = customCategory || cfg.label;
+  // subcategory takes priority as the display label, then customCategory, then built-in label
+  const label = subcategory || customCategory || cfg.label;
   const pad = size === 'md' ? '4px 13px' : '2px 10px';
   const fs = size === 'md' ? 12 : 11;
 

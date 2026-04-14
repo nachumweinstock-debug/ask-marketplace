@@ -3,9 +3,19 @@ import nodemailer from 'nodemailer';
 import { buildICS, googleCalendarUrl } from './calendar.js';
 
 // ── Transport ──────────────────────────────────────────────────────────────────
-function getResend() {
-  return process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-}
+//
+// Priority order:
+//   1. SMTP (Gmail recommended) — set EMAIL_HOST / EMAIL_USER / EMAIL_PASS
+//      Gmail: EMAIL_HOST=smtp.gmail.com  EMAIL_PORT=587
+//             EMAIL_USER=you@gmail.com   EMAIL_PASS=<16-char App Password>
+//      (Gmail > Google Account > Security > 2-Step > App passwords)
+//
+//   2. Resend — set RESEND_API_KEY + verify uask.live domain on resend.com
+//      NOTE: onboarding@resend.dev only delivers to the Resend account owner's email.
+//      You MUST verify a domain and set EMAIL_FROM=noreply@uask.live to send to anyone.
+//
+//   3. Dev fallback — logs to console (code visible in Railway logs)
+
 function getSmtp() {
   const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env;
   if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS) return null;
@@ -16,9 +26,29 @@ function getSmtp() {
   });
 }
 
+function getResend() {
+  return process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+}
+
 const FROM = process.env.EMAIL_FROM || 'ASK Marketplace <onboarding@resend.dev>';
 
+export function emailConfigStatus() {
+  const smtp = !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+  const resend = !!process.env.RESEND_API_KEY;
+  const from = FROM;
+  const sandboxWarning = !smtp && resend && from.includes('onboarding@resend.dev');
+  return { smtp, resend, from, sandboxWarning, mode: smtp ? 'smtp' : resend ? 'resend' : 'dev' };
+}
+
 async function send({ to, subject, html, attachments }) {
+  // SMTP first (Gmail app password — works for everyone, no domain needed)
+  const smtp = getSmtp();
+  if (smtp) {
+    await smtp.sendMail({ from: FROM, to, subject, html, attachments });
+    return;
+  }
+
+  // Resend second (requires verified domain to send to anyone other than Resend account owner)
   const resend = getResend();
   if (resend) {
     const payload = { from: FROM, to, subject, html };
@@ -28,12 +58,13 @@ async function send({ to, subject, html, attachments }) {
         content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
       }));
     }
-    await resend.emails.send(payload);
+    const result = await resend.emails.send(payload);
+    if (result.error) throw new Error(result.error.message || 'Resend error');
     return;
   }
-  const smtp = getSmtp();
-  if (smtp) { await smtp.sendMail({ from: FROM, to, subject, html, attachments }); return; }
-  console.log(`\n📧 [EMAIL DEV] To: ${to}\nSubject: ${subject}\n`);
+
+  // Dev fallback — code is visible in Railway logs
+  console.log(`\n📧 [EMAIL DEV - NOT SENT] To: ${to}\nSubject: ${subject}\nHTML snippet: ${html.slice(0, 200)}\n`);
 }
 
 // ── Design system ──────────────────────────────────────────────────────────────

@@ -22,9 +22,17 @@ export const CATEGORY_MAP = {
     bg: '#F5F3FF',
     border: '#DDD6FE',
   },
+  fitness: {
+    label: 'Fitness',
+    emoji: '🏃',
+    color: '#B45309',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+  },
+  // legacy alias
   tennis: {
     label: 'Fitness',
-    emoji: '🎾',
+    emoji: '🏃',
     color: '#B45309',
     bg: '#FFFBEB',
     border: '#FDE68A',

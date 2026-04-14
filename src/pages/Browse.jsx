@@ -7,10 +7,13 @@ import ProviderCard from '../components/ProviderCard';
 const BASE_FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'tutor', label: 'Tutors' },
+  { id: 'fitness', label: 'Fitness' },
   { id: 'barber', label: 'Barbers' },
   { id: 'hebrew tutor', label: 'Hebrew' },
-  { id: 'tennis', label: 'Fitness' },
 ];
+
+// Categories that support subcategory drilling
+const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness']);
 
 export default function Browse() {
   const { user, refreshUser } = useAuth();
@@ -19,9 +22,11 @@ export default function Browse() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
+  const [subcategory, setSubcategory] = useState(searchParams.get('subcategory') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
   const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
   const [customCats, setCustomCats] = useState([]);
+  const [subcats, setSubcats] = useState([]); // available subcategories for current parent
 
   // Fetch live custom categories once on mount
   useEffect(() => {
@@ -30,13 +35,23 @@ export default function Browse() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchProviders(); }, [category, sort, sessionType]);
+  // Fetch subcategories whenever parent category changes
+  useEffect(() => {
+    setSubcategory('all');
+    if (!SUBCATEGORY_PARENT.has(category)) { setSubcats([]); return; }
+    api.get('/providers/subcategories', { params: { category } })
+      .then(({ data }) => setSubcats(data))
+      .catch(() => setSubcats([]));
+  }, [category]);
+
+  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType]);
 
   async function fetchProviders(searchVal) {
     setLoading(true);
     try {
       const params = {};
       if (category !== 'all') params.category = category;
+      if (subcategory !== 'all') params.subcategory = subcategory;
       if (sessionType !== 'all') params.session_type = sessionType;
       const q = searchVal !== undefined ? searchVal : search;
       if (q) params.search = q;
@@ -73,8 +88,18 @@ export default function Browse() {
 
   function handleCategory(cat) {
     setCategory(cat);
+    setSubcategory('all');
     const p = { ...(search ? { search } : {}), sort };
     if (cat !== 'all') p.category = cat;
+    if (sessionType !== 'all') p.session_type = sessionType;
+    setSearchParams(p);
+  }
+
+  function handleSubcategory(sub) {
+    setSubcategory(sub);
+    const p = { ...(search ? { search } : {}), sort };
+    if (category !== 'all') p.category = category;
+    if (sub !== 'all') p.subcategory = sub;
     if (sessionType !== 'all') p.session_type = sessionType;
     setSearchParams(p);
   }
@@ -186,7 +211,7 @@ export default function Browse() {
       </div>
 
       {/* Pill filters — base categories + any live custom categories */}
-      <div className="pill-row" style={{ marginBottom: 32 }}>
+      <div className="pill-row" style={{ marginBottom: subcats.length > 0 ? 12 : 32 }}>
         {[...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))].map(({ id, label }) => {
           const active = category === id;
           return (
@@ -203,6 +228,29 @@ export default function Browse() {
           );
         })}
       </div>
+
+      {/* Subcategory pills — only shown when a parent with subcategories is active */}
+      {subcats.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 28, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginRight: 4 }}>
+            {category === 'tutor' ? 'Subject' : 'Activity'}
+          </span>
+          {[{ id: 'all', label: 'All' }, ...subcats.map(s => ({ id: s, label: s }))].map(({ id, label }) => {
+            const active = subcategory === id;
+            return (
+              <button key={id} onClick={() => handleSubcategory(id)} style={{
+                padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                background: active ? 'var(--primary)' : 'var(--card)',
+                color: active ? '#fff' : 'var(--muted)',
+                cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
+              }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Results */}
       {loading ? (

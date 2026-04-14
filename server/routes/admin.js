@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { sendVerificationCode, emailConfigStatus } from '../email.js';
 
 const router = Router();
 
@@ -133,6 +134,35 @@ router.post('/import', requireAuth, requireAdmin, (req, res) => {
     imported: results.filter(r => r.status === 'ok').length,
     errors:   results.filter(r => r.status === 'error').length,
   });
+});
+
+// GET /api/admin/email-status — check what email transport is active
+router.get('/email-status', requireAuth, requireAdmin, (req, res) => {
+  res.json(emailConfigStatus());
+});
+
+// POST /api/admin/test-email — send a test email to the logged-in admin
+router.post('/test-email', requireAuth, requireAdmin, async (req, res) => {
+  const user = db.prepare('SELECT email, name FROM users WHERE id = ?').get(req.user.id);
+  try {
+    await sendVerificationCode(user.email, '123456');
+    res.json({ ok: true, message: `Test email sent to ${user.email}` });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, config: emailConfigStatus() });
+  }
+});
+
+// GET /api/admin/pending-codes — view recent unused verification codes (debug)
+router.get('/pending-codes', requireAuth, requireAdmin, (req, res) => {
+  const codes = db.prepare(`
+    SELECT vc.id, vc.code, vc.type, vc.expires_at, vc.used, u.email, u.name
+    FROM verification_codes vc
+    JOIN users u ON vc.user_id = u.id
+    WHERE vc.used = 0 AND vc.expires_at > datetime('now')
+    ORDER BY vc.id DESC
+    LIMIT 50
+  `).all();
+  res.json(codes);
 });
 
 // GET /api/admin/stats

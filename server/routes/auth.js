@@ -60,14 +60,18 @@ router.post('/signup', async (req, res) => {
   }
 
   const code = issueCode(user.id);
+  let emailOk = true;
   try {
     await sendVerificationCode(user.email, code);
+    console.log(`[AUTH] Verification code sent to ${user.email}`);
   } catch (err) {
-    console.error('Email send failed:', err.message);
-    // Don't block signup if email fails — code is still in DB
+    emailOk = false;
+    // Always log the code so it's visible in Railway logs even when email fails
+    console.error(`[AUTH] Email failed for ${user.email}: ${err.message}`);
+    console.log(`[AUTH] FALLBACK CODE for ${user.email}: ${code}`);
   }
 
-  res.json({ needsVerification: true, userId: user.id, email: user.email });
+  res.json({ needsVerification: true, userId: user.id, email: user.email, emailOk });
 });
 
 // POST /auth/verify — submit the 6-digit code

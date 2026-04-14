@@ -206,6 +206,15 @@ if (ppSchema && /user_id\s+INTEGER\s+UNIQUE/i.test(ppSchema.sql)) {
   if (!pp2.includes('title')) db.exec('ALTER TABLE provider_profiles ADD COLUMN title TEXT');
 }
 
+// ── Subcategory column ─────────────────────────────────────────────────────────
+const ppColsFinal = db.pragma('table_info(provider_profiles)').map(c => c.name);
+if (!ppColsFinal.includes('subcategory')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN subcategory TEXT');
+}
+
+// Rename legacy 'tennis' category to 'fitness'
+db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {
