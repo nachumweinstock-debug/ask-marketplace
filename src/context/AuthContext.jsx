@@ -3,51 +3,46 @@ import { supabase } from '../lib/supabase';
 import api from '../api';
 
 const AuthContext = createContext(null);
-
-// Hardwired superadmins — guaranteed admin flag even when backend is unreachable
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // keepExisting: if true, a failed API call keeps the current user instead of logging out.
-  // Use keepExisting=true for background refreshes (e.g. after saving profile).
-  // Use keepExisting=false (default) for the initial auth check on app load.
-  const syncUser = useCallback(async (fallbackSession, keepExisting = false) => {
+  // Fetch user from our backend using whatever token is current
+  const syncUser = useCallback(async (keepExisting = false) => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
     } catch {
-      // Backend unreachable — try to stay logged in
-      if (fallbackSession?.user) {
-        const u = fallbackSession.user;
-        const email = u.email?.toLowerCase() || '';
-        setUser({
-          id: u.id,
-          email,
-          name: u.user_metadata?.full_name || email.split('@')[0],
-          role: 'student',
-          is_admin: SUPERADMINS.includes(email) ? 1 : 0,
-        });
-      } else if (!keepExisting) {
-        // Only clear user on initial load failures, not on explicit refreshes
-        setUser(null);
-      }
-      // If keepExisting=true and no fallback, silently retain current user state
+      if (!keepExisting) setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // 1. Our own JWT in localStorage
+    const localToken = localStorage.getItem('ask_token');
+    if (localToken) {
+      syncUser();
+      return;
+    }
+
+    // 2. Legacy Supabase session (existing users before the migration)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
       if (session) {
-        syncUser(session);
-      } else {
+        syncUser();
+      } else if (!localStorage.getItem('ask_token')) {
         setUser(null);
+        setLoading(false);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        syncUser();
+      } else {
         setLoading(false);
       }
     });
@@ -55,18 +50,25 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, [syncUser]);
 
+  // Called after our own login/verify to store token and set user
+  function loginWithToken(token, userData) {
+    localStorage.setItem('ask_token', token);
+    setUser(userData);
+  }
+
   async function refreshUser() {
-    await syncUser(undefined, true); // keepExisting — never log out on a background refresh
+    await syncUser(true);
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    localStorage.removeItem('ask_token');
     setUser(null);
-    setSession(null);
+    // Also sign out of Supabase in case they were a legacy user
+    try { await supabase.auth.signOut(); } catch {}
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, role: user?.role || null, loading, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, signOut, refreshUser, loginWithToken }}>
       {children}
     </AuthContext.Provider>
   );

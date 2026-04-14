@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 function Wrapper({ children }) {
   return (
@@ -99,13 +100,77 @@ function Err({ msg }) {
   );
 }
 
+// ── Verification code input ────────────────────────────────────────────────────
+
+function CodeInput({ onComplete }) {
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const refs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+
+  useEffect(() => { refs[0].current?.focus(); }, []);
+
+  function handleChange(i, val) {
+    const d = val.replace(/\D/g, '').slice(-1);
+    const next = [...digits];
+    next[i] = d;
+    setDigits(next);
+    if (d && i < 5) refs[i + 1].current?.focus();
+    if (next.every(x => x)) onComplete(next.join(''));
+  }
+
+  function handleKeyDown(i, e) {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) refs[i - 1].current?.focus();
+  }
+
+  function handlePaste(e) {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text.length === 6) {
+      setDigits(text.split(''));
+      onComplete(text);
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '20px 0' }}>
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={refs[i]}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={d}
+          onChange={e => handleChange(i, e.target.value)}
+          onKeyDown={e => handleKeyDown(i, e)}
+          onPaste={handlePaste}
+          style={{
+            width: 44, height: 52, textAlign: 'center',
+            fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-ui)',
+            border: `1.5px solid ${d ? 'var(--primary)' : 'var(--border)'}`,
+            borderRadius: 8, background: '#fff', color: 'var(--text)',
+            outline: 'none',
+          }}
+          onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+          onBlur={e => e.target.style.borderColor = digits[i] ? 'var(--primary)' : 'var(--border)'}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── Sign Up ────────────────────────────────────────────────────────────────────
 
 export function SignUp() {
+  const { loginWithToken } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  // verification state
+  const [verifying, setVerifying] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
@@ -113,39 +178,67 @@ export function SignUp() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data } = await api.post('/auth/signup', {
         email: form.email.toLowerCase(),
+        name: form.name,
         password: form.password,
-        options: { data: { full_name: form.name } },
       });
-      if (error) throw error;
-      setSent(true);
+      setUserId(data.userId);
+      setVerifyEmail(data.email);
+      setVerifying(true);
     } catch (err) {
-      setError(err.message || 'Sign up failed');
+      setError(err.response?.data?.error || 'Sign up failed');
     } finally {
       setLoading(false);
     }
   }
 
-  if (sent) return (
+  async function handleCode(code) {
+    setError(''); setLoading(true);
+    try {
+      const { data } = await api.post('/auth/verify', { userId, code });
+      loginWithToken(data.token, data.user);
+      navigate('/dashboard/student');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Incorrect code');
+      setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    setResendLoading(true); setResendMsg('');
+    try {
+      await api.post('/auth/resend', { userId });
+      setResendMsg('New code sent!');
+    } catch {
+      setResendMsg('Failed to resend.');
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (verifying) return (
     <Wrapper>
-      <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 10 }}>
-          Check your inbox
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>
+          Check your email
         </div>
-        <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7 }}>
-          We sent a confirmation link to<br />
-          <strong style={{ color: 'var(--text)' }}>{form.email}</strong>
+        <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 4 }}>
+          We sent a 6-digit code to<br />
+          <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
         </div>
-        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 10 }}>
-          Click the link to activate your account, then log in.
+        <Err msg={error} />
+        <CodeInput onComplete={handleCode} />
+        {loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Verifying…</div>}
+        <div style={{ marginTop: 16 }}>
+          <button type="button" onClick={handleResend} disabled={resendLoading} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12.5, color: 'var(--primary)', fontWeight: 500,
+          }}>
+            {resendLoading ? 'Sending…' : 'Resend code'}
+          </button>
+          {resendMsg && <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>{resendMsg}</span>}
         </div>
-        <Link to="/login" style={{
-          display: 'inline-block', marginTop: 24,
-          fontSize: 13, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none',
-        }}>
-          Go to login
-        </Link>
       </div>
     </Wrapper>
   );
@@ -155,7 +248,7 @@ export function SignUp() {
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>
         Create account
       </h1>
-      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Join the student marketplace</p>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Join the marketplace</p>
       <form onSubmit={handleSubmit}>
         <Field label="Full name">
           <TextInput placeholder="Your name" value={form.name} onChange={set('name')} autoFocus />
@@ -180,28 +273,91 @@ export function SignUp() {
 // ── Login ──────────────────────────────────────────────────────────────────────
 
 export function Login() {
+  const { loginWithToken } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // re-verification flow if account exists but unverified
+  const [verifying, setVerifying] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
   async function handleSubmit(e) {
     e.preventDefault(); setError(''); setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data } = await api.post('/auth/login', {
         email: form.email.toLowerCase(),
         password: form.password,
       });
-      if (error) throw error;
+      loginWithToken(data.token, data.user);
       navigate('/dashboard/student');
     } catch (err) {
-      setError(err.message || 'Login failed');
+      const d = err.response?.data;
+      if (d?.needsVerification) {
+        setUserId(d.userId);
+        setVerifyEmail(d.email);
+        setVerifying(true);
+      } else {
+        setError(d?.error || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  async function handleCode(code) {
+    setError(''); setLoading(true);
+    try {
+      const { data } = await api.post('/auth/verify', { userId, code });
+      loginWithToken(data.token, data.user);
+      navigate('/dashboard/student');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Incorrect code');
+      setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    setResendLoading(true); setResendMsg('');
+    try {
+      await api.post('/auth/resend', { userId });
+      setResendMsg('New code sent!');
+    } catch {
+      setResendMsg('Failed to resend.');
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (verifying) return (
+    <Wrapper>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>
+          Verify your email
+        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 4 }}>
+          We sent a code to <strong style={{ color: 'var(--text)' }}>{verifyEmail}</strong>
+        </div>
+        <Err msg={error} />
+        <CodeInput onComplete={handleCode} />
+        {loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Verifying…</div>}
+        <div style={{ marginTop: 16 }}>
+          <button type="button" onClick={handleResend} disabled={resendLoading} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12.5, color: 'var(--primary)', fontWeight: 500,
+          }}>
+            {resendLoading ? 'Sending…' : 'Resend code'}
+          </button>
+          {resendMsg && <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>{resendMsg}</span>}
+        </div>
+      </div>
+    </Wrapper>
+  );
 
   return (
     <Wrapper>
@@ -235,41 +391,69 @@ export function Login() {
 // ── Forgot Password ────────────────────────────────────────────────────────────
 
 export function ForgotPassword() {
+  const navigate = useNavigate();
+  const { loginWithToken } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [step, setStep] = useState('email'); // 'email' | 'code' | 'password'
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
 
-  async function handleSubmit(e) {
+  async function handleEmailSubmit(e) {
     e.preventDefault(); setError(''); setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
-      setSent(true);
+      const { data } = await api.post('/auth/forgot-password', { email: email.toLowerCase() });
+      setUserId(data.userId || null);
+      setStep('code');
     } catch (err) {
-      setError(err.message || 'Error sending reset email');
+      setError(err.response?.data?.error || 'Error sending reset code');
     } finally {
       setLoading(false);
     }
   }
 
-  if (sent) return (
+  async function handleReset(e) {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      const { data } = await api.post('/auth/reset-password', {
+        userId, code: code.trim(), password,
+      });
+      loginWithToken(data.token, data.user);
+      navigate('/dashboard/student');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Reset failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (step === 'code') return (
     <Wrapper>
-      <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 10 }}>Check your email</div>
-        <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7 }}>
-          If <strong style={{ color: 'var(--text)' }}>{email}</strong> is registered,<br />
-          we sent a password reset link.
-        </div>
-        <Link to="/login" style={{
-          display: 'inline-block', marginTop: 24,
-          fontSize: 13, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none',
-        }}>
-          Back to login
-        </Link>
-      </div>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>Reset password</h1>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
+        Enter the 6-digit code we sent to <strong style={{ color: 'var(--text)' }}>{email}</strong>,
+        then choose a new password.
+      </p>
+      <form onSubmit={handleReset}>
+        <Field label="Reset code">
+          <TextInput
+            placeholder="123456"
+            value={code}
+            onChange={setCode}
+            autoFocus
+          />
+        </Field>
+        <Field label="New password">
+          <PwInput placeholder="At least 6 characters" value={password} onChange={setPassword} />
+        </Field>
+        <Err msg={error} />
+        <Btn loading={loading} label="Set new password" loadingLabel="Saving..." />
+        <p style={{ textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
+          <Link to="/login" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>Back to login</Link>
+        </p>
+      </form>
     </Wrapper>
   );
 
@@ -277,14 +461,14 @@ export function ForgotPassword() {
     <Wrapper>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>Reset password</h1>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-        Enter your email and we'll send a reset link.
+        Enter your email and we'll send a reset code.
       </p>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleEmailSubmit}>
         <Field label="Email">
           <TextInput type="email" placeholder="you@email.com" value={email} onChange={setEmail} autoFocus />
         </Field>
         <Err msg={error} />
-        <Btn loading={loading} label="Send reset link" loadingLabel="Sending..." />
+        <Btn loading={loading} label="Send reset code" loadingLabel="Sending..." />
         <p style={{ textAlign: 'center', marginTop: 20, marginBottom: 0 }}>
           <Link to="/login" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>Back to login</Link>
         </p>

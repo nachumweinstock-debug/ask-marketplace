@@ -45,6 +45,22 @@ export async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
+  // Custom JWT takes priority
+  const customUser = verifyToken(token);
+  if (customUser) {
+    // Refresh from DB so we always have up-to-date fields
+    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url FROM users WHERE id = ?').get(customUser.id);
+    if (dbUser) {
+      if (SUPERADMINS.includes(dbUser.email) && !dbUser.is_admin) {
+        db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(dbUser.id);
+        dbUser.is_admin = 1;
+      }
+      req.user = dbUser;
+      return next();
+    }
+  }
+
+  // Legacy: fall back to Supabase JWT for users who haven't re-logged-in yet
   if (supabaseAdmin) {
     try {
       const sqliteUser = await resolveSupabaseUser(token);
@@ -57,26 +73,27 @@ export async function requireAuth(req, res, next) {
     }
   }
 
-  // Legacy custom JWT (only when Supabase not configured)
-  const user = verifyToken(token);
-  if (!user) return res.status(401).json({ error: 'Invalid token' });
-  req.user = user;
-  next();
+  return res.status(401).json({ error: 'Invalid token' });
 }
 
 export async function optionalAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return next();
 
+  // Custom JWT first
+  const customUser = verifyToken(token);
+  if (customUser) {
+    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url FROM users WHERE id = ?').get(customUser.id);
+    if (dbUser) { req.user = dbUser; return next(); }
+  }
+
+  // Legacy Supabase fallback
   if (supabaseAdmin) {
     try {
       const sqliteUser = await resolveSupabaseUser(token);
       if (sqliteUser) req.user = sqliteUser;
     } catch { /* ignore */ }
-    return next();
   }
 
-  const user = verifyToken(token);
-  if (user) req.user = user;
   next();
 }
