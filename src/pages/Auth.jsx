@@ -81,10 +81,11 @@ const inputStyle = {
   transition: 'border-color .15s', boxSizing: 'border-box',
 };
 
-function TextInput({ type = 'text', placeholder, value, onChange, autoFocus }) {
+function TextInput({ type = 'text', placeholder, value, onChange, autoFocus, autoComplete }) {
   return (
     <input type={type} placeholder={placeholder} value={value}
       onChange={e => onChange(e.target.value)} required autoFocus={autoFocus}
+      autoComplete={autoComplete}
       style={inputStyle}
       onFocus={e => e.target.style.borderColor = 'var(--primary)'}
       onBlur={e => e.target.style.borderColor = 'var(--border)'}
@@ -92,12 +93,13 @@ function TextInput({ type = 'text', placeholder, value, onChange, autoFocus }) {
   );
 }
 
-function PwInput({ placeholder = 'Password', value, onChange }) {
+function PwInput({ placeholder = 'Password', value, onChange, autoComplete = 'current-password' }) {
   const [show, setShow] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
       <input type={show ? 'text' : 'password'} placeholder={placeholder}
         value={value} onChange={e => onChange(e.target.value)} required minLength={6}
+        autoComplete={autoComplete}
         style={{ ...inputStyle, paddingRight: 40 }}
         onFocus={e => e.target.style.borderColor = 'var(--primary)'}
         onBlur={e => e.target.style.borderColor = 'var(--border)'}
@@ -180,13 +182,13 @@ export function SignUp() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Join the marketplace</p>
       <form onSubmit={handleSubmit}>
         <Field label="Full name">
-          <TextInput placeholder="Your name" value={form.name} onChange={set('name')} autoFocus />
+          <TextInput placeholder="Your name" value={form.name} onChange={set('name')} autoFocus autoComplete="name" />
         </Field>
         <Field label="Email">
-          <TextInput type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} />
+          <TextInput type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoComplete="email" />
         </Field>
         <Field label="Password">
-          <PwInput placeholder="At least 6 characters" value={form.password} onChange={set('password')} />
+          <PwInput placeholder="At least 6 characters" value={form.password} onChange={set('password')} autoComplete="new-password" />
         </Field>
         <Err msg={error} />
         <Btn loading={loading} label="Create account" loadingLabel="Creating..." />
@@ -236,10 +238,10 @@ export function Login() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Sign in to your account</p>
       <form onSubmit={handleSubmit}>
         <Field label="Email">
-          <TextInput type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoFocus />
+          <TextInput type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoFocus autoComplete="email" />
         </Field>
         <Field label="Password">
-          <PwInput value={form.password} onChange={set('password')} />
+          <PwInput value={form.password} onChange={set('password')} autoComplete="current-password" />
         </Field>
         <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 18 }}>
           <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>
@@ -348,7 +350,7 @@ export function ForgotPassword() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Choose a new password for your account.</p>
       <form onSubmit={handlePasswordSubmit}>
         <Field label="New password">
-          <PwInput placeholder="At least 6 characters" value={password} onChange={setPassword} />
+          <PwInput placeholder="At least 6 characters" value={password} onChange={setPassword} autoComplete="new-password" />
         </Field>
         <Err msg={error} />
         <Btn loading={loading} label="Set new password" loadingLabel="Saving..." />
