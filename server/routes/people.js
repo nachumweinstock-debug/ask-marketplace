@@ -24,8 +24,7 @@ router.get('/', optionalAuth, (req, res) => {
         (c.requester_id = ? AND c.receiver_id = u.id) OR
         (c.receiver_id  = ? AND c.requester_id = u.id)
       )
-      WHERE u.id != ? AND u.email_verified = 1
-    `;
+      WHERE u.id != ?     `;
     params = [me, me, me];
   } else {
     query = `
@@ -37,7 +36,6 @@ router.get('/', optionalAuth, (req, res) => {
              NULL as requester_id
       FROM users u
       LEFT JOIN provider_profiles pp ON pp.user_id = u.id
-      WHERE u.email_verified = 1
     `;
     params = [];
   }
@@ -76,8 +74,7 @@ router.get('/:id', optionalAuth, (req, res) => {
         (c.requester_id = ? AND c.receiver_id  = u.id) OR
         (c.receiver_id  = ? AND c.requester_id = u.id)
       )
-      WHERE u.id = ? AND u.email_verified = 1
-    `).get(me, me, targetId);
+      WHERE u.id = ?     `).get(me, me, targetId);
   } else {
     u = db.prepare(`
       SELECT u.id, u.name, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
@@ -90,8 +87,7 @@ router.get('/:id', optionalAuth, (req, res) => {
              NULL as requester_id
       FROM users u
       LEFT JOIN provider_profiles pp ON pp.user_id = u.id
-      WHERE u.id = ? AND u.email_verified = 1
-    `).get(targetId);
+      WHERE u.id = ?     `).get(targetId);
   }
 
   if (!u) return res.status(404).json({ error: 'User not found' });
