@@ -59,9 +59,6 @@ export default function AccountProfile() {
     zelle: '', venmo: '', phone: '', contact_pref: 'imessage',
   });
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
-  const [pwMsg, setPwMsg] = useState('');
-  const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
     api.get('/account').then(({ data }) => {
@@ -118,22 +115,6 @@ export default function AccountProfile() {
     };
     img.onerror = () => { setAvatarUploading(false); URL.revokeObjectURL(objectUrl); };
     img.src = objectUrl;
-  }
-
-  async function handlePasswordChange(e) {
-    e.preventDefault();
-    if (pwForm.newPassword.length < 6) return setPwMsg('Password must be at least 6 characters.');
-    if (pwForm.newPassword !== pwForm.confirm) return setPwMsg('Passwords do not match.');
-    setPwSaving(true); setPwMsg('');
-    const { error } = await supabase.auth.updateUser({ password: pwForm.newPassword });
-    if (error) {
-      setPwMsg(error.message || 'Failed to update password.');
-    } else {
-      setPwForm({ newPassword: '', confirm: '' });
-      setPwMsg('Password updated!');
-      setTimeout(() => setPwMsg(''), 4000);
-    }
-    setPwSaving(false);
   }
 
   async function handleSave(e) {
@@ -480,59 +461,6 @@ export default function AccountProfile() {
           {saving ? 'Saving...' : 'Save profile'}
         </button>
       </form>
-
-      {/* Security */}
-      <div className="card" style={{ padding: '24px 28px', marginTop: 32 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 20 }}>
-          Security
-        </div>
-        <form onSubmit={handlePasswordChange}>
-          <div className="grid-2col" style={{ gap: 14, marginBottom: 14 }}>
-            <div>
-              <label style={labelStyle}>New Password</label>
-              <input
-                type="password"
-                value={pwForm.newPassword}
-                onChange={e => setPwForm(f => ({ ...f, newPassword: e.target.value }))}
-                placeholder="At least 6 characters"
-                style={fieldStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Confirm Password</label>
-              <input
-                type="password"
-                value={pwForm.confirm}
-                onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
-                placeholder="Repeat new password"
-                style={fieldStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-            </div>
-          </div>
-          {pwMsg && (
-            <div style={{
-              fontSize: 13, padding: '9px 14px', borderRadius: 8, marginBottom: 12,
-              background: pwMsg === 'Password updated!' ? '#F0FDF4' : '#FEF2F2',
-              color: pwMsg === 'Password updated!' ? '#166534' : '#DC2626',
-              border: `1px solid ${pwMsg === 'Password updated!' ? '#BBF7D0' : '#FECACA'}`,
-            }}>
-              {pwMsg}
-            </div>
-          )}
-          <button type="submit" disabled={pwSaving || !pwForm.newPassword} style={{
-            background: pwSaving || !pwForm.newPassword ? '#93C5FD' : 'var(--primary)',
-            color: '#fff', border: 'none', borderRadius: 999, padding: '10px 24px',
-            fontSize: 13, fontWeight: 600, cursor: pwSaving || !pwForm.newPassword ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-ui)',
-          }}>
-            {pwSaving ? 'Updating...' : 'Change password'}
-          </button>
-        </form>
-      </div>
 
       {/* Danger zone — providers only */}
       {profile?.role === 'provider' && (
