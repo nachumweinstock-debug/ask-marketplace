@@ -296,3 +296,4 @@ export async function sendProviderConfirmationCopy({ providerEmail, providerName
     attachments: [{ filename: 'session.ics', content: icsData, contentType: 'text/calendar; charset=UTF-8; method=REQUEST' }],
   });
 }
+// Thu Apr 16 22:06:47 EDT 2026
