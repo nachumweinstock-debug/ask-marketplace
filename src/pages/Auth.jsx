@@ -1,8 +1,49 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+
+function CodeInput({ onComplete, resetKey }) {
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const refs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+
+  useEffect(() => { refs[0].current?.focus(); }, []);
+  useEffect(() => {
+    if (resetKey) { setDigits(['', '', '', '', '', '']); setTimeout(() => refs[0].current?.focus(), 0); }
+  }, [resetKey]);
+
+  function handleChange(i, val) {
+    const d = val.replace(/\D/g, '').slice(-1);
+    const next = [...digits]; next[i] = d; setDigits(next);
+    if (d && i < 5) refs[i + 1].current?.focus();
+    if (next.every(x => x)) onComplete(next.join(''));
+  }
+  function handleKeyDown(i, e) {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) refs[i - 1].current?.focus();
+  }
+  function handlePaste(e) {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text.length === 6) { setDigits(text.split('')); onComplete(text); }
+  }
+  return (
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '24px 0 16px' }}>
+      {digits.map((d, i) => (
+        <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={d}
+          onChange={e => handleChange(i, e.target.value)}
+          onKeyDown={e => handleKeyDown(i, e)} onPaste={handlePaste}
+          style={{
+            width: 44, height: 52, textAlign: 'center', fontSize: 22, fontWeight: 700,
+            fontFamily: 'var(--font-ui)', borderRadius: 8, background: '#fff', color: 'var(--text)',
+            border: `1.5px solid ${d ? 'var(--primary)' : 'var(--border)'}`, outline: 'none',
+          }}
+          onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+          onBlur={e => e.target.style.borderColor = digits[i] ? 'var(--primary)' : 'var(--border)'}
+        />
+      ))}
+    </div>
+  );
+}
 
 function Wrapper({ children }) {
   return (
@@ -225,9 +266,10 @@ export function ForgotPassword() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [step, setStep] = useState('email');
-  const [code, setCode] = useState('');
+  const [step, setStep] = useState('email'); // 'email' | 'code' | 'password'
+  const [verifiedCode, setVerifiedCode] = useState('');
   const [password, setPassword] = useState('');
+  const [codeResetKey, setCodeResetKey] = useState(0);
 
   async function handleEmailSubmit(e) {
     e.preventDefault(); setError(''); setLoading(true);
@@ -242,11 +284,25 @@ export function ForgotPassword() {
     }
   }
 
-  async function handleReset(e) {
+  async function handleCode(code) {
+    setError(''); setLoading(true);
+    try {
+      // Validate the code without changing the password yet
+      const { data } = await api.post('/auth/verify-reset-code', { userId, code });
+      if (data.ok) { setVerifiedCode(code); setStep('password'); }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Incorrect code — check your email and try again');
+      setCodeResetKey(k => k + 1);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordSubmit(e) {
     e.preventDefault(); setError(''); setLoading(true);
     try {
       const { data } = await api.post('/auth/reset-password', {
-        userId, code: code.trim(), password,
+        userId, code: verifiedCode, password,
       });
       await loginWithToken(data.token, data.user);
       navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
@@ -259,39 +315,61 @@ export function ForgotPassword() {
 
   if (step === 'code') return (
     <Wrapper>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>Reset password</h1>
-      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-        Enter the 6-digit code we sent to <strong style={{ color: 'var(--text)' }}>{email}</strong>,
-        then choose a new password.
-      </p>
-      <form onSubmit={handleReset}>
-        <Field label="Reset code">
-          <TextInput placeholder="123456" value={code} onChange={setCode} autoFocus />
-        </Field>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 10 }}>
+          Check your email
+        </div>
+        <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 4 }}>
+          We sent a 6-digit code to<br />
+          <strong style={{ color: 'var(--text)' }}>{email}</strong>
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 0 }}>
+          Enter the code below — do not enter your email address.
+        </p>
+        <Err msg={error} />
+        <CodeInput onComplete={handleCode} resetKey={codeResetKey} />
+        {loading && <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: -8 }}>Checking…</p>}
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+          Didn't get it? Check spam, or{' '}
+          <button type="button" onClick={() => setStep('email')} style={{
+            background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600,
+            cursor: 'pointer', fontSize: 12, padding: 0,
+          }}>try a different email</button>.
+        </p>
+      </div>
+    </Wrapper>
+  );
+
+  if (step === 'password') return (
+    <Wrapper>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>
+        Set new password
+      </h1>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Choose a new password for your account.</p>
+      <form onSubmit={handlePasswordSubmit}>
         <Field label="New password">
           <PwInput placeholder="At least 6 characters" value={password} onChange={setPassword} />
         </Field>
         <Err msg={error} />
         <Btn loading={loading} label="Set new password" loadingLabel="Saving..." />
-        <p style={{ textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
-          <Link to="/login" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>Back to login</Link>
-        </p>
       </form>
     </Wrapper>
   );
 
   return (
     <Wrapper>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>Reset password</h1>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 4 }}>
+        Reset password
+      </h1>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-        Enter your email and we'll send a reset code.
+        Enter your email and we'll send you a 6-digit code.
       </p>
       <form onSubmit={handleEmailSubmit}>
         <Field label="Email">
           <TextInput type="email" placeholder="you@email.com" value={email} onChange={setEmail} autoFocus />
         </Field>
         <Err msg={error} />
-        <Btn loading={loading} label="Send reset code" loadingLabel="Sending..." />
+        <Btn loading={loading} label="Send code" loadingLabel="Sending..." />
         <p style={{ textAlign: 'center', marginTop: 20, marginBottom: 0 }}>
           <Link to="/login" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>Back to login</Link>
         </p>

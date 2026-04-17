@@ -94,6 +94,22 @@ router.post('/forgot-password', async (req, res) => {
   res.json({ ok: true, userId: user.id });
 });
 
+// POST /auth/verify-reset-code — check code is valid without consuming it
+router.post('/verify-reset-code', (req, res) => {
+  const { userId, code } = req.body;
+  if (!userId || !code) return res.status(400).json({ error: 'userId and code required' });
+
+  const row = db.prepare(
+    "SELECT * FROM verification_codes WHERE user_id = ? AND type = 'reset' AND used = 0 ORDER BY id DESC LIMIT 1"
+  ).get(userId);
+
+  if (!row) return res.status(400).json({ error: 'No reset code found. Request a new one.' });
+  if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
+  if (row.code !== String(code).trim()) return res.status(400).json({ error: 'Incorrect code — check your email and try again.' });
+
+  res.json({ ok: true });
+});
+
 // POST /auth/reset-password — verify code + set new password
 router.post('/reset-password', async (req, res) => {
   const { userId, code, password } = req.body;
