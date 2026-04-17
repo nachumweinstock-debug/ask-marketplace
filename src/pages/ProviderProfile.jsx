@@ -6,6 +6,29 @@ import { mediaUrl } from '../lib/media';
 import { fmtTime, fmtDay } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 
+function ShareButton({ providerId }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/providers/${providerId}`;
+  function handleCopy() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return (
+    <button onClick={handleCopy} style={{
+      fontSize: 12, fontWeight: 600, color: copied ? '#166534' : 'var(--primary)',
+      background: copied ? '#F0FDF4' : 'var(--accent)',
+      border: `1.5px solid ${copied ? '#BBF7D0' : '#BFDBFE'}`,
+      borderRadius: 999, padding: '5px 14px',
+      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+      transition: 'all .15s',
+    }}>
+      {copied ? '✓ Copied!' : '🔗 Copy link'}
+    </button>
+  );
+}
+
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -52,13 +75,15 @@ export default function ProviderProfile() {
     }
   }
 
+  const redirectParam = `?redirect=/providers/${id}`;
+
   function handleMessage() {
-    if (!user) return navigate('/login');
+    if (!user) return navigate(`/signup${redirectParam}`);
     navigate(`/messages/${provider.user_id}`);
   }
 
   async function handleBook() {
-    if (!user) return navigate('/login');
+    if (!user) return navigate(`/signup${redirectParam}`);
     if (!booking) return setBookingError('Please select a time slot.');
     setBookingLoading(true); setBookingError(''); setBookingSuccess('');
     try {
@@ -116,6 +141,7 @@ export default function ProviderProfile() {
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1 }}>This is your listing</span>
+            <ShareButton providerId={id} />
             <Link to="/dashboard/provider?tab=availability" style={{
               fontSize: 12, fontWeight: 600, color: 'var(--primary)',
               textDecoration: 'none', padding: '5px 14px',
@@ -285,9 +311,34 @@ export default function ProviderProfile() {
           )}
 
           {!user && (
-            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
-              <Link to="/login" style={{ color: 'var(--primary)' }}>Log in</Link> to book a session
-            </p>
+            <div style={{
+              marginTop: 20, background: 'var(--accent)',
+              border: '1.5px solid #BFDBFE', borderRadius: 12,
+              padding: '18px 20px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
+                Create a free account to book
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
+                Select a slot above, then sign up — you'll be taken straight to checkout.
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link to={`/signup${redirectParam}`} style={{
+                  background: 'var(--primary)', color: '#fff', textDecoration: 'none',
+                  borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-ui)',
+                }}>
+                  Sign up free
+                </Link>
+                <Link to={`/login${redirectParam}`} style={{
+                  background: 'none', color: 'var(--primary)', textDecoration: 'none',
+                  borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-ui)', border: '1.5px solid #BFDBFE',
+                }}>
+                  Log in
+                </Link>
+              </div>
+            </div>
           )}
         </div>
 

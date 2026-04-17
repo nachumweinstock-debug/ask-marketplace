@@ -113,6 +113,7 @@ export default function ProviderDashboard() {
   const [imgDragging, setImgDragging] = useState(false);
 
   const [myListings, setMyListings] = useState([]);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -241,6 +242,46 @@ export default function ProviderDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Share your listing */}
+      {profile?.id && (
+        <div style={{
+          background: 'var(--card)', border: '1px solid var(--border)',
+          borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+              Share your listing
+            </div>
+            <div style={{
+              fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-ui)',
+              wordBreak: 'break-all', lineHeight: 1.5,
+            }}>
+              {`${window.location.origin}/providers/${profile.id}`}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/providers/${profile.id}`).then(() => {
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+              });
+            }}
+            style={{
+              flexShrink: 0, fontSize: 13, fontWeight: 600,
+              color: shareCopied ? '#166534' : 'var(--primary)',
+              background: shareCopied ? '#F0FDF4' : 'var(--accent)',
+              border: `1.5px solid ${shareCopied ? '#BBF7D0' : '#BFDBFE'}`,
+              borderRadius: 999, padding: '8px 20px',
+              cursor: 'pointer', fontFamily: 'var(--font-ui)',
+              transition: 'all .15s',
+            }}
+          >
+            {shareCopied ? '✓ Copied!' : '🔗 Copy link'}
+          </button>
+        </div>
+      )}
 
       {/* All listings overview */}
       {myListings.length > 1 && (

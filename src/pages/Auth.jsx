@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -172,6 +172,8 @@ function CodeInput({ onComplete, resetKey }) {
 export function SignUp() {
   const { loginWithToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '';
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -211,7 +213,7 @@ export function SignUp() {
     try {
       const { data } = await api.post('/auth/verify', { userId, code });
       await loginWithToken(data.token, data.user);
-      navigate('/dashboard/student');
+      navigate(redirect || '/dashboard/student');
     } catch (err) {
       setError(err.response?.data?.error || 'Incorrect code');
       setCodeResetKey(k => k + 1); // clear the boxes
@@ -287,7 +289,7 @@ export function SignUp() {
         <Btn loading={loading} label="Create account" loadingLabel="Creating..." />
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', marginTop: 20, marginBottom: 0 }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Log in</Link>
+          <Link to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Log in</Link>
         </p>
       </form>
     </Wrapper>
@@ -299,6 +301,8 @@ export function SignUp() {
 export function Login() {
   const { loginWithToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '';
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -320,7 +324,7 @@ export function Login() {
         password: form.password,
       });
       await loginWithToken(data.token, data.user);
-      navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
+      navigate(redirect || (data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'));
     } catch (err) {
       const d = err.response?.data;
       if (d?.needsVerification) {
@@ -340,7 +344,7 @@ export function Login() {
     try {
       const { data } = await api.post('/auth/verify', { userId, code });
       await loginWithToken(data.token, data.user);
-      navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
+      navigate(redirect || (data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'));
     } catch (err) {
       setError(err.response?.data?.error || 'Incorrect code');
       setCodeResetKey(k => k + 1);
@@ -407,7 +411,7 @@ export function Login() {
         <Btn loading={loading} label="Sign in" loadingLabel="Signing in..." />
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', marginTop: 20, marginBottom: 0 }}>
           No account?{' '}
-          <Link to="/signup" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Sign up</Link>
+          <Link to={redirect ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Sign up</Link>
         </p>
       </form>
     </Wrapper>
