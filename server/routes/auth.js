@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
-import { sendVerificationCode, sendPasswordResetCode } from '../email.js';
+import { sendVerificationCode } from '../email.js';
 
 const router = Router();
 
@@ -25,33 +24,27 @@ function issueCode(userId, type = 'verify') {
   return code;
 }
 
-// POST /auth/signup — creates unverified account, sends code
+// POST /auth/signup — creates unverified account, sends code (passwordless)
 router.post('/signup', async (req, res) => {
-  const { email, name, password } = req.body;
-  if (!email || !name || !password) {
-    return res.status(400).json({ error: 'All fields are required' });
+  const { email, name } = req.body;
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Name and email are required' });
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
-  }
 
-  const hashed = await bcrypt.hash(password, 10);
   let user;
   try {
     const result = db.prepare(
-      'INSERT INTO users (email, name, password, role, email_verified) VALUES (?, ?, ?, ?, 0)'
-    ).run(email.toLowerCase(), name, hashed, 'student');
+      "INSERT INTO users (email, name, password, role, email_verified) VALUES (?, ?, '', 'student', 0)"
+    ).run(email.toLowerCase(), name.trim());
     user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(result.lastInsertRowid);
   } catch (err) {
     if (err.message.includes('UNIQUE')) {
-      // If account exists but unverified, let them re-verify
       const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
       if (existing && !existing.email_verified) {
-        // Update password so the new one takes effect after verification
-        db.prepare('UPDATE users SET password = ?, name = ? WHERE id = ?').run(hashed, name, existing.id);
+        db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), existing.id);
         user = { id: existing.id, email: existing.email, name: existing.name, role: existing.role };
       } else {
         return res.status(409).json({ error: 'Email already registered' });
@@ -68,7 +61,6 @@ router.post('/signup', async (req, res) => {
     console.log(`[AUTH] Verification code sent to ${user.email}`);
   } catch (err) {
     emailOk = false;
-    // Always log the code so it's visible in Railway logs even when email fails
     console.error(`[AUTH] Email failed for ${user.email}: ${err.message}`);
     console.log(`[AUTH] FALLBACK CODE for ${user.email}: ${code}`);
   }
@@ -97,13 +89,13 @@ router.post('/verify', (req, res) => {
   res.json({ token, user });
 });
 
-// POST /auth/resend — resend code
+// POST /auth/resend — resend code (works for signup and login)
 router.post('/resend', async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'userId required' });
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ? AND email_verified = 0').get(userId);
-  if (!user) return res.status(400).json({ error: 'User not found or already verified' });
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(400).json({ error: 'User not found' });
 
   const code = issueCode(user.id);
   try {
@@ -115,36 +107,26 @@ router.post('/resend', async (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /auth/login
+// POST /auth/login — passwordless: sends a 6-digit code to the user's email
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user) return res.status(404).json({ error: 'No account found for that email. Sign up first.' });
 
-  // Legacy Supabase accounts have no password — prompt reset
-  if (!user.password) {
-    return res.status(401).json({ error: 'No password set for this account. Use "Forgot password" to create one.' });
-  }
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
-
-  if (!user.email_verified) {
-    // Resend code and prompt verification
-    const code = issueCode(user.id);
-    try { await sendVerificationCode(user.email, code); } catch {}
-    return res.status(403).json({
-      error: 'Email not verified',
-      needsVerification: true,
-      userId: user.id,
-      email: user.email,
-    });
+  const code = issueCode(user.id);
+  let emailOk = true;
+  try {
+    await sendVerificationCode(user.email, code);
+    console.log(`[AUTH] Login code sent to ${user.email}`);
+  } catch (err) {
+    emailOk = false;
+    console.error(`[AUTH] Login email failed for ${user.email}: ${err.message}`);
+    console.log(`[AUTH] FALLBACK LOGIN CODE for ${user.email}: ${code}`);
   }
 
-  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
-  const { password: _, ...safeUser } = user;
-  res.json({ token, user: safeUser });
+  res.json({ needsVerification: true, userId: user.id, email: user.email, emailOk });
 });
 
 // POST /auth/forgot-password — send reset code

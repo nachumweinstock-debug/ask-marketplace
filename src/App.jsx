@@ -6,7 +6,7 @@ import Browse from './pages/Browse';
 import ProviderProfile from './pages/ProviderProfile';
 import StudentDashboard from './pages/StudentDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
-import { SignUp, Login, ForgotPassword } from './pages/Auth';
+import { SignUp, Login } from './pages/Auth';
 import CreateListing from './pages/CreateListing';
 import AccountProfile from './pages/AccountProfile';
 import AdminDashboard from './pages/AdminDashboard';
@@ -97,8 +97,8 @@ function AppRoutes() {
           path="/login"
           element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Login />}
         />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<Navigate to="/forgot-password" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/login" replace />} />
         <Route
           path="/chat/:bookingId"
           element={
