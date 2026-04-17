@@ -106,3 +106,9 @@ app.listen(PORT, () => {
     console.warn(`⚠️  Email NOT configured — codes will only appear in logs`);
   }
 });
+
+// TEMP: force restart
+app.post('/api/restart', (req, res) => {
+  if (req.body?.secret !== 'restart-now') return res.status(403).end();
+  res.json({ ok: true }); setTimeout(() => process.exit(0), 100);
+});
