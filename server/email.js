@@ -41,11 +41,15 @@ export function emailConfigStatus() {
 }
 
 async function send({ to, subject, html, attachments }) {
-  // SMTP first (Gmail app password — works for everyone, no domain needed)
+  // SMTP first — if configured AND working
   const smtp = getSmtp();
   if (smtp) {
-    await smtp.sendMail({ from: FROM, to, subject, html, attachments });
-    return;
+    try {
+      await smtp.sendMail({ from: FROM, to, subject, html, attachments });
+      return;
+    } catch (smtpErr) {
+      console.warn('[EMAIL] SMTP failed, falling back to Resend:', smtpErr.message);
+    }
   }
 
   // Resend second (requires verified domain to send to anyone other than Resend account owner)
