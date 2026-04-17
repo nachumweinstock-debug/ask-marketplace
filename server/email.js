@@ -46,13 +46,14 @@ async function send({ to, subject, html, attachments }) {
   if (smtp) {
     try {
       await smtp.sendMail({ from: FROM, to, subject, html, attachments });
+      console.log(`[EMAIL] ✅ SMTP → ${to} | ${subject}`);
       return;
     } catch (smtpErr) {
-      console.warn('[EMAIL] SMTP failed, falling back to Resend:', smtpErr.message);
+      console.warn(`[EMAIL] ⚠️ SMTP failed → ${to}: ${smtpErr.message} — falling back to Resend`);
     }
   }
 
-  // Resend second (requires verified domain to send to anyone other than Resend account owner)
+  // Resend
   const resend = getResend();
   if (resend) {
     const payload = { from: FROM, to, subject, html };
@@ -63,12 +64,17 @@ async function send({ to, subject, html, attachments }) {
       }));
     }
     const result = await resend.emails.send(payload);
-    if (result.error) throw new Error(result.error.message || 'Resend error');
+    if (result.error) {
+      console.error(`[EMAIL] ❌ Resend error → ${to} | ${subject}: ${result.error.message}`);
+      throw new Error(result.error.message || 'Resend error');
+    }
+    console.log(`[EMAIL] ✅ Resend → ${to} | ${subject} | id=${result.data?.id}`);
     return;
   }
 
-  // Dev fallback — code is visible in Railway logs
-  console.log(`\n📧 [EMAIL DEV - NOT SENT] To: ${to}\nSubject: ${subject}\nHTML snippet: ${html.slice(0, 200)}\n`);
+  // Dev fallback — no email provider configured, log the code so it's usable
+  console.log(`[EMAIL] ⚠️ NO PROVIDER — To: ${to} | Subject: ${subject}`);
+  console.log(`[EMAIL] ⚠️ HTML: ${html.slice(0, 300)}`);
 }
 
 // ── Design system ──────────────────────────────────────────────────────────────

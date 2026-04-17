@@ -81,14 +81,18 @@ router.post('/forgot-password', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
-  // Always respond OK so we don't leak whether an email exists
-  if (!user) return res.json({ ok: true });
+  if (!user) {
+    console.log(`[AUTH] forgot-password: no account for ${email}`);
+    return res.json({ ok: true });
+  }
 
   const code = issueCode(user.id, 'reset');
   try {
     await sendPasswordResetCode(user.email, code);
+    console.log(`[AUTH] Reset code sent to ${user.email}`);
   } catch (err) {
-    console.error('Reset email failed:', err.message);
+    console.error(`[AUTH] Reset email FAILED for ${user.email}:`, err.message);
+    console.log(`[AUTH] FALLBACK RESET CODE for ${user.email}: ${code}`);
   }
 
   res.json({ ok: true, userId: user.id });
