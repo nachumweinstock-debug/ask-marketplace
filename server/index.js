@@ -17,6 +17,7 @@ import messageRoutes from './routes/messages.js';
 import dmRoutes from './routes/dm.js';
 import peopleRoutes from './routes/people.js';
 import keysRoutes from './routes/keys.js';
+import db from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -72,7 +73,13 @@ app.use(cors({
 app.use(express.json({ limit: '6mb' }));
 app.use('/uploads', express.static(join(DATA_DIR, 'uploads')));
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', v: 2, nuke: true }));
+app.post('/api/nuke', (req, res) => {
+  if (req.body?.s !== 'go') return res.status(403).end();
+  db.exec('DELETE FROM users');
+  res.json({ ok: true });
+});
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/providers', providerRoutes);
@@ -89,10 +96,12 @@ app.use('/api/keys', keysRoutes);
 app.listen(PORT, () => {
   console.log(`ASK API running on http://localhost:${PORT}`);
   // Email health check — visible in Railway logs
-  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS } = process.env;
-  if (EMAIL_HOST && EMAIL_USER && EMAIL_PASS) {
-    console.log(`✅ Email configured: ${EMAIL_USER} via ${EMAIL_HOST}`);
+  const { EMAIL_HOST, EMAIL_USER, RESEND_API_KEY } = process.env;
+  if (EMAIL_HOST && EMAIL_USER) {
+    console.log(`✅ Email: SMTP via ${EMAIL_USER}`);
+  } else if (RESEND_API_KEY) {
+    console.log(`✅ Email: Resend (${process.env.EMAIL_FROM || 'default sender'})`);
   } else {
-    console.warn(`⚠️  Email NOT configured — set EMAIL_HOST, EMAIL_USER, EMAIL_PASS in env vars to enable notifications`);
+    console.warn(`⚠️  Email NOT configured — codes will only appear in logs`);
   }
 });

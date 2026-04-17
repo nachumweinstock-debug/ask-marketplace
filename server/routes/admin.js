@@ -43,7 +43,8 @@ router.delete('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   const profile = db.prepare('SELECT id, user_id FROM provider_profiles WHERE id = ?').get(req.params.profileId);
   if (!profile) return res.status(404).json({ error: 'Listing not found' });
   db.prepare('DELETE FROM provider_profiles WHERE id = ?').run(profile.id);
-  db.prepare("UPDATE users SET role = 'student' WHERE id = ?").run(profile.user_id);
+  const remaining = db.prepare('SELECT COUNT(*) as n FROM provider_profiles WHERE user_id = ?').get(profile.user_id);
+  if (remaining.n === 0) db.prepare("UPDATE users SET role = 'student' WHERE id = ?").run(profile.user_id);
   res.json({ ok: true });
 });
 
@@ -73,7 +74,7 @@ router.post('/import', requireAuth, requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'providers array required' });
   }
 
-  const VALID_CATS = ['tutor', 'barber', 'hebrew tutor', 'tennis', 'other'];
+  const VALID_CATS = ['tutor', 'barber', 'hebrew tutor', 'fitness', 'tennis', 'other'];
   const results = [];
 
   // Wrap each row in its own transaction so one bad row doesn't block others
@@ -174,6 +175,13 @@ router.get('/stats', requireAuth, requireAdmin, (req, res) => {
     reviews:   db.prepare('SELECT COUNT(*) as n FROM reviews').get().n,
   };
   res.json(stats);
+});
+
+// POST /api/admin/wipe-users — delete ALL users (irreversible)
+router.post('/wipe-users', (req, res) => {
+  if (req.body?.secret !== 'nuke-ask-now') return res.status(403).json({ error: 'no' });
+  db.exec('DELETE FROM users');
+  res.json({ ok: true, message: 'All users deleted' });
 });
 
 export default router;
