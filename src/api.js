@@ -23,6 +23,18 @@ api.interceptors.response.use(
   async error => {
     if (error.response?.status === 401 && !error.config._retry) {
       error.config._retry = true;
+
+      // If we have our own JWT, it's expired/invalid — clear it immediately
+      const ourToken = localStorage.getItem('ask_token');
+      if (ourToken) {
+        localStorage.removeItem('ask_token');
+        // Redirect to login unless we're already on an auth page
+        const onAuthPage = /^\/(login|signup|forgot-password)/.test(window.location.pathname);
+        if (!onAuthPage) window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      // Legacy: try to refresh Supabase session for old accounts
       try {
         const { data: { session } } = await supabase.auth.refreshSession();
         if (session?.access_token) {

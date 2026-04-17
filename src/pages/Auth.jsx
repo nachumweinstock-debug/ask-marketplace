@@ -450,8 +450,8 @@ export function ForgotPassword() {
       const { data } = await api.post('/auth/reset-password', {
         userId, code: code.trim(), password,
       });
-      loginWithToken(data.token, data.user);
-      navigate('/dashboard/student');
+      await loginWithToken(data.token, data.user);
+      navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
     } catch (err) {
       setError(err.response?.data?.error || 'Reset failed');
     } finally {

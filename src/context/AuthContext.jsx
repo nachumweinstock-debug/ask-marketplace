@@ -14,7 +14,11 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
-    } catch {
+    } catch (err) {
+      // If our token is expired/invalid, clear it so the user is treated as logged out
+      if (err.response?.status === 401) {
+        localStorage.removeItem('ask_token');
+      }
       if (!keepExisting) setUser(null);
     } finally {
       setLoading(false);
