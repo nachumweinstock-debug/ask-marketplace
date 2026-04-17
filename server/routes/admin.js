@@ -177,11 +177,4 @@ router.get('/stats', requireAuth, requireAdmin, (req, res) => {
   res.json(stats);
 });
 
-// POST /api/admin/wipe-users — delete ALL users (irreversible)
-router.post('/wipe-users', (req, res) => {
-  if (req.body?.secret !== 'nuke-ask-now') return res.status(403).json({ error: 'no' });
-  db.exec('DELETE FROM users');
-  res.json({ ok: true, message: 'All users deleted' });
-});
-
 export default router;

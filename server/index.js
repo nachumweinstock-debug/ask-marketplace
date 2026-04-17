@@ -74,12 +74,7 @@ app.use(cors({
 app.use(express.json({ limit: '6mb' }));
 app.use('/uploads', express.static(join(DATA_DIR, 'uploads')));
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok', v: 2, nuke: true }));
-app.post('/api/nuke', (req, res) => {
-  if (req.body?.s !== 'go') return res.status(403).end();
-  db.exec('DELETE FROM users');
-  res.json({ ok: true });
-});
+app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 
 app.use('/api/auth', authRoutes);
@@ -107,8 +102,3 @@ app.listen(PORT, () => {
   }
 });
 
-// TEMP: force restart
-app.post('/api/restart', (req, res) => {
-  if (req.body?.secret !== 'restart-now') return res.status(403).end();
-  res.json({ ok: true }); setTimeout(() => process.exit(0), 100);
-});
