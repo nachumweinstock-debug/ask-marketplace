@@ -50,6 +50,8 @@ router.post('/signup', async (req, res) => {
       // If account exists but unverified, let them re-verify
       const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
       if (existing && !existing.email_verified) {
+        // Update password so the new one takes effect after verification
+        db.prepare('UPDATE users SET password = ?, name = ? WHERE id = ?').run(hashed, name, existing.id);
         user = { id: existing.id, email: existing.email, name: existing.name, role: existing.role };
       } else {
         return res.status(409).json({ error: 'Email already registered' });
