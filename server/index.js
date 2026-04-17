@@ -21,6 +21,7 @@ import db from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.set('trust proxy', 1); // Railway sits behind a proxy
 const PORT = process.env.PORT || 3001;
 
 // DATA_DIR is a persistent volume path in production (e.g. /data on Railway)
