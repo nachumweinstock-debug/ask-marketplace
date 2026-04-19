@@ -72,6 +72,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '6mb' }));
+app.use(express.urlencoded({ extended: true })); // needed for Apple Sign In POST callback
 app.use('/uploads', express.static(join(DATA_DIR, 'uploads')));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));

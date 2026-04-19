@@ -7,6 +7,7 @@ import ProviderProfile from './pages/ProviderProfile';
 import StudentDashboard from './pages/StudentDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
 import { SignUp, Login, ForgotPassword } from './pages/Auth';
+import AuthCallback from './pages/AuthCallback';
 import CreateListing from './pages/CreateListing';
 import AccountProfile from './pages/AccountProfile';
 import AdminDashboard from './pages/AdminDashboard';
@@ -99,6 +100,7 @@ function AppRoutes() {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<Navigate to="/forgot-password" replace />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/chat/:bookingId"
           element={

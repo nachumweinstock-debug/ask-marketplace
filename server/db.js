@@ -215,6 +215,11 @@ if (!ppColsFinal.includes('subcategory')) {
 // Rename legacy 'tennis' category to 'fitness'
 db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
 
+// OAuth identity columns
+const colsLatest = db.pragma('table_info(users)').map(c => c.name);
+if (!colsLatest.includes('google_id')) db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
+if (!colsLatest.includes('apple_id'))  db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {
