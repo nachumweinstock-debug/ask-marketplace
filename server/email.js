@@ -219,6 +219,24 @@ export async function sendPasswordResetCode(toEmail, code) {
   });
 }
 
+export async function sendDmNotification({ toEmail, toName, fromName, preview }) {
+  await send({
+    to: toEmail,
+    subject: `${fromName} sent you a message on ASK`,
+    html: shell(`New message from ${fromName}`, `
+      ${header('💬', `New message from ${fromName}`, `${fromName} messaged you on ASK Marketplace.`)}
+      ${body(`
+        <div style="background:${BG};border:1px solid ${BORDER};border-radius:10px;padding:16px 20px;margin:0 0 20px">
+          <div style="font-size:13px;color:${MUTED};margin-bottom:6px;font-weight:500">${fromName}</div>
+          <div style="font-size:15px;color:${DARK};line-height:1.55">${preview}</div>
+        </div>
+        ${btn('https://uask.live/messages', 'Reply on ASK')}
+        ${note('You can turn off email notifications in your account settings.')}
+      `)}
+    `),
+  });
+}
+
 export async function sendBookingNotification({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime }) {
   await send({
     to: providerEmail,
