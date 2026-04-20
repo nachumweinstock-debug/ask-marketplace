@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DAYS, TIMES, fmtTime, fmtDay, autoEndTime, sortSlots } from '../lib/slots';
+import { TIMES, fmtTime, fmtDay, autoEndTime, sortSlots } from '../lib/slots';
+import MiniCalendar from './MiniCalendar';
 
 const inputStyle = {
   width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
@@ -9,18 +10,12 @@ const inputStyle = {
   appearance: 'none', WebkitAppearance: 'none',
 };
 
-const selectWrap = { position: 'relative' };
-const chevron = {
-  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-  pointerEvents: 'none', color: 'var(--muted)', fontSize: 11,
-};
-
 function TimeSelect({ value, onChange, minTime, label, placeholder }) {
   const opts = minTime ? TIMES.filter(t => t > minTime) : TIMES;
   return (
     <div>
       {label && <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>{label}</div>}
-      <div style={selectWrap}>
+      <div style={{ position: 'relative' }}>
         <select value={value} onChange={e => onChange(e.target.value)}
           style={{ ...inputStyle, paddingRight: 32, color: value ? 'var(--text)' : 'var(--muted)' }}
           onFocus={e => e.target.style.borderColor = 'var(--primary)'}
@@ -29,21 +24,29 @@ function TimeSelect({ value, onChange, minTime, label, placeholder }) {
           <option value="">{placeholder || 'Select…'}</option>
           {opts.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
         </select>
-        <span style={chevron}>▾</span>
+        <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--muted)', fontSize: 11 }}>▾</span>
       </div>
     </div>
   );
 }
 
-// onAdd(slots: [{date, start_time, end_time}])
+// onAdd(slots: [{date: 'YYYY-MM-DD', start_time, end_time}])
 export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Add slots' }) {
-  const [selectedDays, setSelectedDays] = useState([]);
+  const [selectedDates, setSelectedDates] = useState(new Set());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
 
-  function toggleDay(day) {
-    setSelectedDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day]);
+  // Dates that already have real-date slots (show as marked in calendar)
+  const existingDateSlots = existingSlots.filter(s => /^\d{4}/.test(s.date));
+  const markedDates = new Set(existingDateSlots.map(s => s.date));
+
+  function toggleDate(dateStr) {
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      next.has(dateStr) ? next.delete(dateStr) : next.add(dateStr);
+      return next;
+    });
     setError('');
   }
 
@@ -53,73 +56,57 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
     setError('');
   }
 
-  function handleEnd(t) {
-    setEndTime(t);
-    setError('');
-  }
-
   function handleAdd() {
-    if (selectedDays.length === 0) { setError('Pick at least one day.'); return; }
-    if (!startTime) { setError('Choose a start time.'); return; }
-    if (!endTime) { setError('Choose an end time.'); return; }
-    if (endTime <= startTime) { setError('"To" must be after "From".'); return; }
+    if (selectedDates.size === 0) { setError('Pick at least one date on the calendar.'); return; }
+    if (!startTime)               { setError('Choose a start time.'); return; }
+    if (!endTime)                 { setError('Choose an end time.'); return; }
+    if (endTime <= startTime)     { setError('"To" must be after "From".'); return; }
 
-    // Deduplicate against existing slots
     const existingKeys = new Set(existingSlots.map(s => `${s.date}|${s.start_time}|${s.end_time}`));
-    const newSlots = selectedDays
-      .filter(day => !existingKeys.has(`${day}|${startTime}|${endTime}`))
-      .map(day => ({ date: day, start_time: startTime, end_time: endTime }));
+    const newSlots = [...selectedDates]
+      .filter(date => !existingKeys.has(`${date}|${startTime}|${endTime}`))
+      .sort()
+      .map(date => ({ date, start_time: startTime, end_time: endTime }));
 
     if (newSlots.length === 0) { setError('Those slots already exist.'); return; }
 
     onAdd(newSlots);
-    setSelectedDays([]);
+    setSelectedDates(new Set());
     setError('');
-    // Keep times — natural to add more slots at the same time on different days
   }
 
-  const ready = selectedDays.length > 0 && startTime && endTime && endTime > startTime;
+  const ready = selectedDates.size > 0 && startTime && endTime && endTime > startTime;
 
   return (
     <div>
-      {/* Day multi-select */}
+      {/* Calendar date picker */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 8 }}>
-          Day — tap to toggle, pick multiple
+        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 10 }}>
+          Tap dates to add availability — select multiple at once
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {DAYS.map(day => {
-            const active = selectedDays.includes(day);
-            return (
-              <button key={day} type="button" onClick={() => toggleDay(day)}
-                style={{
-                  padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600,
-                  border: `2px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                  background: active ? 'var(--primary)' : 'var(--card)',
-                  color: active ? '#fff' : 'var(--muted)',
-                  cursor: 'pointer', transition: 'all .12s',
-                  fontFamily: 'var(--font-ui)',
-                  boxShadow: active ? '0 2px 8px rgba(59,130,246,0.25)' : 'none',
-                }}>
-                {day.slice(0, 3)}
-              </button>
-            );
-          })}
-        </div>
+        <MiniCalendar
+          markedDates={markedDates}
+          selectedDates={selectedDates}
+          onSelect={toggleDate}
+          disablePast={true}
+          onlyMarked={false}
+        />
+        {selectedDates.size > 0 && (
+          <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 8, fontWeight: 500 }}>
+            {selectedDates.size} date{selectedDates.size > 1 ? 's' : ''} selected
+          </div>
+        )}
       </div>
 
       {/* Time row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <TimeSelect value={startTime} onChange={handleStart} label="From" placeholder="Start time" />
-        <TimeSelect value={endTime} onChange={handleEnd} minTime={startTime} label="To" placeholder="End time" />
+        <TimeSelect value={endTime} onChange={v => setEndTime(v)} minTime={startTime} label="To" placeholder="End time" />
       </div>
 
-      {/* Smart hint */}
-      {startTime && endTime && endTime > startTime && (
+      {startTime && endTime && endTime > startTime && selectedDates.size > 0 && (
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-          {selectedDays.length > 0
-            ? `Adding ${selectedDays.length} slot${selectedDays.length > 1 ? 's' : ''}: ${selectedDays.map(d => d.slice(0,3)).join(', ')} · ${fmtTime(startTime)} – ${fmtTime(endTime)}`
-            : `${fmtTime(startTime)} – ${fmtTime(endTime)} · pick day(s) above`}
+          Adding {selectedDates.size} slot{selectedDates.size > 1 ? 's' : ''} · {fmtTime(startTime)} – {fmtTime(endTime)}
         </div>
       )}
 
@@ -139,7 +126,7 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
   );
 }
 
-// Slot list display — shared between CreateListing (local state) and ProviderDashboard (DB)
+// Slot list — shared between CreateListing and ProviderDashboard
 export function SlotList({ slots, onRemove, emptyText = 'No slots yet.' }) {
   if (slots.length === 0) return (
     <div style={{
@@ -155,7 +142,7 @@ export function SlotList({ slots, onRemove, emptyText = 'No slots yet.' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
       {sorted.map((slot, i) => (
-        <div key={slot.id || i} style={{
+        <div key={slot.id ?? i} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 16px', background: 'var(--bg)',
           border: '1px solid var(--border)', borderRadius: 8,
@@ -171,7 +158,7 @@ export function SlotList({ slots, onRemove, emptyText = 'No slots yet.' }) {
             )}
           </div>
           {onRemove && !slot.is_booked && (
-            <button type="button" onClick={() => onRemove(slot.id || i)}
+            <button type="button" onClick={() => onRemove(slot.id ?? i)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)', padding: '2px 6px' }}>
               Remove
             </button>

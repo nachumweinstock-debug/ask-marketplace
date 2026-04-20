@@ -42,11 +42,19 @@ export function fmtDay(date) {
   }
 }
 
-// Sort slots by Mon→Sun then start_time
+// Sort slots: real dates (YYYY-MM-DD) first chronologically, then day-name slots Mon→Sun
 export function sortSlots(slots) {
   return [...slots].sort((a, b) => {
-    const di = DAYS.indexOf(a.date) - DAYS.indexOf(b.date);
-    if (di !== 0) return di;
-    return a.start_time.localeCompare(b.start_time);
+    const aIsDay = DAYS.includes(a.date);
+    const bIsDay = DAYS.includes(b.date);
+    if (!aIsDay && !bIsDay) {
+      const dc = a.date.localeCompare(b.date);
+      return dc !== 0 ? dc : a.start_time.localeCompare(b.start_time);
+    }
+    if (aIsDay && bIsDay) {
+      const di = DAYS.indexOf(a.date) - DAYS.indexOf(b.date);
+      return di !== 0 ? di : a.start_time.localeCompare(b.start_time);
+    }
+    return aIsDay ? 1 : -1; // real dates before day-name slots
   });
 }

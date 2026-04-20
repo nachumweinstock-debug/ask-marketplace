@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
-import { fmtTime, fmtDay } from '../lib/slots';
+import { fmtTime, fmtDay, DAYS } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
+import MiniCalendar from '../components/MiniCalendar';
 
 function ShareButton({ providerId }) {
   const [copied, setCopied] = useState(false);
@@ -50,6 +51,7 @@ export default function ProviderProfile() {
   const [provider, setProvider] = useState(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState('');
@@ -108,10 +110,16 @@ export default function ProviderProfile() {
 
   const isOwner = user && user.id === provider.user_id;
 
-  const groupedSlots = provider.availability.reduce((acc, slot) => {
-    const key = fmtDay(slot.date);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(slot);
+  // Separate real calendar dates from legacy day-name slots
+  const realSlots    = provider.availability.filter(s => /^\d{4}/.test(s.date));
+  const legacySlots  = provider.availability.filter(s => DAYS.includes(s.date));
+  const availDates   = new Set(realSlots.map(s => s.date));
+  const slotsForDate = selectedDate ? realSlots.filter(s => s.date === selectedDate) : [];
+
+  // Legacy slots grouped by day name (backward compat)
+  const groupedLegacy = legacySlots.reduce((acc, slot) => {
+    if (!acc[slot.date]) acc[slot.date] = [];
+    acc[slot.date].push(slot);
     return acc;
   }, {});
 
@@ -251,38 +259,94 @@ export default function ProviderProfile() {
         {/* Availability */}
         <div className="card" style={{ padding: '24px' }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 18 }}>
-            Available Slots
+            Book a Session
           </div>
 
-          {Object.keys(groupedSlots).length === 0 ? (
+          {provider.availability.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '28px 0' }}>
               No availability yet. Check back later.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {Object.entries(groupedSlots).map(([date, slots]) => (
-                <div key={date}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.6px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-                    {date}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {slots.map(slot => (
-                      <button key={slot.id} onClick={() => setBooking(booking === slot.id ? null : slot.id)}
-                        style={{
-                          padding: '7px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
-                          border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
-                          background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
-                          color: booking === slot.id ? '#fff' : 'var(--text)',
-                          cursor: 'pointer', transition: 'all .15s',
-                          fontFamily: 'var(--font-ui)',
-                        }}>
-                        {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
-                      </button>
-                    ))}
-                  </div>
+            <>
+              {/* Calendar — for real date slots */}
+              {realSlots.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <MiniCalendar
+                    markedDates={availDates}
+                    selectedDates={selectedDate ? new Set([selectedDate]) : new Set()}
+                    onSelect={d => { setSelectedDate(d === selectedDate ? null : d); setBooking(null); }}
+                    onlyMarked={true}
+                    disablePast={true}
+                  />
+
+                  {/* Time slots for selected date */}
+                  {selectedDate && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>
+                        {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                          weekday: 'long', month: 'long', day: 'numeric',
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {slotsForDate.map(slot => (
+                          <button key={slot.id}
+                            onClick={() => setBooking(booking === slot.id ? null : slot.id)}
+                            style={{
+                              padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+                              border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
+                              background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
+                              color: booking === slot.id ? '#fff' : 'var(--text)',
+                              cursor: 'pointer', transition: 'all .15s',
+                              fontFamily: 'var(--font-ui)',
+                            }}>
+                            {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!selectedDate && (
+                    <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 12, textAlign: 'center' }}>
+                      Pick a highlighted date to see available times
+                    </p>
+                  )}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Legacy day-name slots */}
+              {legacySlots.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: realSlots.length > 0 ? 12 : 0 }}>
+                  {realSlots.length > 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--muted)', borderTop: '1px solid var(--border)', paddingTop: 14, fontWeight: 500 }}>
+                      Also available (recurring weekly)
+                    </div>
+                  )}
+                  {Object.entries(groupedLegacy).map(([day, slots]) => (
+                    <div key={day}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.6px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+                        {day}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {slots.map(slot => (
+                          <button key={slot.id}
+                            onClick={() => setBooking(booking === slot.id ? null : slot.id)}
+                            style={{
+                              padding: '7px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
+                              border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
+                              background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
+                              color: booking === slot.id ? '#fff' : 'var(--text)',
+                              cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                            }}>
+                            {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {bookingError && (
@@ -296,7 +360,7 @@ export default function ProviderProfile() {
             </div>
           )}
 
-          {Object.keys(groupedSlots).length > 0 && (
+          {provider.availability.length > 0 && (
             <button onClick={handleBook} disabled={!booking || bookingLoading}
               style={{
                 marginTop: 20, width: '100%',
@@ -306,7 +370,7 @@ export default function ProviderProfile() {
                 cursor: !booking || bookingLoading ? 'not-allowed' : 'pointer',
                 fontFamily: 'var(--font-ui)', transition: 'opacity .15s',
               }}>
-              {bookingLoading ? 'Booking...' : booking ? 'Book This Slot' : 'Select a Slot to Book'}
+              {bookingLoading ? 'Booking...' : booking ? 'Request Booking' : 'Select a time to book'}
             </button>
           )}
 
@@ -320,23 +384,19 @@ export default function ProviderProfile() {
                 Create a free account to book
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-                Select a slot above, then sign up — you'll be taken straight to checkout.
+                Pick a date and time above, then sign up.
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link to={`/signup${redirectParam}`} style={{
                   background: 'var(--primary)', color: '#fff', textDecoration: 'none',
                   borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
                   fontFamily: 'var(--font-ui)',
-                }}>
-                  Sign up free
-                </Link>
+                }}>Sign up free</Link>
                 <Link to={`/login${redirectParam}`} style={{
                   background: 'none', color: 'var(--primary)', textDecoration: 'none',
                   borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
                   fontFamily: 'var(--font-ui)', border: '1.5px solid #BFDBFE',
-                }}>
-                  Log in
-                </Link>
+                }}>Log in</Link>
               </div>
             </div>
           )}

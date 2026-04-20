@@ -34,7 +34,7 @@ router.get('/:providerId', (req, res) => {
           AND a2.end_time > a.start_time
           AND b.status NOT IN ('cancelled')
       )
-    ORDER BY ${DAY_ORDER}, a.start_time
+    ORDER BY a.date, a.start_time
   `).all(req.params.providerId);
   res.json(slots);
 });
@@ -55,8 +55,11 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   if (!date || !start_time || !end_time) return res.status(400).json({ error: 'date, start_time, end_time required' });
-  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  if (!DAYS.includes(date)) return res.status(400).json({ error: 'date must be a day name (Monday–Sunday)' });
+  const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const isRealDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(new Date(date + 'T00:00:00').getTime());
+  if (!DAY_NAMES.includes(date) && !isRealDate) {
+    return res.status(400).json({ error: 'date must be YYYY-MM-DD or a day name' });
+  }
   if (!/^\d{2}:\d{2}$/.test(start_time) || !/^\d{2}:\d{2}$/.test(end_time)) return res.status(400).json({ error: 'times must be HH:MM format' });
   if (start_time >= end_time) return res.status(400).json({ error: 'end_time must be after start_time' });
 
