@@ -18,6 +18,7 @@ import dmRoutes from './routes/dm.js';
 import peopleRoutes from './routes/people.js';
 import keysRoutes from './routes/keys.js';
 import db from './db.js';
+import { startReminderJobs } from './reminders.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -89,6 +90,8 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/dm', dmRoutes);
 app.use('/api/people', peopleRoutes);
 app.use('/api/keys', keysRoutes);
+
+startReminderJobs();
 
 app.listen(PORT, () => {
   console.log(`ASK API running on http://localhost:${PORT}`);

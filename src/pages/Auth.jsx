@@ -190,7 +190,7 @@ export function SignUp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [error, setError] = useState(searchParams.get('error') === 'google_failed' ? 'Google sign-in failed — please try again.' : searchParams.get('error') === 'apple_failed' ? 'Apple sign-in failed — please try again.' : '');
   const [loading, setLoading] = useState(false);
 
@@ -204,6 +204,7 @@ export function SignUp() {
         email: form.email.toLowerCase(),
         name: form.name,
         password: form.password,
+        phone: form.phone,
       });
       await loginWithToken(data.token, data.user);
       navigate(redirect || '/dashboard/student');
@@ -231,6 +232,9 @@ export function SignUp() {
         </Field>
         <Field label="Password">
           <PwInput placeholder="At least 6 characters" value={form.password} onChange={set('password')} autoComplete="new-password" />
+        </Field>
+        <Field label="Phone number (for booking texts)">
+          <TextInput type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={set('phone')} autoComplete="tel" />
         </Field>
         <Err msg={error} />
         <Btn loading={loading} label="Create account" loadingLabel="Creating..." />

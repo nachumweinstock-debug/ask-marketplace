@@ -61,6 +61,20 @@ export async function smsBookingReminder({ phone, studentName }) {
   );
 }
 
+export async function smsAppointmentReminder({ phone, name, otherName, date, startTime, role }) {
+  const when = `${date} at ${startTime}`;
+  const msg = role === 'provider'
+    ? `ASK: Heads up — your session with ${otherName} is in about 1 hour (${when}). uask.live`
+    : `ASK: Reminder — your session with ${otherName} is in about 1 hour (${when}). uask.live`;
+  await sendSms(phone, msg);
+}
+
+export async function smsReviewReminder({ phone, providerName, bookingId }) {
+  await sendSms(phone,
+    `ASK: How was your session with ${providerName}? Leave a quick rating: uask.live/dashboard/student`
+  );
+}
+
 export async function smsDmReminder({ phone, senderName }) {
   await sendSms(phone,
     `ASK: You still have an unread message from ${senderName}. uask.live/messages`

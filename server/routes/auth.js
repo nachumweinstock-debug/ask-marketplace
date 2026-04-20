@@ -28,7 +28,7 @@ function issueCode(userId, type = 'verify') {
 
 // POST /auth/signup — create account, log in immediately (no email verification)
 router.post('/signup', async (req, res) => {
-  const { email, name, password } = req.body;
+  const { email, name, password, phone } = req.body;
   if (!email || !name || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
@@ -40,11 +40,12 @@ router.post('/signup', async (req, res) => {
   }
 
   const hashed = await bcrypt.hash(password, 10);
+  const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(0, 15) : null;
   let user;
   try {
     const result = db.prepare(
-      "INSERT INTO users (email, name, password, role, email_verified) VALUES (?, ?, ?, 'student', 1)"
-    ).run(email.toLowerCase(), name.trim(), hashed);
+      "INSERT INTO users (email, name, password, role, email_verified, phone) VALUES (?, ?, ?, 'student', 1, ?)"
+    ).run(email.toLowerCase(), name.trim(), hashed, cleanPhone || null);
     user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(result.lastInsertRowid);
   } catch (err) {
     if (err.message.includes('UNIQUE')) {

@@ -215,6 +215,12 @@ if (!ppColsFinal.includes('subcategory')) {
 // Rename legacy 'tennis' category to 'fitness'
 db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
 
+// Booking reminder tracking
+const bookingCols = db.pragma('table_info(bookings)').map(c => c.name);
+if (!bookingCols.includes('reminder_sent_at'))      db.exec('ALTER TABLE bookings ADD COLUMN reminder_sent_at DATETIME');
+if (!bookingCols.includes('sms_reminder_sent'))     db.exec('ALTER TABLE bookings ADD COLUMN sms_reminder_sent INTEGER DEFAULT 0');
+if (!bookingCols.includes('sms_review_sent'))       db.exec('ALTER TABLE bookings ADD COLUMN sms_review_sent INTEGER DEFAULT 0');
+
 // OAuth identity columns
 const colsLatest = db.pragma('table_info(users)').map(c => c.name);
 if (!colsLatest.includes('google_id')) db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
