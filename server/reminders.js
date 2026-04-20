@@ -11,6 +11,7 @@
 
 import db from './db.js';
 import { smsAppointmentReminder, smsReviewReminder } from './sms.js';
+import { sendAppointmentReminderEmail, sendReviewReminderEmail } from './email.js';
 
 // Returns "YYYY-MM-DD HH:MM" in Eastern time, offset by `mins` minutes from now
 function easternOffset(mins = 0) {
@@ -26,13 +27,13 @@ async function sendAppointmentReminders() {
   const bookings = db.prepare(`
     SELECT b.id, b.student_id, b.provider_id,
            a.date, a.start_time, a.end_time,
-           su.name  AS student_name,  su.phone  AS student_phone,
-           pu.name  AS provider_name, pu.phone  AS provider_phone
+           su.name  AS student_name,  su.phone  AS student_phone,  su.email  AS student_email,
+           pu.name  AS provider_name, pu.phone  AS provider_phone, pu.email  AS provider_email
     FROM bookings b
-    JOIN availability a     ON a.id  = b.availability_id
-    JOIN users su            ON su.id = b.student_id
-    JOIN provider_profiles pp ON pp.id = b.provider_id
-    JOIN users pu            ON pu.id = pp.user_id
+    JOIN availability a       ON a.id  = b.availability_id
+    JOIN users su              ON su.id = b.student_id
+    JOIN provider_profiles pp  ON pp.id = b.provider_id
+    JOIN users pu              ON pu.id = pp.user_id
     WHERE b.status = 'confirmed'
       AND b.sms_reminder_sent = 0
       AND a.date GLOB '????-??-??'
@@ -42,13 +43,17 @@ async function sendAppointmentReminders() {
   for (const b of bookings) {
     try {
       await Promise.allSettled([
-        smsAppointmentReminder({ phone: b.student_phone,  name: b.student_name,  otherName: b.provider_name, date: b.date, startTime: b.start_time, role: 'student' }),
-        smsAppointmentReminder({ phone: b.provider_phone, name: b.provider_name, otherName: b.student_name,  date: b.date, startTime: b.start_time, role: 'provider' }),
+        // Student — SMS + email
+        smsAppointmentReminder({ phone: b.student_phone, otherName: b.provider_name, date: b.date, startTime: b.start_time, role: 'student' }),
+        sendAppointmentReminderEmail({ toEmail: b.student_email, toName: b.student_name, otherName: b.provider_name, date: b.date, startTime: b.start_time, endTime: b.end_time, role: 'student', dashboardUrl: 'https://uask.live/dashboard/student' }),
+        // Provider — SMS + email
+        smsAppointmentReminder({ phone: b.provider_phone, otherName: b.student_name, date: b.date, startTime: b.start_time, role: 'provider' }),
+        sendAppointmentReminderEmail({ toEmail: b.provider_email, toName: b.provider_name, otherName: b.student_name, date: b.date, startTime: b.start_time, endTime: b.end_time, role: 'provider', dashboardUrl: 'https://uask.live/dashboard/provider' }),
       ]);
       db.prepare('UPDATE bookings SET sms_reminder_sent = 1 WHERE id = ?').run(b.id);
-      console.log(`[REMINDER] 1hr-before SMS sent for booking ${b.id}`);
+      console.log(`[REMINDER] 1hr-before sent for booking ${b.id}`);
     } catch (err) {
-      console.error(`[REMINDER] before-SMS error booking ${b.id}:`, err.message);
+      console.error(`[REMINDER] before-reminder error booking ${b.id}:`, err.message);
     }
   }
 }
@@ -61,13 +66,13 @@ async function sendReviewReminders() {
   const bookings = db.prepare(`
     SELECT b.id, b.student_id,
            a.date, a.end_time,
-           su.phone AS student_phone,
+           su.phone AS student_phone, su.email AS student_email, su.name AS student_name,
            pu.name  AS provider_name
     FROM bookings b
-    JOIN availability a     ON a.id  = b.availability_id
-    JOIN users su            ON su.id = b.student_id
-    JOIN provider_profiles pp ON pp.id = b.provider_id
-    JOIN users pu            ON pu.id = pp.user_id
+    JOIN availability a       ON a.id  = b.availability_id
+    JOIN users su              ON su.id = b.student_id
+    JOIN provider_profiles pp  ON pp.id = b.provider_id
+    JOIN users pu              ON pu.id = pp.user_id
     WHERE b.status = 'confirmed'
       AND b.sms_review_sent = 0
       AND a.date GLOB '????-??-??'
@@ -76,12 +81,15 @@ async function sendReviewReminders() {
 
   for (const b of bookings) {
     try {
-      await smsReviewReminder({ phone: b.student_phone, providerName: b.provider_name, bookingId: b.id });
+      await Promise.allSettled([
+        smsReviewReminder({ phone: b.student_phone, providerName: b.provider_name, bookingId: b.id }),
+        sendReviewReminderEmail({ toEmail: b.student_email, toName: b.student_name, providerName: b.provider_name }),
+      ]);
       db.prepare('UPDATE bookings SET sms_review_sent = 1, status = ? WHERE id = ? AND status = ?')
-        .run('completed', b.id, 'confirmed'); // auto-complete the booking too
-      console.log(`[REMINDER] review SMS sent for booking ${b.id}`);
+        .run('completed', b.id, 'confirmed');
+      console.log(`[REMINDER] review reminder sent for booking ${b.id}`);
     } catch (err) {
-      console.error(`[REMINDER] review-SMS error booking ${b.id}:`, err.message);
+      console.error(`[REMINDER] review-reminder error booking ${b.id}:`, err.message);
     }
   }
 }

@@ -219,6 +219,42 @@ export async function sendPasswordResetCode(toEmail, code) {
   });
 }
 
+export async function sendAppointmentReminderEmail({ toEmail, toName, otherName, date, startTime, endTime, role, dashboardUrl }) {
+  const isProvider = role === 'provider';
+  const subject = `Reminder: your session ${isProvider ? `with ${otherName}` : `with ${otherName}`} is in 1 hour`;
+  await send({
+    to: toEmail,
+    subject,
+    html: shell(`Your session is coming up in 1 hour`, `
+      ${header('⏰', 'Session in 1 hour', `Just a heads-up — you have a session coming up soon.`)}
+      ${body(`
+        ${infoTable(
+          infoRow(isProvider ? 'Student' : 'Provider', otherName),
+          infoRow('Date & time', date, `${startTime} – ${endTime}`)
+        )}
+        ${btn(dashboardUrl || 'https://uask.live', 'Open dashboard')}
+      `)}
+    `),
+  });
+}
+
+export async function sendReviewReminderEmail({ toEmail, toName, providerName }) {
+  await send({
+    to: toEmail,
+    subject: `How was your session with ${providerName}?`,
+    html: shell(`Rate your session with ${providerName}`, `
+      ${header('⭐', 'How did it go?', `Your session with ${providerName} just wrapped up.`)}
+      ${body(`
+        <p style="margin:0 0 20px;font-size:14px;color:${MUTED};line-height:1.6">
+          Taking 10 seconds to leave a rating helps ${providerName} get more bookings and helps other students find great providers.
+        </p>
+        ${btn('https://uask.live/dashboard/student', '⭐ Leave a rating')}
+        ${note('You can rate from your student dashboard under past sessions.')}
+      `)}
+    `),
+  });
+}
+
 export async function sendDmNotification({ toEmail, toName, fromName, preview }) {
   await send({
     to: toEmail,
