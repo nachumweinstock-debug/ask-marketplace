@@ -243,8 +243,8 @@ router.patch('/:id', requireAuth, (req, res) => {
 });
 
 // GET /bookings/:id/ics — download .ics file for Apple Calendar / Outlook
-// Also accessible without auth so email links work (booking ID is not guessable enough to matter)
-router.get('/:id/ics', requireAuth, (req, res) => {
+// No auth required — link is clicked from email; booking ID is not publicly guessable
+router.get('/:id/ics', (req, res) => {
   const booking = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
            u.name as provider_name
@@ -256,11 +256,9 @@ router.get('/:id/ics', requireAuth, (req, res) => {
   `).get(req.params.id);
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  const isStudent = booking.student_id === req.user.id;
-  const isProvider = !!db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?').get(req.user.id, booking.provider_id);
-  if (!isStudent && !isProvider) return res.status(403).json({ error: 'Forbidden' });
 
-  const isProviderDownload = isProvider && !isStudent;
+  // Show provider title if ?for=provider is passed (used in provider confirmation email)
+  const isProviderDownload = req.query.for === 'provider';
   const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
   const title = isProviderDownload
     ? `Session with ${student?.name || 'Student'}`

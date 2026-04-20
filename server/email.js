@@ -279,10 +279,10 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
         </p>
         <div>
           ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
-          ${btn(`https://uask.live/api/bookings/${bookingId}/ics`, '🍎 Apple Calendar', '#1C1C1E')}
+          ${btn(`https://uask.live/api/bookings/${bookingId}/ics`, '🍎 Apple / Outlook', '#1C1C1E')}
         </div>
         ${divider()}
-        ${note('The .ics file attached to this email also works with Outlook or any other calendar app.')}
+        ${note('The .ics attachment also works with Outlook or any other calendar app.')}
       `)}
     `),
     attachments: [{ filename: 'session.ics', content: icsData, contentType: 'text/calendar; charset=UTF-8; method=REQUEST' }],
@@ -310,11 +310,11 @@ export async function sendProviderConfirmationCopy({ providerEmail, providerName
         </p>
         <div>
           ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
-          ${btn(`https://uask.live/api/bookings/${bookingId}/ics`, '🍎 Apple Calendar', '#1C1C1E')}
+          ${btn(`https://uask.live/api/bookings/${bookingId}/ics?for=provider`, '🍎 Apple / Outlook', '#1C1C1E')}
         </div>
         ${divider()}
         ${btn('https://uask.live/dashboard/provider', 'Open dashboard', BLUE)}
-        ${note('The .ics file attached works with Outlook and any other calendar app.')}
+        ${note('The .ics attachment also works with Outlook or any other calendar app.')}
       `)}
     `),
     attachments: [{ filename: 'session.ics', content: icsData, contentType: 'text/calendar; charset=UTF-8; method=REQUEST' }],
