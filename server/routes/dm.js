@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import { sendDmNotification } from '../email.js';
+import { smsNewDm } from '../sms.js';
 
 const router = Router();
 
@@ -112,15 +113,21 @@ router.post('/:userId', requireAuth, (req, res) => {
   ).get(me, other, result.lastInsertRowid).n;
 
   if (alreadyUnread === 0) {
-    const receiverUser = db.prepare('SELECT email, name FROM users WHERE id = ?').get(other);
-    if (receiverUser?.email) {
+    const receiverUser = db.prepare('SELECT email, name, phone FROM users WHERE id = ?').get(other);
+    if (receiverUser) {
       const preview = body.trim().length > 200 ? body.trim().slice(0, 197) + '…' : body.trim();
-      sendDmNotification({
-        toEmail: receiverUser.email,
-        toName: receiverUser.name,
-        fromName: req.user.name,
-        preview,
-      }).catch(err => console.error(`[EMAIL] DM notification failed → ${receiverUser.email}:`, err.message));
+      if (receiverUser.email) {
+        sendDmNotification({
+          toEmail: receiverUser.email,
+          toName: receiverUser.name,
+          fromName: req.user.name,
+          preview,
+        }).catch(err => console.error(`[EMAIL] DM notification failed → ${receiverUser.email}:`, err.message));
+      }
+      smsNewDm({
+        phone: receiverUser.phone,
+        senderName: req.user.name,
+      }).catch(() => {});
     }
   }
 

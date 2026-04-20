@@ -3,13 +3,13 @@ import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy } from '../email.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
+import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 
 const router = Router();
 
 async function sendBookingEmails(booking, slot, student) {
-  // Look up provider's email
   const providerInfo = db.prepare(`
-    SELECT u.email, u.name as provider_name
+    SELECT u.email, u.phone, u.name as provider_name
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE pp.id = ?
@@ -25,6 +25,14 @@ async function sendBookingEmails(booking, slot, student) {
     startTime: slot.start_time,
     endTime: slot.end_time,
   });
+
+  // SMS to provider
+  smsBookingRequest({
+    phone: providerInfo.phone,
+    studentName: student.name,
+    date: slot.date,
+    startTime: slot.start_time,
+  }).catch(() => {});
 }
 
 // GET /bookings/notifications — unread counts for the navbar badge
@@ -202,7 +210,7 @@ router.patch('/:id', requireAuth, (req, res) => {
   if (status === 'confirmed') {
     try {
       const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(booking.availability_id);
-      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const student = db.prepare('SELECT email, name, phone FROM users WHERE id = ?').get(booking.student_id);
       const provider = db.prepare(`
         SELECT u.name as provider_name FROM provider_profiles pp
         JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
@@ -217,6 +225,14 @@ router.patch('/:id', requireAuth, (req, res) => {
           endTime: slot.end_time,
           bookingId: booking.id,
         }).catch(err => console.error('[BOOKING CONFIRM] student email error:', err.message));
+
+        // SMS to student
+        smsBookingConfirmed({
+          phone: student.phone,
+          providerName: provider.provider_name,
+          date: slot.date,
+          startTime: slot.start_time,
+        }).catch(() => {});
 
         // Also send a confirmation copy + reminder to the provider
         const providerUser = db.prepare(`
