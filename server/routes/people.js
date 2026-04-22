@@ -3,6 +3,25 @@ import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
 import { sendConnectionRequestEmail, sendConnectionAcceptedEmail } from '../email.js';
 
+function canSeePayment(requesterId, targetUserId) {
+  if (!requesterId) return false;
+  if (requesterId === targetUserId) return true;
+  const conn = db.prepare(`
+    SELECT 1 FROM connections
+    WHERE status = 'accepted'
+      AND ((requester_id = ? AND receiver_id = ?) OR (requester_id = ? AND receiver_id = ?))
+    LIMIT 1
+  `).get(requesterId, targetUserId, targetUserId, requesterId);
+  if (conn) return true;
+  const booking = db.prepare(`
+    SELECT 1 FROM bookings b
+    JOIN provider_profiles pp ON pp.id = b.provider_id
+    WHERE b.student_id = ? AND pp.user_id = ? AND b.status IN ('confirmed', 'completed')
+    LIMIT 1
+  `).get(requesterId, targetUserId);
+  return !!booking;
+}
+
 const router = Router();
 
 // GET /people — browse all users; includes connection status when authenticated
@@ -102,6 +121,12 @@ router.get('/:id', optionalAuth, (req, res) => {
 
   if (!u) return res.status(404).json({ error: 'User not found' });
 
+  // Redact payment info unless requester has an accepted connection or booking
+  const paymentUnlocked = canSeePayment(me, Number(targetId));
+  if (!paymentUnlocked) {
+    u = { ...u, zelle: null, venmo: null };
+  }
+
   let mutualConnections = [];
   if (me) {
     mutualConnections = db.prepare(`
@@ -123,7 +148,7 @@ router.get('/:id', optionalAuth, (req, res) => {
     `).all(me, me, targetId, targetId, targetId, me, targetId);
   }
 
-  res.json({ ...u, mutual_connections: mutualConnections });
+  res.json({ ...u, mutual_connections: mutualConnections, payment_unlocked: paymentUnlocked });
 });
 
 // GET /people/connections/mine — my accepted connections + pending requests

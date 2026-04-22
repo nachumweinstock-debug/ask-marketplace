@@ -242,18 +242,35 @@ export default function ProviderProfile() {
               </div>
             )}
 
-            {(provider.zelle || provider.venmo) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
-                {provider.zelle && (
-                  <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: '#5B21B6' }}>
-                    Zelle: {provider.zelle}
-                  </div>
-                )}
-                {provider.venmo && (
-                  <div style={{ background: 'var(--accent)', border: '1px solid #BFDBFE', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
-                    Venmo: @{provider.venmo}
-                  </div>
-                )}
+            {/* Payment info — only shown after accepted connection or confirmed booking */}
+            {provider.payment_unlocked ? (
+              (provider.zelle || provider.venmo) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                  {provider.zelle && (
+                    <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: '#5B21B6' }}>
+                      Zelle: {provider.zelle}
+                    </div>
+                  )}
+                  {provider.venmo && (
+                    <div style={{ background: 'var(--accent)', border: '1px solid #BFDBFE', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
+                      Venmo: @{provider.venmo}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <div style={{
+                marginTop: 14, display: 'flex', alignItems: 'center', gap: 8,
+                background: '#F9FAFB', border: '1px solid var(--border)',
+                borderRadius: 8, padding: '8px 12px',
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  Connect with {provider.name.split(' ')[0]} to see payment details
+                </span>
               </div>
             )}
           </div>

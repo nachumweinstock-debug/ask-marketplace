@@ -1,7 +1,37 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth } from '../auth.js';
+import { requireAuth, optionalAuth } from '../auth.js';
 import { storeImage } from '../storage.js';
+
+/**
+ * Returns true if requesterId is allowed to see zelle/venmo for providerUserId.
+ * Criteria: own profile, OR accepted connection, OR confirmed/completed booking.
+ */
+function canSeePayment(requesterId, providerUserId) {
+  if (!requesterId) return false;
+  if (requesterId === providerUserId) return true;
+
+  const conn = db.prepare(`
+    SELECT 1 FROM connections
+    WHERE status = 'accepted'
+      AND ((requester_id = ? AND receiver_id = ?) OR (requester_id = ? AND receiver_id = ?))
+    LIMIT 1
+  `).get(requesterId, providerUserId, providerUserId, requesterId);
+  if (conn) return true;
+
+  const booking = db.prepare(`
+    SELECT 1 FROM bookings b
+    JOIN provider_profiles pp ON pp.id = b.provider_id
+    WHERE b.student_id = ? AND pp.user_id = ? AND b.status IN ('confirmed', 'completed')
+    LIMIT 1
+  `).get(requesterId, providerUserId);
+  return !!booking;
+}
+
+function redactPayment(provider, requesterId) {
+  if (canSeePayment(requesterId, provider.user_id)) return provider;
+  return { ...provider, zelle: null, venmo: null };
+}
 
 const router = Router();
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'fitness', 'tennis', 'other'];
@@ -68,10 +98,14 @@ router.get('/mine', requireAuth, (req, res) => {
 });
 
 // GET /providers/by-user/:userId — all public listings for a given user
+// Payment info stripped — use the individual /:id endpoint for that after auth check
 router.get('/by-user/:userId', (req, res) => {
   const listings = db.prepare(`
-    SELECT pp.*, u.name,
-      (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
+    SELECT pp.id, pp.user_id, pp.bio, pp.category, pp.custom_category, pp.subcategory,
+           pp.price_per_session, pp.rating, pp.review_count, pp.listing_image,
+           pp.session_type, pp.title,
+           u.name,
+           (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE pp.user_id = ?
@@ -169,8 +203,8 @@ router.delete('/:id', requireAuth, (req, res) => {
   deleteProfile(req.user.id, profile.id, res);
 });
 
-// GET /providers/:id — public listing page
-router.get('/:id', (req, res) => {
+// GET /providers/:id — public listing page (payment info gated behind connection/booking)
+router.get('/:id', optionalAuth, (req, res) => {
   const provider = db.prepare(`
     SELECT pp.*, u.name, u.email,
       (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
@@ -191,7 +225,11 @@ router.get('/:id', (req, res) => {
     WHERE r.provider_id = ? ORDER BY r.created_at DESC
   `).all(req.params.id);
 
-  res.json({ ...provider, availability, reviews });
+  // Expose whether payment is unlocked so frontend can show the right prompt
+  const paymentUnlocked = canSeePayment(req.user?.id, provider.user_id);
+  const safe = redactPayment(provider, req.user?.id);
+
+  res.json({ ...safe, availability, reviews, payment_unlocked: paymentUnlocked });
 });
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
