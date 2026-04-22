@@ -72,6 +72,9 @@ router.get('/:userId', requireAuth, (req, res) => {
     'UPDATE direct_messages SET read_at = CURRENT_TIMESTAMP WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL'
   ).run(other, me);
 
+  // Reset nudge log for this conversation so the cycle restarts if they get new messages later
+  db.prepare('DELETE FROM dm_nudge_log WHERE receiver_id = ? AND sender_id = ?').run(me, other);
+
   const messages = db.prepare(`
     SELECT dm.*, u.name as sender_name, u.avatar_url as sender_avatar_url
     FROM direct_messages dm
@@ -115,7 +118,11 @@ router.post('/:userId', requireAuth, (req, res) => {
   if (alreadyUnread === 0) {
     const receiverUser = db.prepare('SELECT email, name, phone FROM users WHERE id = ?').get(other);
     if (receiverUser) {
-      const preview = body.trim().length > 200 ? body.trim().slice(0, 197) + '…' : body.trim();
+      // Encrypted bodies start with 'enc:v1:' — show generic text so ciphertext isn't emailed
+      const rawBody = body.trim();
+      const preview = rawBody.startsWith('enc:v1:')
+        ? '🔒 Encrypted message — open ASK to read it.'
+        : rawBody.length > 200 ? rawBody.slice(0, 197) + '…' : rawBody;
       if (receiverUser.email) {
         sendDmNotification({
           toEmail: receiverUser.email,

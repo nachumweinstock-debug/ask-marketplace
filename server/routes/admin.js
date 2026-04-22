@@ -26,16 +26,79 @@ router.post('/bootstrap', (req, res) => {
   res.json({ ok: true, message: `${user.name} (${user.email}) is now an admin.` });
 });
 
-// GET /api/admin/users — list all users
+// GET /api/admin/users — list all users (one row per user, most recent listing only)
 router.get('/users', requireAuth, requireAdmin, (req, res) => {
   const users = db.prepare(`
     SELECT u.id, u.email, u.name, u.role, u.is_admin, u.created_at,
            pp.id as provider_profile_id, pp.rating, pp.review_count, pp.category, pp.custom_category
     FROM users u
-    LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+    LEFT JOIN (
+      SELECT * FROM provider_profiles
+      WHERE id IN (SELECT MAX(id) FROM provider_profiles GROUP BY user_id)
+    ) pp ON pp.user_id = u.id
     ORDER BY u.created_at DESC
   `).all();
   res.json(users);
+});
+
+// GET /api/admin/duplicates — users with the same name (likely duplicate accounts)
+router.get('/duplicates', requireAuth, requireAdmin, (req, res) => {
+  const groups = db.prepare(`
+    SELECT LOWER(TRIM(name)) as normalized_name, COUNT(*) as count
+    FROM users
+    GROUP BY LOWER(TRIM(name))
+    HAVING COUNT(*) > 1
+    ORDER BY count DESC
+  `).all();
+
+  const result = groups.map(g => {
+    const accounts = db.prepare(`
+      SELECT u.id, u.email, u.name, u.role, u.created_at,
+             COUNT(b_student.id) as bookings_as_student,
+             COUNT(b_provider.id) as bookings_as_provider,
+             COUNT(dm.id) as messages_sent
+      FROM users u
+      LEFT JOIN bookings b_student ON b_student.student_id = u.id
+      LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+      LEFT JOIN bookings b_provider ON b_provider.provider_id = pp.id
+      LEFT JOIN direct_messages dm ON dm.sender_id = u.id AND dm.is_system = 0
+      WHERE LOWER(TRIM(u.name)) = ?
+      GROUP BY u.id
+      ORDER BY u.created_at ASC
+    `).all(g.normalized_name);
+    return { name: accounts[0]?.name || g.normalized_name, count: g.count, accounts };
+  });
+
+  res.json(result);
+});
+
+// DELETE /api/admin/users/:id/merge-into/:targetId — move all data from one account to another then delete it
+router.post('/users/:id/merge-into/:targetId', requireAuth, requireAdmin, (req, res) => {
+  const { id, targetId } = req.params;
+  if (id === targetId) return res.status(400).json({ error: 'Cannot merge account into itself' });
+
+  const source = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId);
+  if (!source) return res.status(404).json({ error: 'Source user not found' });
+  if (!target) return res.status(404).json({ error: 'Target user not found' });
+
+  try {
+    db.transaction(() => {
+      // Reassign all content from source → target
+      db.prepare('UPDATE bookings SET student_id = ? WHERE student_id = ?').run(targetId, id);
+      db.prepare('UPDATE provider_profiles SET user_id = ? WHERE user_id = ?').run(targetId, id);
+      db.prepare('UPDATE direct_messages SET sender_id = ? WHERE sender_id = ?').run(targetId, id);
+      db.prepare('UPDATE direct_messages SET receiver_id = ? WHERE receiver_id = ?').run(targetId, id);
+      db.prepare('UPDATE connections SET requester_id = ? WHERE requester_id = ? AND NOT EXISTS (SELECT 1 FROM connections WHERE requester_id = ? AND receiver_id = connections.receiver_id)').run(targetId, id, targetId);
+      db.prepare('UPDATE connections SET receiver_id = ? WHERE receiver_id = ? AND NOT EXISTS (SELECT 1 FROM connections WHERE receiver_id = ? AND requester_id = connections.requester_id)').run(targetId, id, targetId);
+      // Delete duplicate/conflicting connections before the user delete cascades
+      db.prepare('DELETE FROM connections WHERE requester_id = ? OR receiver_id = ?').run(id, id);
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    })();
+    res.json({ ok: true, merged: source.email, into: target.email });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/admin/listings/:profileId — delete a provider listing only (keeps user account)

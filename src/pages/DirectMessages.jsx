@@ -3,11 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
-import {
-  getOrCreateKeyPair, exportPublicKey,
-  importPublicKey, deriveSharedKey,
-  encryptMessage, decryptMessage, isEncrypted,
-} from '../lib/e2e';
+
+// Legacy: messages sent before E2E was removed start with this prefix.
+// Display them gracefully instead of showing raw ciphertext.
+const isLegacyEncrypted = body => typeof body === 'string' && body.startsWith('enc:v1:');
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -42,53 +41,9 @@ export default function DirectMessages() {
   const [sending, setSending] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [encryptionReady, setEncryptionReady] = useState(false);
 
-  const messagesEndRef  = useRef(null);
-  const inputRef        = useRef(null);
-  const keyPairRef      = useRef(null);   // own ECDH key pair
-  const sharedKeyRef    = useRef(null);   // AES key for current conversation
-
-  // ── Init own key pair once, upload public key ──
-  useEffect(() => {
-    async function init() {
-      try {
-        const pair = await getOrCreateKeyPair();
-        keyPairRef.current = pair;
-        const pub = await exportPublicKey(pair.publicKey);
-        api.post('/keys', { pubkey: pub }).catch(() => {});
-      } catch { /* web crypto unavailable */ }
-    }
-    init();
-  }, []);
-
-  // ── Derive shared key whenever conversation changes ──
-  useEffect(() => {
-    sharedKeyRef.current = null;
-    setEncryptionReady(false);
-    if (!userId) return;
-
-    async function setupE2E() {
-      // Wait for key pair to be ready (may still be generating on first load)
-      let pair = keyPairRef.current;
-      if (!pair) {
-        try {
-          const { getOrCreateKeyPair: gkp } = await import('../lib/e2e');
-          pair = await gkp();
-          keyPairRef.current = pair;
-        } catch { return; }
-      }
-      try {
-        const { data } = await api.get(`/keys/${userId}`);
-        if (data.pubkey) {
-          const theirPub = await importPublicKey(data.pubkey);
-          sharedKeyRef.current = await deriveSharedKey(pair.privateKey, theirPub);
-          setEncryptionReady(true);
-        }
-      } catch { /* no key for this user — plaintext */ }
-    }
-    setupE2E();
-  }, [userId]);
+  const messagesEndRef = useRef(null);
+  const inputRef       = useRef(null);
 
   useEffect(() => { fetchConversations(); }, []);
 
@@ -113,21 +68,12 @@ export default function DirectMessages() {
     return () => clearInterval(t);
   }, [userId]);
 
-  async function decryptAll(msgs) {
-    if (!sharedKeyRef.current) return msgs;
-    return Promise.all(msgs.map(async m => {
-      if (m.is_system || !isEncrypted(m.body)) return m;
-      return { ...m, body: await decryptMessage(m.body, sharedKeyRef.current) };
-    }));
-  }
-
   async function fetchConversations() {
     try {
       const { data } = await api.get('/dm');
-      // Mask encrypted previews in conversation list
       const masked = data.map(c => ({
         ...c,
-        last_message: isEncrypted(c.last_message) ? '🔒 Encrypted message' : c.last_message,
+        last_message: isLegacyEncrypted(c.last_message) ? '[Older message]' : c.last_message,
       }));
       setConversations(masked);
       if (userId) {
@@ -142,8 +88,7 @@ export default function DirectMessages() {
     setLoadingMessages(true);
     try {
       const { data } = await api.get(`/dm/${uid}`);
-      const decrypted = await decryptAll(data);
-      setMessages(decrypted);
+      setMessages(data);
       setConversations(cs => cs.map(c => String(c.other_id) === String(uid) ? { ...c, unread_count: 0 } : c));
     } catch { /* silent */ }
     finally { setLoadingMessages(false); }
@@ -159,27 +104,22 @@ export default function DirectMessages() {
 
   async function handleSend(e) {
     e.preventDefault();
-    if (!body.trim() || !userId || sending) return;
+    const text = body.trim();
+    if (!text || !userId || sending) return;
     setSending(true);
-    const plainBody = body.trim();
-    let wireBody = plainBody;
-    if (sharedKeyRef.current) {
-      try { wireBody = await encryptMessage(plainBody, sharedKeyRef.current); } catch { /* fallback plaintext */ }
-    }
     const optimistic = {
       id: Date.now(),
       sender_id: user.id,
       receiver_id: Number(userId),
-      body: plainBody,   // show plaintext locally
+      body: text,
       created_at: new Date().toISOString(),
       sender_name: user.name,
     };
     setMessages(ms => [...ms, optimistic]);
     setBody('');
     try {
-      const { data } = await api.post(`/dm/${userId}`, { body: wireBody });
-      // Replace optimistic with server-confirmed (keep plaintext display)
-      setMessages(ms => ms.map(m => m.id === optimistic.id ? { ...data, body: plainBody } : m));
+      const { data } = await api.post(`/dm/${userId}`, { body: text });
+      setMessages(ms => ms.map(m => m.id === optimistic.id ? data : m));
       fetchConversations();
     } catch (err) {
       setMessages(ms => ms.filter(m => m.id !== optimistic.id));
@@ -257,14 +197,6 @@ export default function DirectMessages() {
               <Avatar name={otherUser.name} avatar_url={otherUser.avatar_url} size={36} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{otherUser.name}</div>
-                {encryptionReady && (
-                  <div style={{ fontSize: 10, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
-                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    End-to-end encrypted
-                  </div>
-                )}
               </div>
             </div>
 
@@ -277,6 +209,7 @@ export default function DirectMessages() {
               ) : (
                 messages.map(m => {
                   const isMe = m.sender_id === user?.id;
+                  const displayBody = isLegacyEncrypted(m.body) ? '[Older message — not available]' : m.body;
                   return (
                     <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 8, alignItems: 'flex-end' }}>
                       {!isMe && <Avatar name={otherUser.name} avatar_url={otherUser.avatar_url} size={28} />}
@@ -285,14 +218,16 @@ export default function DirectMessages() {
                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                         background: isMe ? 'var(--primary)' : 'var(--bg)',
                         color: isMe ? '#fff' : 'var(--text)',
-                        fontSize: 13.5, lineHeight: 1.5,
+                        fontSize: isLegacyEncrypted(m.body) ? 12 : 13.5, lineHeight: 1.5,
+                        fontStyle: isLegacyEncrypted(m.body) ? 'italic' : 'normal',
+                        opacity: isLegacyEncrypted(m.body) ? 0.6 : 1,
                         border: isMe ? 'none' : '1px solid var(--border)',
                       }}>
-                        {m.body}
+                        {displayBody}
                         <div style={{ fontSize: 10, opacity: 0.6, marginTop: 3, textAlign: isMe ? 'right' : 'left' }}>
                           {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {encryptionReady && !m.is_system && isMe && (
-                            <span style={{ marginLeft: 4 }}>🔒</span>
+                          {isMe && m.read_at && (
+                            <span style={{ marginLeft: 4 }}>· Read</span>
                           )}
                         </div>
                       </div>
@@ -336,12 +271,6 @@ export default function DirectMessages() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <span>Select a conversation</span>
-            <span style={{ fontSize: 11, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
-                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              Messages are end-to-end encrypted
-            </span>
           </div>
         )}
       </div>

@@ -7,11 +7,18 @@ function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
+function listingLabel(l) {
+  return l.title || l.subcategory || l.custom_category ||
+    { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring',
+      fitness: 'Fitness', tennis: 'Fitness' }[l.category] || l.category;
+}
+
 export default function ProviderCard({ provider, isOwn, onDelete }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+  const allListings = provider.allListings || [provider];
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -56,7 +63,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
             color: '#166534', background: '#DCFCE7', borderRadius: 999,
             padding: '2px 8px', marginBottom: 10, textTransform: 'uppercase',
           }}>
-            Your listing
+            {allListings.length > 1 ? `Your ${allListings.length} listings` : 'Your listing'}
           </div>
         )}
 
@@ -87,21 +94,43 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
 
         {/* Offering headline — the most important thing on the card */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{
-            fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
-            marginBottom: 5,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {provider.title || provider.subcategory || provider.custom_category ||
-              { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring',
-                fitness: 'Fitness', tennis: 'Fitness' }[provider.category] ||
-              provider.category}
-          </div>
-          {/* Session type + category as secondary tags */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
-            <SessionTypePill sessionType={provider.session_type} />
-          </div>
+          {allListings.length > 1 ? (
+            /* Multiple listings: show clickable service pills */
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+              {allListings.map(l => (
+                <button
+                  key={l.id}
+                  onClick={e => { e.stopPropagation(); navigate(`/providers/${l.id}`); }}
+                  style={{
+                    padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                    border: '1.5px solid var(--primary)',
+                    background: 'var(--accent)', color: 'var(--primary)',
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    transition: 'background .12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-light, #DBEAFE)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+                >
+                  {listingLabel(l)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div style={{
+                fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
+                marginBottom: 5,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {listingLabel(provider)}
+              </div>
+              {/* Session type + category as secondary tags */}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
+                <SessionTypePill sessionType={provider.session_type} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Rating + session count */}

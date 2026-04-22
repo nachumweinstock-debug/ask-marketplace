@@ -50,6 +50,7 @@ export default function ProviderProfile() {
   const navigate = useNavigate();
   const [provider, setProvider] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [otherListings, setOtherListings] = useState([]);
   const [booking, setBooking] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -58,8 +59,15 @@ export default function ProviderProfile() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
+    setOtherListings([]);
     api.get(`/providers/${id}`)
-      .then(({ data }) => setProvider(data))
+      .then(({ data }) => {
+        setProvider(data);
+        // Fetch other listings by same user
+        api.get(`/providers/by-user/${data.user_id}`)
+          .then(({ data: all }) => setOtherListings(all.filter(l => l.id !== data.id)))
+          .catch(() => {});
+      })
       .catch(() => navigate('/browse'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -426,6 +434,46 @@ export default function ProviderProfile() {
             </div>
           )}
         </div>
+
+        {/* Other listings by same person */}
+        {otherListings.length > 0 && (
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>
+              Also offered by {provider.name}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {otherListings.map(l => (
+                <Link
+                  key={l.id}
+                  to={`/providers/${l.id}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', borderRadius: 10,
+                    border: '1px solid var(--border)', background: 'var(--bg)',
+                    textDecoration: 'none', transition: 'background .12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg)'}
+                >
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
+                      {l.title || l.subcategory || l.custom_category ||
+                        { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring', fitness: 'Fitness' }[l.category] || l.category}
+                    </div>
+                    {l.bio && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 380 }}>
+                        {l.bio}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flexShrink: 0, marginLeft: 12 }}>
+                    {l.price_per_session > 0 ? `$${l.price_per_session}` : 'Free'}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

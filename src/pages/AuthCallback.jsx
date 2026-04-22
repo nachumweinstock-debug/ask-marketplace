@@ -37,9 +37,9 @@ export default function AuthCallback() {
       }
 
       const decoded = parseJwt(token);
-      await loginWithToken(token, decoded ? { ...decoded } : null);
+      await loginWithToken(token, decoded ? { ...decoded } : null, { skipMe: true });
 
-      // Fetch full user to check for phone
+      // Fetch full user to check for phone (this is the single /auth/me call)
       try {
         const { data: user } = await api.get('/auth/me');
         const destination = next || (user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');

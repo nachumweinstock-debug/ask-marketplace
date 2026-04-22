@@ -54,15 +54,18 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, [syncUser]);
 
-  // Called after our own login/verify to store token and set user
-  async function loginWithToken(token, userData) {
+  // Called after our own login/verify to store token and set user.
+  // skipMe: pass true when the caller will fetch /auth/me itself (e.g. AuthCallback).
+  async function loginWithToken(token, userData, { skipMe = false } = {}) {
     localStorage.setItem('ask_token', token);
     setUser(userData); // set immediately so navigation works right away
-    // then replace with the full record (includes is_admin, provider_profile_id, etc.)
-    try {
-      const { data } = await api.get('/auth/me');
-      setUser(data);
-    } catch { /* leave userData in place */ }
+    if (!skipMe) {
+      // Replace with full record (includes is_admin, provider_profile_id, etc.)
+      try {
+        const { data } = await api.get('/auth/me');
+        setUser(data);
+      } catch { /* leave userData in place */ }
+    }
   }
 
   async function refreshUser() {

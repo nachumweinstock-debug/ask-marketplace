@@ -15,13 +15,15 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [duplicates, setDuplicates] = useState([]);
 
   useEffect(() => {
     if (!user?.is_admin) { navigate('/'); return; }
     Promise.all([
       api.get('/admin/users'),
       api.get('/admin/stats'),
-    ]).then(([u, s]) => { setUsers(u.data); setStats(s.data); })
+      api.get('/admin/duplicates'),
+    ]).then(([u, s, d]) => { setUsers(u.data); setStats(s.data); setDuplicates(d.data); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user]);
@@ -38,6 +40,22 @@ export default function AdminDashboard() {
     try {
       await api.delete(`/admin/users/${id}`);
       setUsers(us => us.filter(u => u.id !== id));
+      setDuplicates(ds => ds.map(g => ({
+        ...g,
+        accounts: g.accounts.filter(a => a.id !== id),
+      })).filter(g => g.accounts.length > 1));
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+  }
+
+  async function mergeInto(sourceId, targetId, sourceName) {
+    if (!confirm(`Merge this account into the selected one? All their messages and bookings move to the target account, then the duplicate is deleted.`)) return;
+    try {
+      await api.post(`/admin/users/${sourceId}/merge-into/${targetId}`);
+      setUsers(us => us.filter(u => u.id !== sourceId));
+      setDuplicates(ds => ds.map(g => ({
+        ...g,
+        accounts: g.accounts.filter(a => a.id !== sourceId),
+      })).filter(g => g.accounts.length > 1));
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
@@ -112,6 +130,61 @@ export default function AdminDashboard() {
           api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
         }} />
       </div>
+
+      {/* Duplicate accounts */}
+      {duplicates.length > 0 && (
+        <div className="card" style={{ padding: '24px', marginBottom: 24, border: '1.5px solid #FED7AA' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#C2410C', marginBottom: 16 }}>
+            Duplicate Accounts ({duplicates.length} name{duplicates.length > 1 ? 's' : ''} with multiple accounts)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {duplicates.map(group => (
+              <div key={group.name}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+                  {group.name} — {group.count} accounts
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {group.accounts.map((a, i) => (
+                    <div key={a.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                      border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
+                      flexWrap: 'wrap',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 600 }}>{a.email}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                          ID {a.id} · {a.role} · joined {new Date(a.created_at).toLocaleDateString()}
+                          {' · '}{a.bookings_as_student} student booking{a.bookings_as_student !== 1 ? 's' : ''}
+                          {' · '}{a.bookings_as_provider} provider booking{a.bookings_as_provider !== 1 ? 's' : ''}
+                          {' · '}{a.messages_sent} message{a.messages_sent !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+                        {group.accounts.filter(b => b.id !== a.id).map(target => (
+                          <button key={target.id} onClick={() => mergeInto(a.id, target.id, a.email)} style={{
+                            fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
+                            border: '1px solid #BBF7D0', background: '#F0FDF4', color: '#166534',
+                            fontFamily: 'var(--font-ui)',
+                          }}>
+                            Merge → ID {target.id}
+                          </button>
+                        ))}
+                        <button onClick={() => deleteUser(a.id, a.email)} style={{
+                          fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
+                          border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626',
+                          fontFamily: 'var(--font-ui)',
+                        }}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Users table */}
       <div className="card" style={{ padding: '24px' }}>

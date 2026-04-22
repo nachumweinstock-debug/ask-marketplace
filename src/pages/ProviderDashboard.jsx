@@ -515,7 +515,7 @@ export default function ProviderDashboard() {
                   <button key={id} type="button"
                     onClick={async () => {
                       try {
-                        await api.put('/providers/me', { session_type: id });
+                        await api.put(`/providers/${profile.id}`, { session_type: id });
                         setProfile(p => ({ ...p, session_type: id }));
                       } catch { alert('Failed to update'); }
                     }}

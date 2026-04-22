@@ -44,10 +44,11 @@ app.use(helmet({
   contentSecurityPolicy: false, // handled by Vercel on the frontend
 }));
 
-// Rate limiters
+// Strict limiter — only for endpoints that can be brute-forced
+// (login, signup, password reset). NOT applied to /auth/me or OAuth callbacks.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 30,
   message: { error: 'Too many attempts — please wait 15 minutes and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,13 +56,19 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 120,
+  max: 200,
   message: { error: 'Too many requests — slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-app.use('/api/auth', authLimiter);
+// Apply strict limiter only to the endpoints that are actually brute-forceable.
+// /auth/me, /auth/google/*, /auth/apple/* are intentionally excluded.
+const RATE_LIMITED_AUTH = ['/login', '/signup', '/forgot-password', '/verify-reset-code', '/reset-password'];
+for (const path of RATE_LIMITED_AUTH) {
+  app.use(`/api/auth${path}`, authLimiter);
+}
+
 app.use('/api', apiLimiter);
 
 app.use(cors({

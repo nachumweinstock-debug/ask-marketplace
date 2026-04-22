@@ -138,7 +138,7 @@ function PwInput({ placeholder = 'Password', value, onChange, autoComplete = 'cu
   return (
     <div style={{ position: 'relative' }}>
       <input type={show ? 'text' : 'password'} placeholder={placeholder}
-        value={value} onChange={e => onChange(e.target.value)} required minLength={6}
+        value={value} onChange={e => onChange(e.target.value)} required minLength={8}
         autoComplete={autoComplete}
         style={{ ...inputStyle, paddingRight: 40 }}
         onFocus={e => e.target.style.borderColor = 'var(--primary)'}
@@ -231,7 +231,7 @@ export function SignUp() {
           <TextInput type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoComplete="email" />
         </Field>
         <Field label="Password">
-          <PwInput placeholder="At least 6 characters" value={form.password} onChange={set('password')} autoComplete="new-password" />
+          <PwInput placeholder="At least 8 characters" value={form.password} onChange={set('password')} autoComplete="new-password" />
         </Field>
         <Field label="Phone number (for booking texts)">
           <TextInput type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={set('phone')} autoComplete="tel" />
@@ -315,7 +315,6 @@ export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState(null);
   const [step, setStep] = useState('email'); // 'email' | 'code' | 'password'
   const [verifiedCode, setVerifiedCode] = useState('');
   const [password, setPassword] = useState('');
@@ -324,8 +323,8 @@ export function ForgotPassword() {
   async function handleEmailSubmit(e) {
     e.preventDefault(); setError(''); setLoading(true);
     try {
-      const { data } = await api.post('/auth/forgot-password', { email: email.toLowerCase() });
-      setUserId(data.userId || null);
+      await api.post('/auth/forgot-password', { email: email.toLowerCase() });
+      // Always advance to code step — server never reveals whether email exists
       setStep('code');
     } catch (err) {
       setError(err.response?.data?.error || 'Error sending reset code');
@@ -337,8 +336,8 @@ export function ForgotPassword() {
   async function handleCode(code) {
     setError(''); setLoading(true);
     try {
-      // Validate the code without changing the password yet
-      const { data } = await api.post('/auth/verify-reset-code', { userId, code });
+      // Validate the code without changing the password yet (passes email, not userId)
+      const { data } = await api.post('/auth/verify-reset-code', { email: email.toLowerCase(), code });
       if (data.ok) { setVerifiedCode(code); setStep('password'); }
     } catch (err) {
       setError(err.response?.data?.error || 'Incorrect code — check your email and try again');
@@ -352,7 +351,7 @@ export function ForgotPassword() {
     e.preventDefault(); setError(''); setLoading(true);
     try {
       const { data } = await api.post('/auth/reset-password', {
-        userId, code: verifiedCode, password,
+        email: email.toLowerCase(), code: verifiedCode, password,
       });
       await loginWithToken(data.token, data.user);
       navigate(data.user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
@@ -398,7 +397,7 @@ export function ForgotPassword() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>Choose a new password for your account.</p>
       <form onSubmit={handlePasswordSubmit}>
         <Field label="New password">
-          <PwInput placeholder="At least 6 characters" value={password} onChange={setPassword} autoComplete="new-password" />
+          <PwInput placeholder="At least 8 characters" value={password} onChange={setPassword} autoComplete="new-password" />
         </Field>
         <Err msg={error} />
         <Btn loading={loading} label="Set new password" loadingLabel="Saving..." />

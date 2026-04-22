@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomInt } from 'crypto';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
-import { sendPasswordResetCode } from '../email.js';
+import { sendPasswordResetCode, sendWelcomeEmail } from '../email.js';
+
+// Dummy hash used to prevent timing attacks when email doesn't exist
+const DUMMY_HASH = await bcrypt.hash('dummy-timing-prevention', 10);
 
 const router = Router();
 
@@ -15,7 +19,7 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000)); // cryptographically secure
 }
 
 function issueCode(userId, type = 'verify') {
@@ -35,8 +39,8 @@ router.post('/signup', async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   const hashed = await bcrypt.hash(password, 10);
@@ -46,7 +50,7 @@ router.post('/signup', async (req, res) => {
     const result = db.prepare(
       "INSERT INTO users (email, name, password, role, email_verified, phone) VALUES (?, ?, ?, 'student', 1, ?)"
     ).run(email.toLowerCase(), name.trim(), hashed, cleanPhone || null);
-    user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(result.lastInsertRowid);
+    user = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(result.lastInsertRowid);
   } catch (err) {
     if (err.message.includes('UNIQUE')) {
       return res.status(409).json({ error: 'Email already registered' });
@@ -54,7 +58,13 @@ router.post('/signup', async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 
-  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role, token_version: user.token_version });
+
+  // Send welcome email (non-blocking — don't fail signup if email is down)
+  sendWelcomeEmail(user.email, user.name).catch(err =>
+    console.error('[AUTH] Welcome email failed:', err.message)
+  );
+
   res.json({ token, user });
 });
 
@@ -64,27 +74,37 @@ router.post('/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+
+  // Always run bcrypt to prevent timing-based email enumeration.
+  // For non-existent users or OAuth-only accounts (password=''), compare against
+  // a pre-computed dummy hash so response time is indistinguishable from a real miss.
+  const hashToCompare = user?.password || DUMMY_HASH;
+  const valid = await bcrypt.compare(password, hashToCompare);
+
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
+  // OAuth-only account has password='' — give a helpful message (slightly reveals OAuth status
+  // but that's better UX than a confusing "Invalid credentials" with no path forward).
   if (!user.password) {
     return res.status(401).json({ error: 'No password set. Use "Forgot password" to create one.' });
   }
-  const valid = await bcrypt.compare(password, user.password);
+
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role, token_version: user.token_version });
   const { password: _, ...safeUser } = user;
   res.json({ token, user: safeUser });
 });
 
 // POST /auth/forgot-password — send reset code
+// Always returns { ok: true } — never reveals whether the email is registered.
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   if (!user) {
-    console.log(`[AUTH] forgot-password: no account for ${email}`);
+    // Return identical response regardless — prevents email enumeration
     return res.json({ ok: true });
   }
 
@@ -94,20 +114,26 @@ router.post('/forgot-password', async (req, res) => {
     console.log(`[AUTH] Reset code sent to ${user.email}`);
   } catch (err) {
     console.error(`[AUTH] Reset email FAILED for ${user.email}:`, err.message);
-    console.log(`[AUTH] FALLBACK RESET CODE for ${user.email}: ${code}`);
+    // Do NOT log the actual code — anyone with Railway log access could use it.
+    // If email is broken, user can re-request or contact support.
+    console.log(`[AUTH] Reset code delivery failed — check email config`);
   }
 
-  res.json({ ok: true, userId: user.id });
+  res.json({ ok: true });
 });
 
 // POST /auth/verify-reset-code — check code is valid without consuming it
+// Accepts email (not userId) so we never expose internal IDs to clients.
 router.post('/verify-reset-code', (req, res) => {
-  const { userId, code } = req.body;
-  if (!userId || !code) return res.status(400).json({ error: 'userId and code required' });
+  const { email, code } = req.body;
+  if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
+
+  const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+  if (!user) return res.status(400).json({ error: 'No reset code found. Request a new one.' });
 
   const row = db.prepare(
     "SELECT * FROM verification_codes WHERE user_id = ? AND type = 'reset' AND used = 0 ORDER BY id DESC LIMIT 1"
-  ).get(userId);
+  ).get(user.id);
 
   if (!row) return res.status(400).json({ error: 'No reset code found. Request a new one.' });
   if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
@@ -117,14 +143,18 @@ router.post('/verify-reset-code', (req, res) => {
 });
 
 // POST /auth/reset-password — verify code + set new password
+// Accepts email (not userId) so we never expose internal IDs to clients.
 router.post('/reset-password', async (req, res) => {
-  const { userId, code, password } = req.body;
-  if (!userId || !code || !password) return res.status(400).json({ error: 'All fields required' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const { email, code, password } = req.body;
+  if (!email || !code || !password) return res.status(400).json({ error: 'All fields required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  if (!user) return res.status(400).json({ error: 'No reset code found. Request a new one.' });
 
   const row = db.prepare(
     "SELECT * FROM verification_codes WHERE user_id = ? AND type = 'reset' AND used = 0 ORDER BY id DESC LIMIT 1"
-  ).get(userId);
+  ).get(user.id);
 
   if (!row) return res.status(400).json({ error: 'No reset code found. Request a new one.' });
   if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
@@ -132,11 +162,13 @@ router.post('/reset-password', async (req, res) => {
 
   db.prepare('UPDATE verification_codes SET used = 1 WHERE id = ?').run(row.id);
   const hashed = await bcrypt.hash(password, 10);
-  db.prepare('UPDATE users SET password = ?, email_verified = 1 WHERE id = ?').run(hashed, userId);
 
-  const user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(userId);
-  const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
-  res.json({ token, user });
+  // Increment token_version to invalidate all existing sessions on other devices
+  db.prepare('UPDATE users SET password = ?, email_verified = 1, token_version = COALESCE(token_version, 1) + 1 WHERE id = ?').run(hashed, user.id);
+
+  const updatedUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+  const token = signToken({ id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role, token_version: updatedUser.token_version });
+  res.json({ token, user: updatedUser });
 });
 
 // ── Google OAuth ───────────────────────────────────────────────────────────────
@@ -208,7 +240,8 @@ router.get('/google/callback', async (req, res) => {
       }
     }
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
+    const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+    const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
     const next = redirect ? `&next=${encodeURIComponent(redirect)}` : '';
     console.log(`[AUTH] Google login: ${user.email}`);
     res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);
@@ -307,7 +340,8 @@ router.post('/apple/callback', async (req, res) => {
       user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
     }
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
+    const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+    const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
     const next = redirect ? `&next=${encodeURIComponent(redirect)}` : '';
     console.log(`[AUTH] Apple login: ${user.email}`);
     res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);

@@ -189,6 +189,27 @@ function note(text) {
 
 // ── Email functions ────────────────────────────────────────────────────────────
 
+export async function sendWelcomeEmail(toEmail, toName) {
+  await send({
+    to: toEmail,
+    subject: `Welcome to ASK, ${toName.split(' ')[0]}!`,
+    html: shell(`Welcome to ASK Marketplace`, `
+      ${header('👋', `Welcome, ${toName.split(' ')[0]}!`, 'Your campus services marketplace account is ready.')}
+      ${body(`
+        <p style="margin:0 0 16px;font-size:15px;color:${DARK};line-height:1.6">
+          You can browse providers, book sessions, and connect with other students — all in one place.
+        </p>
+        <div>
+          ${btn('https://uask.live/browse', 'Browse providers')}
+          ${btn('https://uask.live/people', 'Meet people', '#111111')}
+        </div>
+        ${divider()}
+        ${note('Want to offer a service? Head to your dashboard to create a listing.')}
+      `)}
+    `),
+  });
+}
+
 export async function sendVerificationCode(toEmail, code) {
   await send({
     to: toEmail,
@@ -221,7 +242,7 @@ export async function sendPasswordResetCode(toEmail, code) {
 
 export async function sendAppointmentReminderEmail({ toEmail, toName, otherName, date, startTime, endTime, role, dashboardUrl }) {
   const isProvider = role === 'provider';
-  const subject = `Reminder: your session ${isProvider ? `with ${otherName}` : `with ${otherName}`} is in 1 hour`;
+  const subject = `Reminder: your session with ${otherName} is in 1 hour`;
   await send({
     to: toEmail,
     subject,
@@ -294,7 +315,7 @@ export async function sendBookingNotification({ providerEmail, providerName, stu
   });
 }
 
-export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId }) {
+export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId, icsToken = '' }) {
   const calTitle = `Session with ${providerName}`;
   const calDesc  = `Booked via ASK Marketplace · uask.live`;
   const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
@@ -315,7 +336,7 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
         </p>
         <div>
           ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
-          ${btn(`https://uask.live/api/bookings/${bookingId}/ics`, '🍎 Apple / Outlook', '#1C1C1E')}
+          ${btn(`https://uask.live/api/bookings/${bookingId}/ics?token=${icsToken}`, '🍎 Apple / Outlook', '#1C1C1E')}
         </div>
         ${divider()}
         ${note('The .ics attachment also works with Outlook or any other calendar app.')}
@@ -325,7 +346,32 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
   });
 }
 
-export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime, bookingId }) {
+export async function sendCancellationNotification({ toEmail, toName, otherName, date, startTime, endTime, role }) {
+  const isProvider = role === 'provider';
+  await send({
+    to: toEmail,
+    subject: `Session with ${otherName} on ${date} was cancelled`,
+    html: shell(`Session cancellation — ${date}`, `
+      ${header('❌', 'Session cancelled', isProvider
+        ? `${otherName} has cancelled their booking with you.`
+        : `${otherName} has cancelled your upcoming session.`)}
+      ${body(`
+        ${infoTable(
+          infoRow(isProvider ? 'Student' : 'Provider', otherName),
+          infoRow('Date & time', date, `${startTime} – ${endTime}`)
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          ${isProvider
+            ? 'The time slot has been freed up on your dashboard.'
+            : 'Your booking has been removed from your dashboard.'}
+        </p>
+        ${btn(isProvider ? 'https://uask.live/dashboard/provider' : 'https://uask.live/dashboard/student', 'Open dashboard')}
+      `)}
+    `),
+  });
+}
+
+export async function sendProviderConfirmationCopy({ providerEmail, providerName, studentName, studentEmail, date, startTime, endTime, bookingId, icsToken = '' }) {
   const calTitle = `Session with ${studentName}`;
   const calDesc  = `Student: ${studentName} (${studentEmail}) · Manage at uask.live/dashboard/provider`;
   const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
@@ -346,7 +392,7 @@ export async function sendProviderConfirmationCopy({ providerEmail, providerName
         </p>
         <div>
           ${btn(gCalUrl, '📅 Google Calendar', '#4285F4')}
-          ${btn(`https://uask.live/api/bookings/${bookingId}/ics?for=provider`, '🍎 Apple / Outlook', '#1C1C1E')}
+          ${btn(`https://uask.live/api/bookings/${bookingId}/ics?for=provider&token=${icsToken}`, '🍎 Apple / Outlook', '#1C1C1E')}
         </div>
         ${divider()}
         ${btn('https://uask.live/dashboard/provider', 'Open dashboard', BLUE)}
@@ -354,5 +400,37 @@ export async function sendProviderConfirmationCopy({ providerEmail, providerName
       `)}
     `),
     attachments: [{ filename: 'session.ics', content: icsData, contentType: 'text/calendar; charset=UTF-8; method=REQUEST' }],
+  });
+}
+
+export async function sendConnectionRequestEmail({ toEmail, toName, fromName }) {
+  await send({
+    to: toEmail,
+    subject: `${fromName} wants to connect with you on ASK`,
+    html: shell(`${fromName} sent you a connection request`, `
+      ${header('🤝', `${fromName} wants to connect`, 'You have a new connection request on ASK Marketplace.')}
+      ${body(`
+        <p style="margin:0 0 20px;font-size:14px;color:${MUTED};line-height:1.6">
+          ${fromName} sent you a connection request. Accept it to stay in touch and see each other's activity.
+        </p>
+        ${btn('https://uask.live/people/connections', 'View request')}
+      `)}
+    `),
+  });
+}
+
+export async function sendConnectionAcceptedEmail({ toEmail, toName, fromName }) {
+  await send({
+    to: toEmail,
+    subject: `${fromName} accepted your connection request`,
+    html: shell(`${fromName} is now connected with you`, `
+      ${header('✅', `You're connected with ${fromName}!`, `${fromName} accepted your connection request.`)}
+      ${body(`
+        <p style="margin:0 0 20px;font-size:14px;color:${MUTED};line-height:1.6">
+          You can now message ${fromName} directly on ASK.
+        </p>
+        ${btn('https://uask.live/people', 'Browse people')}
+      `)}
+    `),
   });
 }

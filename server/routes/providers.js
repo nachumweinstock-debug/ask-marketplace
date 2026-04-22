@@ -67,6 +67,19 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json(listings);
 });
 
+// GET /providers/by-user/:userId — all public listings for a given user
+router.get('/by-user/:userId', (req, res) => {
+  const listings = db.prepare(`
+    SELECT pp.*, u.name,
+      (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
+    FROM provider_profiles pp
+    JOIN users u ON pp.user_id = u.id
+    WHERE pp.user_id = ?
+    ORDER BY pp.id DESC
+  `).all(req.params.userId);
+  res.json(listings);
+});
+
 // GET /providers/me/profile — first/most recent profile (backwards compat)
 router.get('/me/profile', requireAuth, (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);

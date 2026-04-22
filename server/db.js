@@ -221,10 +221,25 @@ if (!bookingCols.includes('reminder_sent_at'))      db.exec('ALTER TABLE booking
 if (!bookingCols.includes('sms_reminder_sent'))     db.exec('ALTER TABLE bookings ADD COLUMN sms_reminder_sent INTEGER DEFAULT 0');
 if (!bookingCols.includes('sms_review_sent'))       db.exec('ALTER TABLE bookings ADD COLUMN sms_review_sent INTEGER DEFAULT 0');
 
-// OAuth identity columns
+// OAuth identity columns + token versioning for session invalidation
 const colsLatest = db.pragma('table_info(users)').map(c => c.name);
-if (!colsLatest.includes('google_id')) db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
-if (!colsLatest.includes('apple_id'))  db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
+if (!colsLatest.includes('google_id'))     db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
+if (!colsLatest.includes('apple_id'))      db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
+if (!colsLatest.includes('token_version')) db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1');
+
+// DM nudge tracking — prevents re-sending the same nudge level for a conversation
+const tablesLatest = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+if (!tablesLatest.includes('dm_nudge_log')) {
+  db.exec(`
+    CREATE TABLE dm_nudge_log (
+      receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nudge_level INTEGER NOT NULL,
+      sent_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (receiver_id, sender_id, nudge_level)
+    )
+  `);
+}
 
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];

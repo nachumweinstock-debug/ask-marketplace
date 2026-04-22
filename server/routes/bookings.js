@@ -1,7 +1,15 @@
 import { Router } from 'express';
+import { createHmac } from 'crypto';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
-import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy } from '../email.js';
+
+// Deterministic token for a booking's ICS download — no DB column needed.
+// Changing JWT_SECRET invalidates all existing links (fine — email links are short-lived anyway).
+function icsToken(bookingId) {
+  const secret = process.env.JWT_SECRET || 'dev-only-insecure-fallback-do-not-use-in-prod';
+  return createHmac('sha256', secret).update(`ics-${bookingId}`).digest('hex').slice(0, 24);
+}
+import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification } from '../email.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 
@@ -182,10 +190,14 @@ router.patch('/:id', requireAuth, (req, res) => {
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
+  let cancelledByStudent = false;
+  let cancelledByProvider = false;
+
   if (booking.student_id === req.user.id) {
     // Student can cancel (any status) or mark as completed (only from confirmed)
     if (status === 'cancelled') {
       db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
+      cancelledByStudent = true;
     } else if (status === 'completed') {
       if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Can only mark a confirmed booking as done' });
     } else {
@@ -200,11 +212,44 @@ router.patch('/:id', requireAuth, (req, res) => {
     if (!['confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     if (status === 'cancelled') {
       db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
+      cancelledByProvider = true;
     }
   }
 
   db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
   const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+
+  // Email on cancellation
+  if (cancelledByStudent || cancelledByProvider) {
+    try {
+      const slot = db.prepare('SELECT * FROM availability WHERE id = ?').get(booking.availability_id);
+      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const providerInfo = db.prepare(`
+        SELECT u.email, u.name FROM provider_profiles pp
+        JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+
+      if (slot && student && providerInfo) {
+        if (cancelledByStudent) {
+          // Notify provider that student cancelled
+          sendCancellationNotification({
+            toEmail: providerInfo.email, toName: providerInfo.name,
+            otherName: student.name,
+            date: slot.date, startTime: slot.start_time, endTime: slot.end_time,
+            role: 'provider',
+          }).catch(() => {});
+        } else {
+          // Notify student that provider cancelled
+          sendCancellationNotification({
+            toEmail: student.email, toName: student.name,
+            otherName: providerInfo.name,
+            date: slot.date, startTime: slot.start_time, endTime: slot.end_time,
+            role: 'student',
+          }).catch(() => {});
+        }
+      }
+    } catch { /* non-fatal */ }
+  }
 
   // Email student when provider confirms
   if (status === 'confirmed') {
@@ -224,6 +269,7 @@ router.patch('/:id', requireAuth, (req, res) => {
           startTime: slot.start_time,
           endTime: slot.end_time,
           bookingId: booking.id,
+          icsToken: icsToken(booking.id),
         }).catch(err => console.error('[BOOKING CONFIRM] student email error:', err.message));
 
         // SMS to student
@@ -249,6 +295,7 @@ router.patch('/:id', requireAuth, (req, res) => {
             startTime: slot.start_time,
             endTime: slot.end_time,
             bookingId: booking.id,
+            icsToken: icsToken(booking.id),
           }).catch(err => console.error('[BOOKING CONFIRM] provider email error:', err.message));
         }
       }
@@ -259,7 +306,7 @@ router.patch('/:id', requireAuth, (req, res) => {
 });
 
 // GET /bookings/:id/ics — download .ics file for Apple Calendar / Outlook
-// No auth required — link is clicked from email; booking ID is not publicly guessable
+// Protected with a signed HMAC token included in confirmation emails.
 router.get('/:id/ics', (req, res) => {
   const booking = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
@@ -272,6 +319,11 @@ router.get('/:id/ics', (req, res) => {
   `).get(req.params.id);
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+  const expected = icsToken(booking.id);
+  if (!req.query.token || req.query.token !== expected) {
+    return res.status(403).json({ error: 'Invalid or missing download token' });
+  }
 
   // Show provider title if ?for=provider is passed (used in provider confirmation email)
   const isProviderDownload = req.query.for === 'provider';
@@ -323,7 +375,7 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
 
   res.json({
     google: googleCalendarUrl({ title, description, slotDate: booking.date, startTime: booking.start_time, endTime: booking.end_time }),
-    ics: `/api/bookings/${booking.id}/ics`,
+    ics: `/api/bookings/${booking.id}/ics?token=${icsToken(booking.id)}`,
     title,
     date: booking.date,
     startTime: booking.start_time,

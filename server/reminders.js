@@ -11,7 +11,7 @@
 
 import db from './db.js';
 import { smsAppointmentReminder, smsReviewReminder } from './sms.js';
-import { sendAppointmentReminderEmail, sendReviewReminderEmail } from './email.js';
+import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification } from './email.js';
 
 // Returns "YYYY-MM-DD HH:MM" in Eastern time, offset by `mins` minutes from now
 function easternOffset(mins = 0) {
@@ -94,10 +94,73 @@ async function sendReviewReminders() {
   }
 }
 
+// DM nudge escalation: 1 hour → 24 hours → 7 days after first unread.
+// dm_nudge_log tracks which levels have fired so we never re-send the same level.
+// The log is cleared when the receiver opens the conversation (dm.js GET /:userId).
+const NUDGE_LEVELS = [
+  { level: 1, hours: 1,   label: '1hr'  },
+  { level: 2, hours: 24,  label: '24hr' },
+  { level: 3, hours: 168, label: '7day' },
+];
+
+async function sendUnreadDmNudges() {
+  for (const { level, hours, label } of NUDGE_LEVELS) {
+    // Find conversations where:
+    //   - at least one unread non-system message is old enough
+    //   - this nudge level hasn't been sent yet
+    const rows = db.prepare(`
+      SELECT dm.receiver_id, dm.sender_id,
+             u_recv.email AS receiver_email, u_recv.name AS receiver_name,
+             u_send.name  AS sender_name,
+             COUNT(*) AS unread_count
+      FROM direct_messages dm
+      JOIN users u_recv ON u_recv.id = dm.receiver_id
+      JOIN users u_send ON u_send.id = dm.sender_id
+      WHERE dm.read_at IS NULL
+        AND dm.is_system = 0
+        AND dm.created_at <= datetime('now', '-${hours} hours')
+        AND NOT EXISTS (
+          SELECT 1 FROM dm_nudge_log n
+          WHERE n.receiver_id = dm.receiver_id
+            AND n.sender_id   = dm.sender_id
+            AND n.nudge_level = ${level}
+        )
+      GROUP BY dm.receiver_id, dm.sender_id
+    `).all();
+
+    for (const row of rows) {
+      try {
+        const preview = level === 1
+          ? `You have ${row.unread_count} unread message${row.unread_count > 1 ? 's' : ''} — open ASK to reply.`
+          : level === 2
+          ? `${row.sender_name} is still waiting for your reply.`
+          : `Don't miss it — ${row.sender_name} messaged you a week ago.`;
+
+        await sendDmNotification({
+          toEmail:  row.receiver_email,
+          toName:   row.receiver_name,
+          fromName: row.sender_name,
+          preview,
+        });
+
+        // Record this level so it doesn't fire again
+        db.prepare(
+          'INSERT OR REPLACE INTO dm_nudge_log (receiver_id, sender_id, nudge_level) VALUES (?, ?, ?)'
+        ).run(row.receiver_id, row.sender_id, level);
+
+        console.log(`[REMINDER] DM nudge ${label} → ${row.receiver_email} from ${row.sender_name}`);
+      } catch (err) {
+        console.error(`[REMINDER] DM nudge ${label} error:`, err.message);
+      }
+    }
+  }
+}
+
 export function startReminderJobs() {
   const run = () => {
     sendAppointmentReminders().catch(e => console.error('[REMINDER] before job error:', e.message));
     sendReviewReminders().catch(e => console.error('[REMINDER] review job error:', e.message));
+    sendUnreadDmNudges().catch(e => console.error('[REMINDER] DM nudge error:', e.message));
   };
 
   // Run once at startup, then every 15 minutes

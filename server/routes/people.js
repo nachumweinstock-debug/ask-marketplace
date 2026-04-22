@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
+import { sendConnectionRequestEmail, sendConnectionAcceptedEmail } from '../email.js';
 
 const router = Router();
 
@@ -8,6 +9,13 @@ const router = Router();
 router.get('/', optionalAuth, (req, res) => {
   const { search } = req.query;
   const me = req.user?.id;
+
+  // Use a subquery to pick only the most recent listing per user —
+  // without this, users with multiple listings appear once per listing.
+  const ppSubquery = `(
+    SELECT * FROM provider_profiles
+    WHERE id IN (SELECT MAX(id) FROM provider_profiles GROUP BY user_id)
+  )`;
 
   let query, params;
   if (me) {
@@ -19,7 +27,7 @@ router.get('/', optionalAuth, (req, res) => {
              c.status as connection_status,
              c.requester_id
       FROM users u
-      LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+      LEFT JOIN ${ppSubquery} pp ON pp.user_id = u.id
       LEFT JOIN connections c ON (
         (c.requester_id = ? AND c.receiver_id = u.id) OR
         (c.receiver_id  = ? AND c.requester_id = u.id)
@@ -35,7 +43,8 @@ router.get('/', optionalAuth, (req, res) => {
              NULL as connection_status,
              NULL as requester_id
       FROM users u
-      LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+      LEFT JOIN ${ppSubquery} pp ON pp.user_id = u.id
+      WHERE 1=1
     `;
     params = [];
   }
@@ -57,6 +66,7 @@ router.get('/:id', optionalAuth, (req, res) => {
   const me = req.user?.id;
   const targetId = req.params.id;
 
+  const ppSub = `(SELECT * FROM provider_profiles WHERE id IN (SELECT MAX(id) FROM provider_profiles GROUP BY user_id))`;
   let u;
   if (me) {
     u = db.prepare(`
@@ -69,7 +79,7 @@ router.get('/:id', optionalAuth, (req, res) => {
              c.status as connection_status,
              c.requester_id
       FROM users u
-      LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+      LEFT JOIN ${ppSub} pp ON pp.user_id = u.id
       LEFT JOIN connections c ON (
         (c.requester_id = ? AND c.receiver_id  = u.id) OR
         (c.receiver_id  = ? AND c.requester_id = u.id)
@@ -86,7 +96,7 @@ router.get('/:id', optionalAuth, (req, res) => {
              NULL as connection_status,
              NULL as requester_id
       FROM users u
-      LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+      LEFT JOIN ${ppSub} pp ON pp.user_id = u.id
       WHERE u.id = ?     `).get(targetId);
   }
 
@@ -118,6 +128,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 
 // GET /people/connections/mine — my accepted connections + pending requests
 router.get('/connections/mine', requireAuth, (req, res) => {
+  const ppSubConn = `(SELECT * FROM provider_profiles WHERE id IN (SELECT MAX(id) FROM provider_profiles GROUP BY user_id))`;
   const accepted = db.prepare(`
     SELECT u.id, u.name, u.avatar_url, u.major, u.user_bio,
            pp.id as provider_profile_id, pp.category, pp.custom_category,
@@ -126,7 +137,7 @@ router.get('/connections/mine', requireAuth, (req, res) => {
     JOIN users u ON u.id = CASE
       WHEN c.requester_id = ? THEN c.receiver_id ELSE c.requester_id
     END
-    LEFT JOIN provider_profiles pp ON pp.user_id = u.id
+    LEFT JOIN ${ppSubConn} pp ON pp.user_id = u.id
     WHERE (c.requester_id = ? OR c.receiver_id = ?) AND c.status = 'accepted'
     ORDER BY u.name ASC
   `).all(req.user.id, req.user.id, req.user.id);
@@ -168,6 +179,13 @@ router.post('/connections', requireAuth, (req, res) => {
     // They already sent us a request — auto-accept it
     if (existing.requester_id === receiver_id && existing.status === 'pending') {
       db.prepare('UPDATE connections SET status = ? WHERE id = ?').run('accepted', existing.id);
+      // Notify the original requester that we accepted
+      const requesterUser = db.prepare('SELECT email, name FROM users WHERE id = ?').get(receiver_id);
+      if (requesterUser) {
+        sendConnectionAcceptedEmail({
+          toEmail: requesterUser.email, toName: requesterUser.name, fromName: req.user.name,
+        }).catch(() => {});
+      }
       return res.json({ ...existing, status: 'accepted' });
     }
     return res.status(400).json({ error: 'Connection already exists' });
@@ -176,6 +194,14 @@ router.post('/connections', requireAuth, (req, res) => {
   const result = db.prepare(
     'INSERT INTO connections (requester_id, receiver_id) VALUES (?, ?)'
   ).run(req.user.id, receiver_id);
+
+  // Notify the receiver of the new connection request
+  const receiverUser = db.prepare('SELECT email, name FROM users WHERE id = ?').get(receiver_id);
+  if (receiverUser) {
+    sendConnectionRequestEmail({
+      toEmail: receiverUser.email, toName: receiverUser.name, fromName: req.user.name,
+    }).catch(() => {});
+  }
 
   res.json(db.prepare('SELECT * FROM connections WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -188,6 +214,15 @@ router.patch('/connections/:id', requireAuth, (req, res) => {
   if (conn.status !== 'pending') return res.status(400).json({ error: 'Already responded' });
 
   db.prepare('UPDATE connections SET status = ? WHERE id = ?').run('accepted', conn.id);
+
+  // Notify the requester that their request was accepted
+  const requesterUser = db.prepare('SELECT email, name FROM users WHERE id = ?').get(conn.requester_id);
+  if (requesterUser) {
+    sendConnectionAcceptedEmail({
+      toEmail: requesterUser.email, toName: requesterUser.name, fromName: req.user.name,
+    }).catch(() => {});
+  }
+
   res.json({ ...conn, status: 'accepted' });
 });
 

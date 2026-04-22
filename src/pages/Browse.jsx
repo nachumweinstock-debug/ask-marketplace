@@ -273,19 +273,34 @@ export default function Browse() {
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, fontWeight: 500 }}>
-            {providers.length} {providers.length === 1 ? 'listing' : 'listings'}
-          </div>
-          <div className="provider-grid">
-            {providers.map(p => (
-              <ProviderCard
-                key={p.id}
-                provider={p}
-                isOwn={!!user && user.id === p.user_id}
-                onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
-              />
-            ))}
-          </div>
+          {(() => {
+            // Group listings by user — first occurrence is the primary (best-sorted) listing
+            const grouped = [];
+            const seen = new Set();
+            for (const p of providers) {
+              if (!seen.has(p.user_id)) {
+                seen.add(p.user_id);
+                grouped.push({ ...p, allListings: providers.filter(q => q.user_id === p.user_id) });
+              }
+            }
+            return (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, fontWeight: 500 }}>
+                  {grouped.length} {grouped.length === 1 ? 'person' : 'people'}
+                </div>
+                <div className="provider-grid">
+                  {grouped.map(p => (
+                    <ProviderCard
+                      key={p.user_id}
+                      provider={p}
+                      isOwn={!!user && user.id === p.user_id}
+                      onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
+                    />
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </>
       )}
     </div>
