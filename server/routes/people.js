@@ -6,19 +6,14 @@ import { sendConnectionRequestEmail, sendConnectionAcceptedEmail } from '../emai
 function canSeePayment(requesterId, targetUserId) {
   if (!requesterId) return false;
   if (requesterId === targetUserId) return true;
-  const conn = db.prepare(`
-    SELECT 1 FROM connections
-    WHERE status = 'accepted'
-      AND ((requester_id = ? AND receiver_id = ?) OR (requester_id = ? AND receiver_id = ?))
-    LIMIT 1
-  `).get(requesterId, targetUserId, targetUserId, requesterId);
-  if (conn) return true;
+  // Confirmed/completed booking in either direction unlocks payment info
   const booking = db.prepare(`
     SELECT 1 FROM bookings b
     JOIN provider_profiles pp ON pp.id = b.provider_id
-    WHERE b.student_id = ? AND pp.user_id = ? AND b.status IN ('confirmed', 'completed')
+    WHERE ((b.student_id = ? AND pp.user_id = ?) OR (b.student_id = ? AND pp.user_id = ?))
+      AND b.status IN ('confirmed', 'completed')
     LIMIT 1
-  `).get(requesterId, targetUserId);
+  `).get(requesterId, targetUserId, targetUserId, requesterId);
   return !!booking;
 }
 

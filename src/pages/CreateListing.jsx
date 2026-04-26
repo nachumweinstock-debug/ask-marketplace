@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
 const CATEGORIES = [
-  { id: 'tutor',        label: 'Tutors'   },
-  { id: 'barber',       label: 'Barbers'  },
-  { id: 'fitness',      label: 'Fitness'  },
-  { id: 'other',        label: 'Other'    },
+  { id: 'tutor',   label: 'Tutoring' },
+  { id: 'barber',  label: 'Barber'   },
+  { id: 'fitness', label: 'Fitness'  },
+  { id: 'other',   label: 'Other'    },
 ];
 
 const BIO_PLACEHOLDERS = {
@@ -18,31 +18,10 @@ const BIO_PLACEHOLDERS = {
   other: "Describe what you offer and who it's for...",
 };
 
-// Specialty suggestions shown as quick-pick pills
 const SUBCATEGORY_SUGGESTIONS = {
   tutor: ['Math', 'Chemistry', 'Biology', 'Physics', 'Excel', 'Coding', 'English', 'History', 'Economics', 'SAT/ACT', 'Calculus', 'Statistics', 'Gemara', 'Hebrew'],
   fitness: ['Tennis', 'Golf', 'Basketball', 'Soccer', 'Baseball', 'Swimming', 'Squash', 'Yoga', 'Weightlifting', 'Running', 'Boxing', 'Volleyball'],
 };
-
-const inputStyle = {
-  width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
-  padding: '10px 14px', fontSize: 13.5, outline: 'none',
-  background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
-  transition: 'border-color .15s', boxSizing: 'border-box',
-};
-
-const labelStyle = {
-  display: 'block', fontSize: 12, fontWeight: 500,
-  color: 'var(--muted)', marginBottom: 6,
-};
-
-function SectionHeader({ children }) {
-  return (
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16, marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
-      {children}
-    </div>
-  );
-}
 
 function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
   return new Promise(resolve => {
@@ -83,39 +62,43 @@ function ImageDrop({ value, onChange }) {
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
         style={{
-          border: `2px dashed ${dragging ? 'var(--primary)' : 'var(--border)'}`,
-          borderRadius: 10, overflow: 'hidden',
-          background: dragging ? 'var(--accent)' : 'var(--bg)',
+          border: dragging ? '2px dashed var(--accent)' : '1px solid var(--cream-200)',
+          borderRadius: 14, overflow: 'hidden',
+          background: dragging ? '#FFF5F0' : 'var(--cream-50)',
           transition: 'all .15s', position: 'relative',
           cursor: value ? 'default' : 'pointer',
-          minHeight: value ? 'auto' : 130,
+          minHeight: value ? 'auto' : 120,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         {processing ? (
           <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 24, height: 24, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Processing...</div>
+            <div style={{ width: 24, height: 24, border: '2px solid var(--ink-900)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ fontSize: 13, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)' }}>Processing...</div>
           </div>
         ) : value ? (
           <>
-            <img src={value} alt="listing" style={{ width: '100%', display: 'block', maxHeight: 220, objectFit: 'cover' }} />
+            <img src={value} alt="listing" style={{ width: '100%', display: 'block', maxHeight: 200, objectFit: 'cover' }} />
             <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
               <button type="button" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
-                style={{ background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
+                style={{ background: 'rgba(10,10,10,0.6)', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
                 Change
               </button>
               <button type="button" onClick={e => { e.stopPropagation(); onChange(null); }}
-                style={{ background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 999, width: 26, height: 26, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                style={{ background: 'rgba(10,10,10,0.6)', color: '#fff', border: 'none', borderRadius: 8, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 ×
               </button>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--muted)' }}>
-            <div style={{ fontSize: 32, marginBottom: 8, lineHeight: 1 }}>🖼</div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Drag a photo here, or click to browse</div>
-            <div style={{ fontSize: 11.5, marginTop: 4 }}>Shows as a cover image on your listing card</div>
+          <div style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--ink-500)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: 0.6 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-700)', fontFamily: 'var(--font-ui)' }}>
+              Drop a photo, or click to upload
+            </div>
+            <div style={{ fontSize: 12, marginTop: 4, fontFamily: 'var(--font-ui)' }}>Shows as a cover on your listing card</div>
           </div>
         )}
       </div>
@@ -124,6 +107,99 @@ function ImageDrop({ value, onChange }) {
   );
 }
 
+// ── Live Preview Card ─────────────────────────────────────────────────────────
+function LivePreview({ category, customCategory, subcategory, bio, price, listingImage, sessionType }) {
+  const label = subcategory || customCategory ||
+    { tutor: 'Tutoring', barber: 'Haircuts', fitness: 'Fitness', other: 'Service' }[category] || '';
+  const eyebrow = (customCategory || { tutor: 'TUTORING', barber: 'BARBER', fitness: 'FITNESS', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
+  const fmt = sessionType === 'zoom' ? { color: '#7C3AED', label: 'ZOOM' }
+    : sessionType === 'both' ? { color: '#7C3AED', label: 'ZOOM & IN-PERSON' }
+    : { color: '#0E8345', label: 'IN-PERSON' };
+
+  const isEmpty = !category && !bio && !price;
+
+  return (
+    <div style={{
+      position: 'sticky', top: 96,
+      background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
+      borderRadius: 16, overflow: 'hidden',
+      transition: 'all .15s',
+    }}>
+      {listingImage && (
+        <div style={{ height: 140, overflow: 'hidden', position: 'relative' }}>
+          <img src={listingImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, rgba(10,10,10,0.3), transparent)' }} />
+        </div>
+      )}
+      <div style={{ padding: 22 }}>
+        {isEmpty ? (
+          <div style={{
+            fontFamily: 'var(--font-display)', fontStyle: 'italic',
+            fontSize: 18, color: 'var(--ink-500)', opacity: 0.6,
+            padding: '40px 0', textAlign: 'center',
+          }}>
+            Your listing appears here
+          </div>
+        ) : (
+          <>
+            {/* Format dot */}
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
+              color: 'var(--ink-500)', letterSpacing: '0.06em',
+              display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: fmt.color }} />
+              {fmt.label}
+            </div>
+
+            {/* Eyebrow */}
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500,
+              letterSpacing: '0.08em', color: 'var(--ink-500)', marginBottom: 6,
+            }}>
+              {eyebrow}
+            </div>
+
+            {/* Title */}
+            <div style={{
+              fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600,
+              color: 'var(--ink-900)', lineHeight: 1.15, marginBottom: 10,
+              fontOpticalSizing: 'auto',
+              transition: 'opacity .15s',
+            }}>
+              {label || 'Your service'}
+            </div>
+
+            {/* Bio */}
+            {bio && (
+              <p style={{
+                fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-700)',
+                lineHeight: 1.55, marginBottom: 16,
+                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              }}>
+                {bio}
+              </p>
+            )}
+
+            {/* Divider */}
+            <div style={{ height: 1, background: 'var(--cream-200)', margin: '16px 0' }} />
+
+            {/* Price */}
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: 20,
+              color: 'var(--ink-900)', display: 'flex', alignItems: 'baseline', gap: 4,
+            }}>
+              {price ? `$${price}` : 'Free'}
+              {price > 0 && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 400, color: 'var(--ink-500)' }}>/session</span>}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function CreateListing() {
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -141,19 +217,18 @@ export default function CreateListing() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [priceStats, setPriceStats] = useState(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
-  // Pre-fill payment info from saved account profile
   useEffect(() => {
     api.get('/account').then(({ data }) => {
       if (data.zelle) setZelle(data.zelle);
       if (data.venmo) setVenmo(data.venmo);
+      if (data.zelle || data.venmo) setPaymentOpen(true);
     }).catch(() => {});
   }, []);
 
-  // Reset subcategory when category changes
   useEffect(() => { setSubcategory(''); }, [category]);
 
-  // Fetch market price data when category or subcategory changes
   useEffect(() => {
     if (!category) { setPriceStats(null); return; }
     const cat = category === 'other' ? customCategory : category;
@@ -197,255 +272,322 @@ export default function CreateListing() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: '48px 32px 80px' }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
-          Post a listing
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Takes about a minute.</p>
-      </div>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 48px 80px' }}>
 
-      <div className="card" style={{ padding: '32px 28px' }}>
-        <form onSubmit={handleSubmit}>
+      {/* ── Two-column layout ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 56, alignItems: 'start' }}>
 
-          {/* Category */}
-          <div style={{ marginBottom: 8 }}>
-            <label style={labelStyle}>What do you offer?</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {CATEGORIES.map(({ id, label }) => {
-                const active = category === id;
-                return (
-                  <button key={id} type="button" onClick={() => setCategory(id)}
-                    style={{
-                      padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                      background: active ? 'var(--primary)' : 'var(--card)',
-                      color: active ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
-                    }}>
-                    {label}
-                  </button>
-                );
-              })}
+        {/* ── LEFT: Form ── */}
+        <div>
+          {/* Header */}
+          <div style={{ marginBottom: 40 }} className="fade-up">
+            <div className="section-label" style={{ marginBottom: 10 }}>
+              NEW LISTING · STEP 1 OF 1
             </div>
+            <h1 style={{
+              fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+              fontSize: 'clamp(36px, 4vw, 48px)', fontWeight: 600,
+              color: 'var(--ink-900)', lineHeight: 1.1,
+              letterSpacing: '-0.02em', marginBottom: 10,
+            }}>
+              Put something on the board.
+            </h1>
+            <p style={{
+              fontFamily: 'var(--font-ui)', fontSize: 16, fontWeight: 400,
+              color: 'var(--ink-500)', maxWidth: 480,
+            }}>
+              Keep it honest. Keep it short. Students book the ones that sound like a person.
+            </p>
           </div>
 
-          {/* Specialty / subcategory — shown for tutor and fitness */}
-          {SUBCATEGORY_SUGGESTIONS[category] && (
-            <div style={{ marginBottom: 20, marginTop: 14 }}>
-              <label style={labelStyle}>
-                {category === 'tutor' ? 'What subject?' : 'What sport or activity?'}
-                <span style={{ fontWeight: 400, opacity: 0.7, marginLeft: 4 }}>(pick one or type your own)</span>
-              </label>
-              {/* Quick-pick suggestion pills */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                {SUBCATEGORY_SUGGESTIONS[category].map(s => {
-                  const active = subcategory === s;
+          <form onSubmit={handleSubmit}>
+
+            {/* ── Category: segmented control ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>What do you offer?</label>
+              <div style={{
+                display: 'inline-flex', background: 'var(--cream-50)',
+                border: '1px solid var(--cream-300)', borderRadius: 12, padding: 3, gap: 2,
+              }}>
+                {CATEGORIES.map(({ id, label }) => {
+                  const active = category === id;
                   return (
-                    <button key={s} type="button" onClick={() => setSubcategory(active ? '' : s)}
-                      style={{
-                        padding: '5px 13px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                        border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                        background: active ? 'var(--primary)' : 'var(--card)',
-                        color: active ? '#fff' : 'var(--muted)',
-                        cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
-                      }}>
-                      {s}
+                    <button key={id} type="button" onClick={() => setCategory(id)} style={{
+                      padding: '9px 20px', borderRadius: 10, border: 'none',
+                      background: active ? 'var(--ink-900)' : 'transparent',
+                      color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                      fontFamily: 'var(--font-ui)', transition: 'all .2s',
+                    }}>
+                      {label}
                     </button>
                   );
                 })}
               </div>
-              {/* Free-text override */}
-              <input
-                value={subcategory}
-                onChange={e => setSubcategory(e.target.value)}
-                placeholder={category === 'tutor' ? 'Or type your own: Organic Chemistry, LSAT...' : 'Or type your own: Pickleball, Crossfit...'}
-                style={{ ...inputStyle, marginTop: 2 }}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
             </div>
-          )}
 
-          {/* Custom category */}
-          {category === 'other' && (
-            <div style={{ marginBottom: 20, marginTop: 12 }}>
-              <label style={labelStyle}>What is it? (shown on your card)</label>
-              <input value={customCategory} onChange={e => setCustomCategory(e.target.value)}
-                placeholder="e.g. Photography, Guitar Lessons, Meal Prep..."
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
-              />
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>
-                This becomes your category label — "Photography", "Guitar Lessons", etc.
-              </div>
-            </div>
-          )}
-
-          {/* Session type */}
-          <div style={{ marginBottom: 20, marginTop: 16 }}>
-            <label style={labelStyle}>How do you meet?</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {[
-                { id: 'in-person', label: 'In-Person', emoji: '📍' },
-                { id: 'zoom',      label: 'Zoom',      emoji: '💻' },
-                { id: 'both',      label: 'Both',      emoji: '🔀' },
-              ].map(({ id, label, emoji }) => {
-                const active = sessionType === id;
-                return (
-                  <button key={id} type="button" onClick={() => setSessionType(id)}
-                    style={{
-                      flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                      border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                      background: active ? 'var(--primary)' : 'var(--card)',
-                      color: active ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    }}>
-                    <span>{emoji}</span>{label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Listing image */}
-          <div style={{ marginBottom: 20, marginTop: 0 }}>
-            <label style={labelStyle}>Cover photo <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
-            <ImageDrop value={listingImage} onChange={setListingImage} />
-          </div>
-
-          {/* Bio */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={labelStyle}>Describe what you offer</label>
-            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
-              placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
-              style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
-              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
-          </div>
-
-          {/* Price */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={labelStyle}>Price per session</label>
-
-            {/* Market price suggestion banner */}
-            {priceStats && (
-              <div style={{
-                background: '#F0FDF4', border: '1.5px solid #86EFAC',
-                borderRadius: 9, padding: '10px 14px', marginBottom: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                flexWrap: 'wrap', gap: 8,
-              }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 2 }}>
-                    Market rate for this category
-                  </div>
-                  <div style={{ fontSize: 12, color: '#15803D' }}>
-                    {priceStats.count} provider{priceStats.count !== 1 ? 's' : ''} charging{' '}
-                    <strong>${priceStats.min}–${priceStats.max}</strong>
-                    {' '}· avg <strong>${priceStats.avg}</strong>
-                  </div>
+            {/* ── Specialty / subcategory ── */}
+            {SUBCATEGORY_SUGGESTIONS[category] && (
+              <div style={{ marginBottom: 28 }}>
+                <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>
+                  {category === 'tutor' ? 'SUBJECT' : 'ACTIVITY'}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {SUBCATEGORY_SUGGESTIONS[category].map(s => {
+                    const active = subcategory === s;
+                    return (
+                      <button key={s} type="button" onClick={() => setSubcategory(active ? '' : s)}
+                        style={{
+                          padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                          border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+                          background: active ? 'var(--ink-900)' : 'var(--cream-50)',
+                          color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                          cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
+                        }}>
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[priceStats.min, priceStats.avg, priceStats.max].filter((v, i, a) => a.indexOf(v) === i).map(v => (
-                    <button key={v} type="button"
-                      onClick={() => setPrice(String(v))}
-                      style={{
-                        padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                        border: price === String(v) ? '1.5px solid #166534' : '1.5px solid #86EFAC',
-                        background: price === String(v) ? '#166534' : '#DCFCE7',
-                        color: price === String(v) ? '#fff' : '#166534',
-                        cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                      }}
-                    >
-                      ${v}
-                    </button>
-                  ))}
+                <input
+                  value={subcategory}
+                  onChange={e => setSubcategory(e.target.value)}
+                  placeholder={category === 'tutor' ? 'Or type your own: Organic Chemistry, LSAT...' : 'Or type your own: Pickleball, Crossfit...'}
+                  className="input-underline"
+                />
+              </div>
+            )}
+
+            {/* ── Custom category ── */}
+            {category === 'other' && (
+              <div style={{ marginBottom: 28 }}>
+                <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>CATEGORY NAME</label>
+                <input value={customCategory} onChange={e => setCustomCategory(e.target.value)}
+                  placeholder="e.g. Photography, Guitar Lessons, Meal Prep..."
+                  className="input-underline"
+                />
+                <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 8, fontFamily: 'var(--font-ui)' }}>
+                  This becomes your category label on the card.
                 </div>
               </div>
             )}
 
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13.5, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>$</span>
-              <input type="number" min="0" placeholder="0" value={price}
-                onChange={e => setPrice(e.target.value)}
-                style={{ ...inputStyle, paddingLeft: 28 }}
-                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            {/* ── Session type: segmented ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>FORMAT</label>
+              <div style={{
+                display: 'inline-flex', background: 'var(--cream-50)',
+                border: '1px solid var(--cream-300)', borderRadius: 12, padding: 3, gap: 2,
+              }}>
+                {[
+                  { id: 'in-person', label: 'In-Person' },
+                  { id: 'zoom',      label: 'Zoom'      },
+                  { id: 'both',      label: 'Both'      },
+                ].map(({ id, label }) => {
+                  const active = sessionType === id;
+                  return (
+                    <button key={id} type="button" onClick={() => setSessionType(id)} style={{
+                      padding: '9px 20px', borderRadius: 10, border: 'none',
+                      background: active ? 'var(--ink-900)' : 'transparent',
+                      color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                      fontFamily: 'var(--font-ui)', transition: 'all .2s',
+                    }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Cover photo ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>
+                COVER PHOTO <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional)</span>
+              </label>
+              <ImageDrop value={listingImage} onChange={setListingImage} />
+            </div>
+
+            {/* ── Bio ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>DESCRIPTION</label>
+              <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
+                placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
+                className="input-underline"
+                style={{ resize: 'none', lineHeight: 1.6, borderBottom: `1px solid var(--cream-300)` }}
               />
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>Leave 0 if free or negotiable</div>
-          </div>
 
-          {/* Payment */}
-          <div style={{ marginBottom: 4 }}>
-            <label style={labelStyle}>How do students pay you?</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <div style={{ ...labelStyle, marginBottom: 5 }}>Zelle (phone or email)</div>
-                <input type="text" placeholder="646-555-1234" value={zelle}
-                  onChange={e => setZelle(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                  onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            {/* ── Price ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>PRICE PER SESSION</label>
+
+              {priceStats && (
+                <div style={{
+                  background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
+                  borderRadius: 12, padding: '12px 16px', marginBottom: 14,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  flexWrap: 'wrap', gap: 8,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-700)', marginBottom: 2, fontFamily: 'var(--font-ui)' }}>
+                      Market rate
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)' }}>
+                      {priceStats.count} provider{priceStats.count !== 1 ? 's' : ''} · ${priceStats.min}–${priceStats.max} · avg ${priceStats.avg}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[priceStats.min, priceStats.avg, priceStats.max].filter((v, i, a) => a.indexOf(v) === i).map(v => (
+                      <button key={v} type="button" onClick={() => setPrice(String(v))}
+                        style={{
+                          padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                          border: `1px solid ${price === String(v) ? 'var(--ink-900)' : 'var(--cream-300)'}`,
+                          background: price === String(v) ? 'var(--ink-900)' : 'var(--cream-50)',
+                          color: price === String(v) ? 'var(--cream-50)' : 'var(--ink-700)',
+                          cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                        }}>
+                        ${v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ position: 'relative', maxWidth: 200 }}>
+                <span style={{
+                  position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                  fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 500, color: 'var(--ink-500)',
+                }}>$</span>
+                <input type="number" min="0" placeholder="0" value={price}
+                  onChange={e => setPrice(e.target.value)}
+                  style={{
+                    width: '100%', border: 'none', borderBottom: '1px solid var(--cream-300)',
+                    padding: '10px 0 10px 24px', fontSize: 24, outline: 'none',
+                    background: 'transparent', color: 'var(--ink-900)',
+                    fontFamily: 'var(--font-mono)', fontWeight: 500,
+                    transition: 'border-color .2s',
+                  }}
+                  onFocus={e => e.target.style.borderBottomColor = 'var(--ink-900)'}
+                  onBlur={e => e.target.style.borderBottomColor = 'var(--cream-300)'}
                 />
               </div>
-              <div>
-                <div style={{ ...labelStyle, marginBottom: 5 }}>Venmo username</div>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>@</span>
-                  <input type="text" placeholder="username" value={venmo}
-                    onChange={e => setVenmo(e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: 26 }}
-                    onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                  />
-                </div>
+              <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 8, fontFamily: 'var(--font-ui)' }}>
+                Leave 0 if free or negotiable
               </div>
             </div>
-          </div>
 
-          {/* Availability */}
-          <SectionHeader>When are you available?</SectionHeader>
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-            Toggle multiple days at once — same time block applies to all selected days.
-          </p>
+            {/* ── Payment (collapsible) ── */}
+            <div style={{ marginBottom: 28 }}>
+              <button type="button" onClick={() => setPaymentOpen(o => !o)} style={{
+                display: 'flex', alignItems: 'center', gap: 8, background: 'none',
+                border: 'none', cursor: 'pointer', padding: 0,
+              }}>
+                <span className="section-label">PAYMENT DETAILS</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" style={{
+                  transform: paymentOpen ? 'rotate(180deg)' : 'rotate(0)',
+                  transition: 'transform .2s', color: 'var(--ink-500)',
+                }}>
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                </svg>
+              </button>
 
-          <SlotPicker
-            onAdd={newSlots => setSlots(s => [...s, ...newSlots.map(sl => ({ ...sl, id: Date.now() + Math.random() }))])}
-            existingSlots={slots}
-          />
-          <SlotList
-            slots={slots}
-            onRemove={id => setSlots(s => s.filter(sl => sl.id !== id))}
-            emptyText="No slots yet — add some above or after publishing."
-          />
-
-          {error && (
-            <div style={{
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              borderRadius: 8, padding: '9px 14px',
-              fontSize: 12.5, color: '#DC2626', marginBottom: 16, marginTop: 16,
-            }}>
-              {error}
+              {paymentOpen && (
+                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div>
+                    <label className="section-label" style={{ display: 'block', marginBottom: 8, fontSize: 10 }}>ZELLE</label>
+                    <input type="text" placeholder="Phone or email" value={zelle}
+                      onChange={e => setZelle(e.target.value)}
+                      className="input-underline"
+                    />
+                  </div>
+                  <div>
+                    <label className="section-label" style={{ display: 'block', marginBottom: 8, fontSize: 10 }}>VENMO</label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--ink-500)' }}>@</span>
+                      <input type="text" placeholder="username" value={venmo}
+                        onChange={e => setVenmo(e.target.value)}
+                        className="input-underline"
+                        style={{ paddingLeft: 16 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-          <button type="submit" disabled={loading || !category} style={{
-            width: '100%', background: loading || !category ? '#93C5FD' : 'var(--primary)',
-            color: '#fff', border: 'none', borderRadius: 9,
-            padding: '13px', fontSize: 14, fontWeight: 600,
-            cursor: loading || !category ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-ui)', transition: 'opacity .15s', marginTop: 8,
-          }}>
-            {loading ? 'Publishing...' : `Publish listing${slots.length > 0 ? ` with ${slots.length} slot${slots.length > 1 ? 's' : ''}` : ''}`}
-          </button>
+            {/* ── Availability ── */}
+            <div style={{ marginBottom: 28, paddingTop: 28, borderTop: '1px solid var(--cream-200)' }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>AVAILABILITY</label>
+              <p style={{ fontSize: 13, color: 'var(--ink-500)', marginBottom: 16, fontFamily: 'var(--font-ui)' }}>
+                Toggle days and set time blocks. You can always add more later.
+              </p>
+              <SlotPicker
+                onAdd={newSlots => setSlots(s => [...s, ...newSlots.map(sl => ({ ...sl, id: Date.now() + Math.random() }))])}
+                existingSlots={slots}
+              />
+              <SlotList
+                slots={slots}
+                onRemove={id => setSlots(s => s.filter(sl => sl.id !== id))}
+                emptyText="No slots yet — add some above or after publishing."
+              />
+            </div>
 
-        </form>
+            {/* ── Error ── */}
+            {error && (
+              <div style={{
+                background: '#FEF2F2', border: '1px solid #FECACA',
+                borderRadius: 10, padding: '10px 16px',
+                fontSize: 13, color: 'var(--danger)', marginBottom: 20,
+                fontFamily: 'var(--font-ui)',
+              }}>
+                {error}
+              </div>
+            )}
+
+            {/* ── Submit ── */}
+            <button type="submit" disabled={loading || !category} style={{
+              width: '100%', height: 56,
+              background: loading || !category ? 'var(--cream-300)' : 'var(--ink-900)',
+              color: loading || !category ? 'var(--ink-500)' : 'var(--cream-50)',
+              border: 'none', borderRadius: 14,
+              fontSize: 18, fontWeight: 500,
+              cursor: loading || !category ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+              transition: 'background .2s, color .2s',
+            }}
+              onMouseEnter={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--ink-900)'; } }}
+              onMouseLeave={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; } }}
+            >
+              {loading ? 'Publishing...' : 'Post listing →'}
+            </button>
+          </form>
+        </div>
+
+        {/* ── RIGHT: Live Preview ── */}
+        <div className="create-listing-preview" style={{ position: 'relative' }}>
+          <div className="section-label" style={{ marginBottom: 14 }}>PREVIEW</div>
+          <LivePreview
+            category={category}
+            customCategory={customCategory}
+            subcategory={subcategory}
+            bio={bio}
+            price={price}
+            listingImage={listingImage}
+            sessionType={sessionType}
+          />
+        </div>
       </div>
+
+      {/* ── Responsive: hide preview on mobile ── */}
+      <style>{`
+        @media (max-width: 860px) {
+          .create-listing-preview { display: none; }
+          div[style*="grid-template-columns: 1fr 380px"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -269,7 +269,7 @@ export default function ProviderProfile() {
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Connect with {provider.name.split(' ')[0]} to see payment details
+                  Book a session and get confirmed to see payment details
                 </span>
               </div>
             )}

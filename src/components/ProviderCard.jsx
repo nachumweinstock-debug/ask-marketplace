@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CategoryPill, { SessionTypePill } from './CategoryPill';
 import { mediaUrl } from '../lib/media';
 
 function initials(name) {
@@ -13,12 +12,25 @@ function listingLabel(l) {
       fitness: 'Fitness', tennis: 'Fitness' }[l.category] || l.category;
 }
 
+function categoryEyebrow(l) {
+  if (l.custom_category) return l.custom_category.toUpperCase();
+  const map = { tutor: 'TUTORING', barber: 'BARBER', 'hebrew tutor': 'HEBREW', fitness: 'FITNESS', tennis: 'FITNESS', other: 'SERVICE' };
+  return map[l.category] || 'SERVICE';
+}
+
+function formatDot(sessionType) {
+  if (!sessionType || sessionType === 'in-person') return { color: '#0E8345', label: 'IN-PERSON' };
+  if (sessionType === 'zoom') return { color: '#7C3AED', label: 'ZOOM' };
+  return { color: '#7C3AED', label: 'ZOOM & IN-PERSON' };
+}
+
 export default function ProviderCard({ provider, isOwn, onDelete }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const allListings = provider.allListings || [provider];
+  const hasPhoto = !!provider.listing_image;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -29,6 +41,121 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
     return () => document.removeEventListener('mousedown', handle);
   }, [menuOpen]);
 
+  const fmt = formatDot(provider.session_type);
+
+  // ── Variant B: Photo-forward ──
+  if (hasPhoto) {
+    return (
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => navigate(`/providers/${provider.id}`)}
+        style={{
+          position: 'relative', cursor: 'pointer',
+          background: 'var(--cream-50)',
+          border: `1px solid ${hovered ? 'var(--ink-900)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+          borderRadius: 16, overflow: 'hidden',
+          boxShadow: hovered ? '0 12px 32px -16px rgba(10,10,10,0.12)' : 'none',
+          transform: hovered ? 'translateY(-2px)' : 'none',
+          transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
+        }}
+      >
+        {/* Cover photo */}
+        <div style={{ position: 'relative', height: 180, overflow: 'hidden', background: 'var(--cream-100)' }}>
+          <img src={provider.listing_image} alt={provider.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
+            background: 'linear-gradient(to top, rgba(10,10,10,0.45), transparent)',
+          }} />
+          {/* Price overlay */}
+          <div style={{
+            position: 'absolute', bottom: 12, right: 14,
+            fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: 20,
+            color: '#fff', textShadow: '0 1px 8px rgba(0,0,0,0.3)',
+          }}>
+            {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
+          </div>
+          {/* Format dot */}
+          <div style={{
+            position: 'absolute', top: 12, right: 14,
+            fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
+            color: '#fff', letterSpacing: '0.06em',
+            display: 'flex', alignItems: 'center', gap: 5,
+            textShadow: '0 1px 4px rgba(0,0,0,0.3)',
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: fmt.color, flexShrink: 0 }} />
+            {fmt.label}
+          </div>
+        </div>
+
+        {/* Content below photo */}
+        <div style={{ padding: '18px 22px 22px' }}>
+          {isOwn && <OwnBadge count={allListings.length} />}
+
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500,
+            letterSpacing: '0.08em', color: 'var(--ink-500)',
+            marginBottom: 6, textTransform: 'uppercase',
+          }}>
+            {categoryEyebrow(provider)}
+          </div>
+
+          {allListings.length > 1 ? (
+            <MultiListingPills allListings={allListings} navigate={navigate} />
+          ) : (
+            <div style={{
+              fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600,
+              color: 'var(--ink-900)', lineHeight: 1.15, marginBottom: 8,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontOpticalSizing: 'auto',
+            }}>
+              {listingLabel(provider)}
+            </div>
+          )}
+
+          {/* Bio */}
+          <p style={{
+            fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-700)',
+            lineHeight: 1.55, marginBottom: 14,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {provider.bio || 'No description provided.'}
+          </p>
+
+          {/* Bottom row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {mediaUrl(provider.avatar_url) ? (
+                <img src={mediaUrl(provider.avatar_url)} alt="" style={{
+                  width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
+                  border: '1px solid var(--cream-200)',
+                }} />
+              ) : (
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'var(--cream-100)', border: '1px solid var(--cream-300)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 10,
+                  color: 'var(--ink-700)',
+                }}>
+                  {initials(provider.name)}
+                </div>
+              )}
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 500, color: 'var(--ink-900)' }}>
+                {provider.name}
+              </span>
+              <RatingBadge rating={provider.rating} count={provider.review_count} sessions={provider.completed_sessions} />
+            </div>
+          </div>
+        </div>
+
+        {isOwn && <OwnMenu menuRef={menuRef} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} onDelete={onDelete} hasPhoto />}
+      </div>
+    );
+  }
+
+  // ── Variant A: Service-forward (default) ──
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -36,209 +163,218 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       onClick={() => navigate(`/providers/${provider.id}`)}
       style={{
         position: 'relative', cursor: 'pointer',
-        background: isOwn ? '#F0FDF4' : 'var(--card)',
-        border: `1px solid ${isOwn ? '#86EFAC' : 'var(--border)'}`,
-        borderRadius: 12, overflow: 'hidden',
-        boxShadow: hovered ? '0 6px 24px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
+        background: isOwn ? '#FAFFF8' : 'var(--cream-50)',
+        border: `1px solid ${hovered ? 'var(--ink-900)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+        borderRadius: 16, padding: 24, overflow: 'hidden',
+        boxShadow: hovered ? '0 12px 32px -16px rgba(10,10,10,0.12)' : 'none',
         transform: hovered ? 'translateY(-2px)' : 'none',
-        transition: 'box-shadow .2s, transform .2s',
+        transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
       }}
     >
-      {/* Cover image */}
-      {provider.listing_image ? (
-        <div style={{ height: 130, overflow: 'hidden', background: 'var(--bg)' }}>
-          <img src={provider.listing_image} alt={provider.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        </div>
+      {isOwn && <OwnBadge count={allListings.length} />}
+
+      {/* Format dot — top right */}
+      <div style={{
+        position: 'absolute', top: 20, right: 22,
+        fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
+        color: 'var(--ink-500)', letterSpacing: '0.06em',
+        display: 'flex', alignItems: 'center', gap: 5,
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: 999, background: fmt.color, flexShrink: 0 }} />
+        {fmt.label}
+      </div>
+
+      {/* Category eyebrow */}
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500,
+        letterSpacing: '0.08em', color: 'var(--ink-500)',
+        marginBottom: 8, textTransform: 'uppercase',
+      }}>
+        {categoryEyebrow(provider)}
+      </div>
+
+      {/* Title */}
+      {allListings.length > 1 ? (
+        <MultiListingPills allListings={allListings} navigate={navigate} />
       ) : (
-        <div style={{ height: 6, background: isOwn ? '#86EFAC' : 'var(--accent)' }} />
+        <div style={{
+          fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600,
+          color: 'var(--ink-900)', lineHeight: 1.1, marginBottom: 8,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontOpticalSizing: 'auto',
+        }}>
+          {listingLabel(provider)}
+        </div>
       )}
 
-      <div style={{ padding: '16px 20px 20px' }}>
-        {/* "Your listing" badge */}
-        {isOwn && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.4px',
-            color: '#166534', background: '#DCFCE7', borderRadius: 999,
-            padding: '2px 8px', marginBottom: 10, textTransform: 'uppercase',
-          }}>
-            {allListings.length > 1 ? `Your ${allListings.length} listings` : 'Your listing'}
-          </div>
-        )}
+      {/* Bio */}
+      <p style={{
+        fontFamily: 'var(--font-ui)', fontSize: 15, color: 'var(--ink-700)',
+        lineHeight: 1.55, marginBottom: 0,
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      }}>
+        {provider.bio || 'No description provided.'}
+      </p>
 
-        {/* Avatar + name row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+      {/* Divider */}
+      <div style={{ height: 1, background: 'var(--cream-200)', margin: '20px 0' }} />
+
+      {/* Bottom row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {mediaUrl(provider.avatar_url) ? (
-            <img src={mediaUrl(provider.avatar_url)} alt={provider.name} style={{
-              width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
-              border: '1px solid var(--border)', flexShrink: 0,
+            <img src={mediaUrl(provider.avatar_url)} alt="" style={{
+              width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
+              border: '1px solid var(--cream-200)',
             }} />
           ) : (
             <div style={{
-              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--accent)', color: 'var(--primary)',
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'var(--cream-100)', border: '1px solid var(--cream-300)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: 11, fontFamily: 'var(--font-ui)',
+              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 10,
+              color: 'var(--ink-700)',
             }}>
               {initials(provider.name)}
             </div>
           )}
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, lineHeight: 1.2,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {provider.name}
-            </div>
-          </div>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 500, color: 'var(--ink-900)' }}>
+            {provider.name}
+          </span>
+          <RatingBadge rating={provider.rating} count={provider.review_count} sessions={provider.completed_sessions} />
         </div>
-
-        {/* Offering headline — the most important thing on the card */}
-        <div style={{ marginBottom: 8 }}>
-          {allListings.length > 1 ? (
-            /* Multiple listings: show clickable service pills */
-            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-              {allListings.map(l => (
-                <button
-                  key={l.id}
-                  onClick={e => { e.stopPropagation(); navigate(`/providers/${l.id}`); }}
-                  style={{
-                    padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-                    border: '1.5px solid var(--primary)',
-                    background: 'var(--accent)', color: 'var(--primary)',
-                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                    transition: 'background .12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-light, #DBEAFE)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
-                >
-                  {listingLabel(l)}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div style={{
-                fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
-                marginBottom: 5,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {listingLabel(provider)}
-              </div>
-              {/* Session type + category as secondary tags */}
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                <CategoryPill category={provider.category} customCategory={provider.custom_category} subcategory={provider.subcategory} />
-                <SessionTypePill sessionType={provider.session_type} />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Rating + session count */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
-          {provider.rating > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ color: '#F59E0B', fontSize: 12 }}>★</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{provider.rating.toFixed(1)}</span>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>({provider.review_count})</span>
-            </div>
-          )}
-          {provider.completed_sessions > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              {provider.rating > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>·</span>}
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-                {provider.completed_sessions} session{provider.completed_sessions !== 1 ? 's' : ''}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Bio */}
-        <p style={{
-          fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.55,
-          marginBottom: 14, minHeight: 32,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>
-          {provider.bio || 'No description provided.'}
-        </p>
 
         {/* Price */}
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: 20,
+          color: hovered ? 'var(--accent)' : 'var(--ink-900)',
+          transition: 'color .22s cubic-bezier(0.2,0.8,0.2,1)',
+          display: 'flex', alignItems: 'baseline', gap: 3,
+        }}>
           {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
           {provider.price_per_session > 0 && (
-            <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>/ session</span>
+            <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 400, fontSize: 12, color: 'var(--ink-500)' }}>/session</span>
           )}
         </div>
       </div>
 
-      {/* Hover CTA */}
-      {!isOwn && (
-        <div style={{
-          position: 'absolute', bottom: 16, right: 16,
-          background: 'var(--primary)', color: '#fff',
-          borderRadius: 999, padding: '5px 14px',
-          fontSize: 12, fontWeight: 600,
-          opacity: hovered ? 1 : 0, transition: 'opacity .15s',
-          pointerEvents: 'none',
-        }}>
-          View
-        </div>
-      )}
+      {isOwn && <OwnMenu menuRef={menuRef} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} onDelete={onDelete} />}
+    </div>
+  );
+}
 
-      {/* Three-dot menu — own listing only */}
-      {isOwn && (
-        <div ref={menuRef} style={{ position: 'absolute', top: provider.listing_image ? 142 : 16, right: 12 }}
-          onClick={e => e.stopPropagation()}>
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function RatingBadge({ rating, count, sessions }) {
+  if (!rating && !sessions) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+      {rating > 0 && (
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 500, color: 'var(--ink-500)' }}>
+          <span style={{ color: '#F59E0B' }}>★</span> {rating.toFixed(1)}
+          <span style={{ opacity: 0.6, marginLeft: 2 }}>({count})</span>
+        </span>
+      )}
+      {sessions > 0 && (
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-500)' }}>
+          {rating > 0 && '· '}{sessions} session{sessions !== 1 ? 's' : ''}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function OwnBadge({ count }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
+      letterSpacing: '0.06em', color: '#166534',
+      background: '#DCFCE7', borderRadius: 999,
+      padding: '3px 10px', marginBottom: 10, textTransform: 'uppercase',
+    }}>
+      {count > 1 ? `YOUR ${count} LISTINGS` : 'YOUR LISTING'}
+    </div>
+  );
+}
+
+function MultiListingPills({ allListings, navigate }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+      {allListings.map(l => (
+        <button
+          key={l.id}
+          onClick={e => { e.stopPropagation(); navigate(`/providers/${l.id}`); }}
+          style={{
+            padding: '5px 14px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+            border: '1px solid var(--cream-300)',
+            background: 'var(--cream-50)', color: 'var(--ink-900)',
+            cursor: 'pointer', fontFamily: 'var(--font-ui)',
+            transition: 'background .12s, border-color .12s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; e.currentTarget.style.borderColor = 'var(--ink-900)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream-50)'; e.currentTarget.style.color = 'var(--ink-900)'; e.currentTarget.style.borderColor = 'var(--cream-300)'; }}
+        >
+          {listingLabel(l)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function OwnMenu({ menuRef, menuOpen, setMenuOpen, navigate, onDelete, hasPhoto }) {
+  return (
+    <div ref={menuRef} style={{ position: 'absolute', top: hasPhoto ? 192 : 16, right: 12 }}
+      onClick={e => e.stopPropagation()}>
+      <button
+        onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+        style={{
+          background: 'rgba(251,249,246,0.9)', border: '1px solid var(--cream-200)',
+          borderRadius: 999, width: 28, height: 28, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, color: 'var(--ink-500)', fontWeight: 700, lineHeight: 1,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        }}
+      >
+        ···
+      </button>
+      {menuOpen && (
+        <div style={{
+          position: 'absolute', right: 0, top: 34,
+          background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
+          borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          minWidth: 160, zIndex: 50, overflow: 'hidden',
+        }}>
           <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+            onClick={e => { e.stopPropagation(); setMenuOpen(false); navigate('/dashboard/provider?tab=availability'); }}
             style={{
-              background: 'rgba(255,255,255,0.9)', border: '1px solid var(--border)',
-              borderRadius: 999, width: 28, height: 28, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, color: 'var(--muted)', fontWeight: 700, lineHeight: 1,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '10px 16px', background: 'none', border: 'none',
+              fontSize: 13, color: 'var(--ink-900)', cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
             }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--cream-100)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
           >
-            ···
+            Edit listing
           </button>
-          {menuOpen && (
-            <div style={{
-              position: 'absolute', right: 0, top: 34,
-              background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              minWidth: 160, zIndex: 50, overflow: 'hidden',
-            }}>
-              <button
-                onClick={e => { e.stopPropagation(); setMenuOpen(false); navigate('/dashboard/provider?tab=availability'); }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 16px', background: 'none', border: 'none',
-                  fontSize: 13, color: 'var(--text)', cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                Edit listing
-              </button>
-              <button
-                onClick={e => {
-                  e.stopPropagation(); setMenuOpen(false);
-                  if (onDelete) onDelete();
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 16px', background: 'none', border: 'none',
-                  fontSize: 13, color: '#DC2626', cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
-                  borderTop: '1px solid var(--border)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                Delete listing
-              </button>
-            </div>
-          )}
+          <button
+            onClick={e => {
+              e.stopPropagation(); setMenuOpen(false);
+              if (onDelete) onDelete();
+            }}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '10px 16px', background: 'none', border: 'none',
+              fontSize: 13, color: 'var(--danger)', cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+              borderTop: '1px solid var(--cream-200)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
+            Delete listing
+          </button>
         </div>
       )}
     </div>

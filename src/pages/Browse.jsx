@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,6 @@ const BASE_FILTERS = [
   { id: 'hebrew tutor', label: 'Hebrew' },
 ];
 
-// Categories that support subcategory drilling
 const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness']);
 
 export default function Browse() {
@@ -26,16 +25,15 @@ export default function Browse() {
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
   const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
   const [customCats, setCustomCats] = useState([]);
-  const [subcats, setSubcats] = useState([]); // available subcategories for current parent
+  const [subcats, setSubcats] = useState([]);
+  const debounceRef = useRef(null);
 
-  // Fetch live custom categories once on mount
   useEffect(() => {
     api.get('/providers/categories')
       .then(({ data }) => setCustomCats(data))
       .catch(() => {});
   }, []);
 
-  // Fetch subcategories whenever parent category changes
   useEffect(() => {
     setSubcategory('all');
     if (!SUBCATEGORY_PARENT.has(category)) { setSubcats([]); return; }
@@ -45,6 +43,13 @@ export default function Browse() {
   }, [category]);
 
   useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType]);
+
+  // Search-on-type with debounce
+  function handleSearchInput(val) {
+    setSearch(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchProviders(val), 200);
+  }
 
   async function fetchProviders(searchVal) {
     setLoading(true);
@@ -79,11 +84,6 @@ export default function Browse() {
   function handleSearch(e) {
     e.preventDefault();
     fetchProviders(search);
-    const p = {};
-    if (search) p.search = search;
-    if (category !== 'all') p.category = category;
-    if (sort !== 'rating') p.sort = sort;
-    setSearchParams(p);
   }
 
   function handleCategory(cat) {
@@ -121,64 +121,124 @@ export default function Browse() {
     setSearchParams(p);
   }
 
-  return (
-    <div className="page" style={{ paddingTop: 40 }}>
+  // Group listings by user
+  const grouped = [];
+  const seen = new Set();
+  for (const p of providers) {
+    if (!seen.has(p.user_id)) {
+      seen.add(p.user_id);
+      grouped.push({ ...p, allListings: providers.filter(q => q.user_id === p.user_id) });
+    }
+  }
 
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
+  const allFilters = [...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))];
+
+  return (
+    <div className="page" style={{ paddingTop: 56 }}>
+
+      {/* ── Hero typography ── */}
+      <div style={{ marginBottom: 48 }} className="fade-up">
         <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6,
+          fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+          fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 600,
+          color: 'var(--ink-900)', lineHeight: 1.05,
+          letterSpacing: '-0.02em', marginBottom: 12,
         }}>
-          Browse listings
+          What are you looking for?
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--muted)' }}>Services offered by students in your community.</p>
+        <p style={{
+          fontFamily: 'var(--font-ui)', fontSize: 18, fontWeight: 400,
+          color: 'var(--ink-500)',
+        }}>
+          {grouped.length} student{grouped.length !== 1 ? 's' : ''}. {providers.length} service{providers.length !== 1 ? 's' : ''}. Campus, now.
+        </p>
       </div>
 
-      {/* Search + Sort row */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={handleSearch} style={{ flex: 1, minWidth: 240 }}>
-          <div style={{
-            display: 'flex', background: '#fff',
-            borderRadius: 8, overflow: 'hidden',
-            border: '1px solid var(--border)',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            maxWidth: 480,
-          }}>
-            <input
-              type="text"
-              placeholder="Search by name or description..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                flex: 1, border: 'none', padding: '11px 20px',
-                fontSize: 13, outline: 'none', background: 'transparent', color: 'var(--text)',
-                fontFamily: 'var(--font-ui)',
-              }}
-            />
-            <button type="submit" style={{
-              background: 'var(--primary)', color: '#fff', border: 'none',
-              padding: '0 20px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
-              fontFamily: 'var(--font-ui)',
-            }}>
-              Search
-            </button>
+      {/* ── Search + filter bar ── */}
+      <div style={{ marginBottom: 28 }} className="fade-up-delay">
+        <form onSubmit={handleSearch} style={{
+          display: 'flex', alignItems: 'center',
+          background: 'var(--cream-50)', border: '1px solid var(--cream-300)',
+          borderRadius: 12, height: 56, overflow: 'hidden',
+          maxWidth: 680,
+        }}>
+          {/* Search icon */}
+          <div style={{ padding: '0 0 0 18px', display: 'flex', alignItems: 'center', color: 'var(--ink-500)', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Try 'excel tutor' or 'barber near campus'"
+            value={search}
+            onChange={e => handleSearchInput(e.target.value)}
+            style={{
+              flex: 1, border: 'none', padding: '0 16px', height: '100%',
+              fontSize: 14, outline: 'none', background: 'transparent',
+              color: 'var(--ink-900)', fontFamily: 'var(--font-ui)',
+            }}
+          />
+          {/* Vertical divider */}
+          <div style={{ width: 1, height: 28, background: 'var(--cream-300)', flexShrink: 0 }} />
+          {/* Format filter inline */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '0 8px', flexShrink: 0 }}>
+            {[
+              { id: 'all', label: 'Any' },
+              { id: 'in-person', label: 'In-Person' },
+              { id: 'zoom', label: 'Zoom' },
+            ].map(({ id, label }) => {
+              const active = sessionType === id;
+              return (
+                <button key={id} type="button" onClick={() => handleSessionType(id)} style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  border: 'none',
+                  background: active ? 'var(--ink-900)' : 'transparent',
+                  color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                  cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                }}>
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </form>
+      </div>
 
-        {/* Sort pills */}
-        <div style={{ display: 'flex', gap: 6 }}>
+      {/* ── Category pills + sort ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: subcats.length > 0 ? 14 : 32, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {allFilters.map(({ id, label }) => {
+            const active = category === id;
+            return (
+              <button key={id} onClick={() => handleCategory(id)} style={{
+                padding: '7px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--ink-900)' : 'var(--cream-50)',
+                color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                cursor: 'pointer', transition: 'all .15s',
+                fontFamily: 'var(--font-ui)',
+              }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort — editorial text buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {[
             { id: 'rating', label: 'Top Rated' },
             { id: 'newest', label: 'Newest' },
-            { id: 'price_asc', label: 'Price: Low' },
+            { id: 'price_asc', label: 'Price ↑' },
           ].map(s => (
             <button key={s.id} onClick={() => handleSort(s.id)} style={{
-              padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-              border: `1px solid ${sort === s.id ? 'var(--primary)' : 'var(--border)'}`,
-              background: sort === s.id ? 'var(--primary)' : 'var(--card)',
-              color: sort === s.id ? '#fff' : 'var(--muted)',
-              cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+              border: 'none',
+              background: sort === s.id ? 'var(--cream-100)' : 'transparent',
+              color: sort === s.id ? 'var(--ink-900)' : 'var(--ink-500)',
+              cursor: 'pointer', fontFamily: 'var(--font-ui)',
+              transition: 'all .15s',
             }}>
               {s.label}
             </button>
@@ -186,53 +246,10 @@ export default function Browse() {
         </div>
       </div>
 
-      {/* Session type filter */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginRight: 4 }}>Format</span>
-        {[
-          { id: 'all',       label: 'All',       emoji: '·' },
-          { id: 'in-person', label: 'In-Person',  emoji: '📍' },
-          { id: 'zoom',      label: 'Zoom',       emoji: '💻' },
-        ].map(({ id, label, emoji }) => {
-          const active = sessionType === id;
-          return (
-            <button key={id} onClick={() => handleSessionType(id)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-              border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-              background: active ? 'var(--primary)' : 'var(--card)',
-              color: active ? '#fff' : 'var(--muted)',
-              cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              {id !== 'all' && <span>{emoji}</span>}{label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Pill filters — base categories + any live custom categories */}
-      <div className="pill-row" style={{ marginBottom: subcats.length > 0 ? 12 : 32 }}>
-        {[...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))].map(({ id, label }) => {
-          const active = category === id;
-          return (
-            <button key={id} onClick={() => handleCategory(id)} style={{
-              padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-              background: active ? 'var(--primary)' : 'var(--card)',
-              color: active ? '#fff' : 'var(--muted)',
-              cursor: 'pointer', transition: 'all .15s',
-              fontFamily: 'var(--font-ui)',
-            }}>
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Subcategory pills — only shown when a parent with subcategories is active */}
+      {/* ── Subcategory pills ── */}
       {subcats.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 28, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginRight: 4 }}>
+          <span className="section-label" style={{ marginRight: 4 }}>
             {category === 'tutor' ? 'Subject' : 'Activity'}
           </span>
           {[{ id: 'all', label: 'All' }, ...subcats.map(s => ({ id: s, label: s }))].map(({ id, label }) => {
@@ -240,9 +257,9 @@ export default function Browse() {
             return (
               <button key={id} onClick={() => handleSubcategory(id)} style={{
                 padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                background: active ? 'var(--primary)' : 'var(--card)',
-                color: active ? '#fff' : 'var(--muted)',
+                border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--ink-900)' : 'var(--cream-50)',
+                color: active ? 'var(--cream-50)' : 'var(--ink-500)',
                 cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
               }}>
                 {label}
@@ -252,56 +269,52 @@ export default function Browse() {
         </div>
       )}
 
-      {/* Results */}
+      {/* ── Results ── */}
       {loading ? (
         <div className="provider-grid">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="card" style={{ padding: '20px', height: 180 }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#F1F5F9', marginBottom: 14 }} />
-              <div style={{ height: 13, background: '#F1F5F9', borderRadius: 6, width: '55%', marginBottom: 10 }} />
-              <div style={{ height: 11, background: '#F1F5F9', borderRadius: 6, width: '35%', marginBottom: 8 }} />
-              <div style={{ height: 11, background: '#F1F5F9', borderRadius: 6, width: '80%' }} />
+            <div key={i} style={{
+              background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
+              borderRadius: 16, padding: 24, height: 220,
+            }}>
+              <div style={{ width: '30%', height: 11, background: 'var(--cream-200)', borderRadius: 6, marginBottom: 14 }} />
+              <div style={{ width: '70%', height: 22, background: 'var(--cream-200)', borderRadius: 8, marginBottom: 12 }} />
+              <div style={{ width: '100%', height: 13, background: 'var(--cream-200)', borderRadius: 6, marginBottom: 8 }} />
+              <div style={{ width: '60%', height: 13, background: 'var(--cream-200)', borderRadius: 6, marginBottom: 24 }} />
+              <div style={{ height: 1, background: 'var(--cream-200)', marginBottom: 18 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--cream-200)' }} />
+                  <div style={{ width: 60, height: 12, background: 'var(--cream-200)', borderRadius: 6 }} />
+                </div>
+                <div style={{ width: 40, height: 18, background: 'var(--cream-200)', borderRadius: 6 }} />
+              </div>
             </div>
           ))}
         </div>
-      ) : providers.length === 0 ? (
+      ) : grouped.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+            fontSize: 28, fontWeight: 600, color: 'var(--ink-900)', marginBottom: 10,
+          }}>
             Nothing here yet.
           </div>
-          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Try a different search or category.</div>
+          <div style={{ fontSize: 15, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)' }}>
+            Try a different search or category.
+          </div>
         </div>
       ) : (
-        <>
-          {(() => {
-            // Group listings by user — first occurrence is the primary (best-sorted) listing
-            const grouped = [];
-            const seen = new Set();
-            for (const p of providers) {
-              if (!seen.has(p.user_id)) {
-                seen.add(p.user_id);
-                grouped.push({ ...p, allListings: providers.filter(q => q.user_id === p.user_id) });
-              }
-            }
-            return (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, fontWeight: 500 }}>
-                  {grouped.length} {grouped.length === 1 ? 'person' : 'people'}
-                </div>
-                <div className="provider-grid">
-                  {grouped.map(p => (
-                    <ProviderCard
-                      key={p.user_id}
-                      provider={p}
-                      isOwn={!!user && user.id === p.user_id}
-                      onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
-                    />
-                  ))}
-                </div>
-              </>
-            );
-          })()}
-        </>
+        <div className="provider-grid">
+          {grouped.map(p => (
+            <ProviderCard
+              key={p.user_id}
+              provider={p}
+              isOwn={!!user && user.id === p.user_id}
+              onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

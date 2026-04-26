@@ -5,27 +5,29 @@ import { storeImage } from '../storage.js';
 
 /**
  * Returns true if requesterId is allowed to see zelle/venmo for providerUserId.
- * Criteria: own profile, OR accepted connection, OR confirmed/completed booking.
+ * Gate: own profile, OR a confirmed/completed booking between them (either direction).
  */
 function canSeePayment(requesterId, providerUserId) {
   if (!requesterId) return false;
   if (requesterId === providerUserId) return true;
 
-  const conn = db.prepare(`
-    SELECT 1 FROM connections
-    WHERE status = 'accepted'
-      AND ((requester_id = ? AND receiver_id = ?) OR (requester_id = ? AND receiver_id = ?))
-    LIMIT 1
-  `).get(requesterId, providerUserId, providerUserId, requesterId);
-  if (conn) return true;
-
-  const booking = db.prepare(`
+  // Student booked with this provider and provider confirmed
+  const asStudent = db.prepare(`
     SELECT 1 FROM bookings b
     JOIN provider_profiles pp ON pp.id = b.provider_id
     WHERE b.student_id = ? AND pp.user_id = ? AND b.status IN ('confirmed', 'completed')
     LIMIT 1
   `).get(requesterId, providerUserId);
-  return !!booking;
+  if (asStudent) return true;
+
+  // Provider booked with this user as student and it was confirmed
+  const asProvider = db.prepare(`
+    SELECT 1 FROM bookings b
+    JOIN provider_profiles pp ON pp.id = b.provider_id
+    WHERE b.student_id = ? AND pp.user_id = ? AND b.status IN ('confirmed', 'completed')
+    LIMIT 1
+  `).get(providerUserId, requesterId);
+  return !!asProvider;
 }
 
 function redactPayment(provider, requesterId) {
