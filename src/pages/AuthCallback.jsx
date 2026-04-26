@@ -39,11 +39,12 @@ export default function AuthCallback() {
       const decoded = parseJwt(token);
       await loginWithToken(token, decoded ? { ...decoded } : null, { skipMe: true });
 
-      // Fetch full user to check for phone (this is the single /auth/me call)
+      // Fetch full user — only prompt phone for brand-new accounts (created <60s ago)
       try {
         const { data: user } = await api.get('/auth/me');
         const destination = next || (user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
-        if (!user.phone) {
+        const isNew = user.created_at && (Date.now() - new Date(user.created_at).getTime() < 60000);
+        if (!user.phone && isNew) {
           setDest(destination);
           setStep('phone');
         } else {

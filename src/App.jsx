@@ -15,6 +15,7 @@ import Chat from './pages/Chat';
 import People from './pages/People';
 import UserProfile from './pages/UserProfile';
 import DirectMessages from './pages/DirectMessages';
+import HelpWanted from './pages/HelpWanted';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
         <Route path="/people" element={<Layout><People /></Layout>} />
+        <Route path="/help-wanted" element={<Layout><HelpWanted /></Layout>} />
         <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />
         <Route path="/providers/:id" element={<Layout><ProviderProfile /></Layout>} />
         <Route

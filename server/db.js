@@ -241,6 +241,23 @@ if (!tablesLatest.includes('dm_nudge_log')) {
   `);
 }
 
+// Help Wanted — users can request services they need
+if (!tablesLatest.includes('help_wanted')) {
+  db.exec(`
+    CREATE TABLE help_wanted (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title       TEXT NOT NULL,
+      description TEXT,
+      category    TEXT,
+      budget      TEXT,
+      urgency     TEXT DEFAULT 'flexible' CHECK(urgency IN ('asap','this_week','flexible')),
+      status      TEXT DEFAULT 'open' CHECK(status IN ('open','filled','closed')),
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {

@@ -124,6 +124,7 @@ export default function Navbar() {
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
     { to: '/people', label: 'People', show: true },
+    { to: '/help-wanted', label: 'Help Wanted', show: true },
     { to: '/create-listing', label: 'Post', show: !!user },
     { to: '/messages', label: 'Messages', show: !!user, badge: unread },
     { to: '/dashboard/student', label: 'Bookings', show: !!user },

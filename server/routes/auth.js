@@ -200,6 +200,8 @@ router.get('/google/callback', async (req, res) => {
 
   let redirect = '';
   try { redirect = Buffer.from(state || '', 'base64url').toString(); } catch {}
+  // Prevent open redirect — only allow relative paths
+  if (redirect && !redirect.startsWith('/')) redirect = '';
 
   try {
     // Exchange code for access token

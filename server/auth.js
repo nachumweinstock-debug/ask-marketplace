@@ -59,7 +59,7 @@ export async function requireAuth(req, res, next) {
   const customUser = verifyToken(token);
   if (customUser) {
     // Refresh from DB so we always have up-to-date fields
-    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url, token_version FROM users WHERE id = ?').get(customUser.id);
+    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, classes_taking, gpa, user_bio, avatar_url, token_version, phone, created_at FROM users WHERE id = ?').get(customUser.id);
     if (dbUser) {
       // Reject tokens issued before the current token_version (password reset invalidation)
       if (customUser.tv !== undefined && customUser.tv < (dbUser.token_version || 1)) {

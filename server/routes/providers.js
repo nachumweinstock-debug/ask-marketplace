@@ -257,8 +257,10 @@ async function updateProfile(req, res, profile) {
       listing_image = null;
     } else if (listing_image_data_url?.startsWith('data:image/')) {
       listing_image = await storeImage(listing_image_data_url, 'listings', profile.id);
-    } else if (listing_image_data_url?.startsWith('http')) {
-      listing_image = listing_image_data_url;
+    } else if (listing_image_data_url?.startsWith('https://')) {
+      // Only allow HTTPS URLs (no javascript:, data:, or plain http)
+      try { new URL(listing_image_data_url); listing_image = listing_image_data_url; }
+      catch { /* invalid URL, ignore */ }
     }
 
     db.prepare(`

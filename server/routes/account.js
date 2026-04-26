@@ -85,9 +85,12 @@ router.put('/', requireAuth, async (req, res) => {
       userUpdates.avatar_url = stored;
     }
 
-    if (Object.keys(userUpdates).length > 0) {
-      const setClauses = Object.keys(userUpdates).map(k => `${k} = ?`).join(', ');
-      db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...Object.values(userUpdates), req.user.id);
+    // Whitelist of allowed column names (defense-in-depth against injection)
+    const ALLOWED_COLS = new Set(['name','major','classes_taking','gpa','user_bio','zelle','venmo','phone','contact_pref','avatar_url']);
+    const safeUpdates = Object.fromEntries(Object.entries(userUpdates).filter(([k]) => ALLOWED_COLS.has(k)));
+    if (Object.keys(safeUpdates).length > 0) {
+      const setClauses = Object.keys(safeUpdates).map(k => `${k} = ?`).join(', ');
+      db.prepare(`UPDATE users SET ${setClauses} WHERE id = ?`).run(...Object.values(safeUpdates), req.user.id);
     }
 
     // Sync avatar to provider_profile if changed

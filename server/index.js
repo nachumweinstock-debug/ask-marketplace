@@ -17,6 +17,7 @@ import messageRoutes from './routes/messages.js';
 import dmRoutes from './routes/dm.js';
 import peopleRoutes from './routes/people.js';
 import keysRoutes from './routes/keys.js';
+import helpWantedRoutes from './routes/helpwanted.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 
@@ -62,6 +63,15 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Tighter limiter for write-heavy endpoints (DMs, bookings, help-wanted, connections)
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15,
+  message: { error: 'Too many requests — slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Apply strict limiter only to the endpoints that are actually brute-forceable.
 // /auth/me, /auth/google/*, /auth/apple/* are intentionally excluded.
 const RATE_LIMITED_AUTH = ['/login', '/signup', '/forgot-password', '/verify-reset-code', '/reset-password'];
@@ -70,6 +80,12 @@ for (const path of RATE_LIMITED_AUTH) {
 }
 
 app.use('/api', apiLimiter);
+
+// Tighter limits on spam-prone write endpoints
+app.post('/api/dm/:userId', writeLimiter);
+app.post('/api/bookings', writeLimiter);
+app.post('/api/help-wanted', writeLimiter);
+app.post('/api/people/connections', writeLimiter);
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -97,6 +113,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/dm', dmRoutes);
 app.use('/api/people', peopleRoutes);
 app.use('/api/keys', keysRoutes);
+app.use('/api/help-wanted', helpWantedRoutes);
 
 startReminderJobs();
 
