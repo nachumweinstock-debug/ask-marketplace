@@ -57,6 +57,11 @@ export default function ProviderProfile() {
   const [bookingError, setBookingError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [reqDate, setReqDate] = useState('');
+  const [reqTime, setReqTime] = useState('');
+  const [reqMessage, setReqMessage] = useState('');
+  const [reqLoading, setReqLoading] = useState(false);
+  const [reqSuccess, setReqSuccess] = useState('');
 
   useEffect(() => {
     setOtherListings([]);
@@ -106,6 +111,27 @@ export default function ProviderProfile() {
       setBookingError(err.response?.data?.error || `Booking failed (${err.response?.status || 'network error'})`);
     } finally {
       setBookingLoading(false);
+    }
+  }
+
+  async function handleRequestTime(e) {
+    e.preventDefault();
+    if (!user) return navigate(`/signup${redirectParam}`);
+    if (!reqDate || !reqTime) { setBookingError('Pick a date and time'); return; }
+    setReqLoading(true); setBookingError(''); setReqSuccess('');
+    try {
+      await api.post('/time-requests', {
+        provider_id: parseInt(id),
+        requested_date: reqDate,
+        requested_time: reqTime,
+        message: reqMessage || undefined,
+      });
+      setReqSuccess('Request sent! They\'ll get an email notification.');
+      setReqDate(''); setReqTime(''); setReqMessage('');
+    } catch (err) {
+      setBookingError(err.response?.data?.error || 'Failed to send request');
+    } finally {
+      setReqLoading(false);
     }
   }
 
@@ -288,9 +314,54 @@ export default function ProviderProfile() {
           </div>
 
           {provider.availability.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '28px 0' }}>
-              No availability yet. Check back later.
-            </p>
+            !isOwner ? (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.5 }}>
+                  No set availability — but you can request a time and they'll be notified.
+                </p>
+                {reqSuccess ? (
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#166534' }}>
+                    {reqSuccess}
+                  </div>
+                ) : (
+                  <form onSubmit={handleRequestTime} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date</label>
+                        <input type="date" value={reqDate} onChange={e => setReqDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Time</label>
+                        <input type="time" value={reqTime} onChange={e => setReqTime(e.target.value)}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
+                        />
+                      </div>
+                    </div>
+                    <input type="text" value={reqMessage} onChange={e => setReqMessage(e.target.value)}
+                      placeholder="Add a note (optional)"
+                      maxLength={300}
+                      style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
+                    />
+                    <button type="submit" disabled={reqLoading || !reqDate || !reqTime} style={{
+                      width: '100%', background: (!reqDate || !reqTime || reqLoading) ? 'var(--cream-300)' : 'var(--blue-600)',
+                      color: (!reqDate || !reqTime || reqLoading) ? 'var(--muted)' : '#fff',
+                      border: 'none', borderRadius: 999, padding: '11px', fontSize: 13, fontWeight: 600,
+                      cursor: (!reqDate || !reqTime || reqLoading) ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--font-ui)', transition: 'background .15s',
+                    }}>
+                      {reqLoading ? 'Sending...' : 'Request This Time'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '28px 0' }}>
+                No availability set. Add slots from your dashboard so students can book.
+              </p>
+            )
           ) : (
             <>
               {/* Calendar — for real date slots */}

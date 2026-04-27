@@ -18,6 +18,7 @@ import dmRoutes from './routes/dm.js';
 import peopleRoutes from './routes/people.js';
 import keysRoutes from './routes/keys.js';
 import helpWantedRoutes from './routes/helpwanted.js';
+import timeRequestRoutes from './routes/timerequests.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 
@@ -86,6 +87,7 @@ app.post('/api/dm/:userId', writeLimiter);
 app.post('/api/bookings', writeLimiter);
 app.post('/api/help-wanted', writeLimiter);
 app.post('/api/people/connections', writeLimiter);
+app.post('/api/time-requests', writeLimiter);
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -114,6 +116,7 @@ app.use('/api/dm', dmRoutes);
 app.use('/api/people', peopleRoutes);
 app.use('/api/keys', keysRoutes);
 app.use('/api/help-wanted', helpWantedRoutes);
+app.use('/api/time-requests', timeRequestRoutes);
 
 startReminderJobs();
 

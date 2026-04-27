@@ -243,6 +243,7 @@ export default function CreateListing() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!category) { setError('Select a category first'); return; }
+    if (!bio.trim() || bio.trim().length < 20) { setError('Add a description (at least 20 characters) so people know what you offer'); return; }
     setError(''); setLoading(true);
     try {
       const { data: becomeData } = await api.post('/providers/become');
@@ -314,8 +315,8 @@ export default function CreateListing() {
                   return (
                     <button key={id} type="button" onClick={() => setCategory(id)} style={{
                       padding: '9px 20px', borderRadius: 10, border: 'none',
-                      background: active ? 'var(--ink-900)' : 'transparent',
-                      color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                      background: active ? 'var(--blue-600)' : 'transparent',
+                      color: active ? '#fff' : 'var(--ink-500)',
                       fontSize: 13, fontWeight: 500, cursor: 'pointer',
                       fontFamily: 'var(--font-ui)', transition: 'all .2s',
                     }}>
@@ -339,9 +340,9 @@ export default function CreateListing() {
                       <button key={s} type="button" onClick={() => setSubcategory(active ? '' : s)}
                         style={{
                           padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                          border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
-                          background: active ? 'var(--ink-900)' : 'var(--cream-50)',
-                          color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                          border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
+                          background: active ? 'var(--blue-600)' : 'var(--cream-50)',
+                          color: active ? '#fff' : 'var(--ink-500)',
                           cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
                         }}>
                         {s}
@@ -388,8 +389,8 @@ export default function CreateListing() {
                   return (
                     <button key={id} type="button" onClick={() => setSessionType(id)} style={{
                       padding: '9px 20px', borderRadius: 10, border: 'none',
-                      background: active ? 'var(--ink-900)' : 'transparent',
-                      color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                      background: active ? 'var(--blue-600)' : 'transparent',
+                      color: active ? '#fff' : 'var(--ink-500)',
                       fontSize: 13, fontWeight: 500, cursor: 'pointer',
                       fontFamily: 'var(--font-ui)', transition: 'all .2s',
                     }}>
@@ -410,7 +411,7 @@ export default function CreateListing() {
 
             {/* ── Bio ── */}
             <div style={{ marginBottom: 28 }}>
-              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>DESCRIPTION</label>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>DESCRIPTION <span style={{ color: 'var(--accent)' }}>*</span></label>
               <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
                 placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
                 className="input-underline"
@@ -442,9 +443,9 @@ export default function CreateListing() {
                       <button key={v} type="button" onClick={() => setPrice(String(v))}
                         style={{
                           padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                          border: `1px solid ${price === String(v) ? 'var(--ink-900)' : 'var(--cream-300)'}`,
-                          background: price === String(v) ? 'var(--ink-900)' : 'var(--cream-50)',
-                          color: price === String(v) ? 'var(--cream-50)' : 'var(--ink-700)',
+                          border: `1px solid ${price === String(v) ? 'var(--blue-600)' : 'var(--cream-300)'}`,
+                          background: price === String(v) ? 'var(--blue-600)' : 'var(--cream-50)',
+                          color: price === String(v) ? '#fff' : 'var(--ink-700)',
                           cursor: 'pointer', fontFamily: 'var(--font-mono)',
                         }}>
                         ${v}
@@ -548,16 +549,16 @@ export default function CreateListing() {
             {/* ── Submit ── */}
             <button type="submit" disabled={loading || !category} style={{
               width: '100%', height: 56,
-              background: loading || !category ? 'var(--cream-300)' : 'var(--ink-900)',
-              color: loading || !category ? 'var(--ink-500)' : 'var(--cream-50)',
+              background: loading || !category ? 'var(--cream-300)' : 'var(--blue-600)',
+              color: loading || !category ? 'var(--ink-500)' : '#fff',
               border: 'none', borderRadius: 14,
               fontSize: 18, fontWeight: 500,
               cursor: loading || !category ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
               transition: 'background .2s, color .2s',
             }}
-              onMouseEnter={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--ink-900)'; } }}
-              onMouseLeave={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; } }}
+              onMouseEnter={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = '#fff'; } }}
+              onMouseLeave={e => { if (!loading && category) { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; } }}
             >
               {loading ? 'Publishing...' : 'Post listing →'}
             </button>

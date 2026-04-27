@@ -108,8 +108,8 @@ export default function HelpWanted() {
 
         {user && (
           <button onClick={() => setShowForm(o => !o)} style={{
-            background: showForm ? 'var(--cream-100)' : 'var(--ink-900)',
-            color: showForm ? 'var(--ink-900)' : 'var(--cream-50)',
+            background: showForm ? 'var(--cream-100)' : 'var(--blue-600)',
+            color: showForm ? 'var(--ink-900)' : '#fff',
             border: showForm ? '1px solid var(--cream-300)' : 'none',
             borderRadius: 12, padding: '12px 28px',
             fontSize: 15, fontWeight: 500, cursor: 'pointer',
@@ -177,9 +177,9 @@ export default function HelpWanted() {
                   ].map(u => (
                     <button key={u.id} type="button" onClick={() => setUrgency(u.id)} style={{
                       flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 11, fontWeight: 500,
-                      border: `1px solid ${urgency === u.id ? 'var(--ink-900)' : 'var(--cream-200)'}`,
-                      background: urgency === u.id ? 'var(--ink-900)' : 'transparent',
-                      color: urgency === u.id ? 'var(--cream-50)' : 'var(--ink-500)',
+                      border: `1px solid ${urgency === u.id ? 'var(--blue-600)' : 'var(--cream-200)'}`,
+                      background: urgency === u.id ? 'var(--blue-600)' : 'transparent',
+                      color: urgency === u.id ? '#fff' : 'var(--ink-500)',
                       cursor: 'pointer', fontFamily: 'var(--font-ui)', transition: 'all .15s',
                     }}>
                       {u.label}
@@ -192,7 +192,7 @@ export default function HelpWanted() {
             {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12, fontFamily: 'var(--font-ui)' }}>{error}</div>}
 
             <button type="submit" disabled={submitting} style={{
-              background: 'var(--ink-900)', color: 'var(--cream-50)',
+              background: 'var(--blue-600)', color: '#fff',
               border: 'none', borderRadius: 12, padding: '12px 32px',
               fontSize: 15, fontWeight: 500, cursor: 'pointer',
               fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
@@ -221,9 +221,9 @@ export default function HelpWanted() {
             return (
               <button key={c.id} onClick={() => setCategory(c.id)} style={{
                 padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
-                background: active ? 'var(--ink-900)' : 'var(--cream-50)',
-                color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--blue-600)' : 'var(--cream-50)',
+                color: active ? '#fff' : 'var(--ink-500)',
                 cursor: 'pointer', fontFamily: 'var(--font-ui)', transition: 'all .15s',
               }}>
                 {c.label}
@@ -318,12 +318,12 @@ export default function HelpWanted() {
                     {!isOwn && user && (
                       <button onClick={() => navigate(`/messages/${r.user_id}`)} style={{
                         fontSize: 13, fontWeight: 500, padding: '7px 16px', borderRadius: 10,
-                        background: 'transparent', color: 'var(--ink-900)',
-                        border: '1px solid var(--ink-900)', cursor: 'pointer',
+                        background: 'transparent', color: 'var(--blue-600)',
+                        border: '1px solid var(--blue-600)', cursor: 'pointer',
                         fontFamily: 'var(--font-ui)', transition: 'all .15s',
                       }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ink-900)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--blue-600)'; }}
                       >
                         I can help
                       </button>

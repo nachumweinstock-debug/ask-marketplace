@@ -235,8 +235,8 @@ export default function DirectMessages() {
                       <div style={{
                         maxWidth: '68%', padding: '10px 16px',
                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                        background: isMe ? 'var(--ink-900)' : 'var(--cream-100)',
-                        color: isMe ? 'var(--cream-50)' : 'var(--ink-900)',
+                        background: isMe ? 'var(--blue-600)' : 'var(--cream-100)',
+                        color: isMe ? '#fff' : 'var(--ink-900)',
                         fontSize: encrypted ? 12 : 14, lineHeight: 1.5,
                         fontStyle: encrypted ? 'italic' : 'normal',
                         opacity: encrypted ? 0.5 : 1,
@@ -274,12 +274,12 @@ export default function DirectMessages() {
                   fontFamily: 'var(--font-ui)', background: '#fff', color: 'var(--ink-900)',
                   transition: 'border-color .15s',
                 }}
-                onFocus={e => e.target.style.borderColor = 'var(--ink-900)'}
+                onFocus={e => e.target.style.borderColor = 'var(--blue-600)'}
                 onBlur={e => e.target.style.borderColor = 'var(--cream-300)'}
               />
               <button type="submit" disabled={!body.trim() || sending} style={{
-                background: body.trim() && !sending ? 'var(--ink-900)' : 'var(--cream-300)',
-                color: body.trim() && !sending ? 'var(--cream-50)' : 'var(--ink-500)',
+                background: body.trim() && !sending ? 'var(--blue-600)' : 'var(--cream-300)',
+                color: body.trim() && !sending ? '#fff' : 'var(--ink-500)',
                 border: 'none', borderRadius: 12,
                 padding: '11px 22px', fontSize: 14, fontWeight: 600,
                 cursor: body.trim() && !sending ? 'pointer' : 'not-allowed',

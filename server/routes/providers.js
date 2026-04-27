@@ -244,6 +244,7 @@ async function updateProfile(req, res, profile) {
     }
     if (custom_category && custom_category.length > 50) return res.status(400).json({ error: 'Category name too long (max 50 chars)' });
     if (subcategory && subcategory.length > 60) return res.status(400).json({ error: 'Specialty too long (max 60 chars)' });
+    if (bio !== undefined && bio.trim().length < 20) return res.status(400).json({ error: 'Description required (at least 20 characters)' });
     if (bio && bio.length > 2000) return res.status(400).json({ error: 'Bio too long (max 2000 chars)' });
     if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
       return res.status(400).json({ error: 'Invalid session type' });

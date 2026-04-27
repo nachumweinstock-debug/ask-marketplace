@@ -258,6 +258,22 @@ if (!tablesLatest.includes('help_wanted')) {
   `);
 }
 
+// Time requests — users can request a specific day/time from providers without availability
+if (!tablesLatest.includes('time_requests')) {
+  db.exec(`
+    CREATE TABLE time_requests (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider_id INTEGER NOT NULL REFERENCES provider_profiles(id) ON DELETE CASCADE,
+      requested_date TEXT NOT NULL,
+      requested_time TEXT NOT NULL,
+      message     TEXT,
+      status      TEXT DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined')),
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {

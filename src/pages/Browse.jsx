@@ -193,8 +193,8 @@ export default function Browse() {
                 <button key={id} type="button" onClick={() => handleSessionType(id)} style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
                   border: 'none',
-                  background: active ? 'var(--ink-900)' : 'transparent',
-                  color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                  background: active ? 'var(--blue-600)' : 'transparent',
+                  color: active ? '#fff' : 'var(--ink-500)',
                   cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
                 }}>
                   {label}
@@ -213,9 +213,9 @@ export default function Browse() {
             return (
               <button key={id} onClick={() => handleCategory(id)} style={{
                 padding: '7px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
-                background: active ? 'var(--ink-900)' : 'var(--cream-50)',
-                color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--blue-600)' : 'var(--cream-50)',
+                color: active ? '#fff' : 'var(--ink-500)',
                 cursor: 'pointer', transition: 'all .15s',
                 fontFamily: 'var(--font-ui)',
               }}>
@@ -257,9 +257,9 @@ export default function Browse() {
             return (
               <button key={id} onClick={() => handleSubcategory(id)} style={{
                 padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                border: `1px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
-                background: active ? 'var(--ink-900)' : 'var(--cream-50)',
-                color: active ? 'var(--cream-50)' : 'var(--ink-500)',
+                border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--blue-600)' : 'var(--cream-50)',
+                color: active ? '#fff' : 'var(--ink-500)',
                 cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
               }}>
                 {label}

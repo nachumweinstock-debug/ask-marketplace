@@ -8,17 +8,19 @@
   --cream-300:  #D9D1C3;
 
   /* ── Ink palette ───────────────────────────────────────── */
-  --ink-900:    #0A0A0A;
-  --ink-700:    #2A2A28;
-  --ink-500:    #6B6B66;
+  --ink-900:    #1E293B;
+  --ink-700:    #334155;
+  --ink-500:    #64748B;
 
   /* ── Brand blue ────────────────────────────────────────── */
-  --blue-600:   #1B4FD8;
-  --blue-700:   #1540B8;
-  --blue-50:    #EEF2FF;
+  --blue-600:   #3B82F6;
+  --blue-700:   #2563EB;
+  --blue-50:    #EFF6FF;
+  --blue-100:   #DBEAFE;
+  --blue-200:   #BFDBFE;
 
-  /* ── Accent (burnt orange — use sparingly) ─────────────── */
-  --accent:     #FF5B1F;
+  /* ── Accent (warm orange — pops of energy) ─────────────── */
+  --accent:     #F97316;
 
   /* ── Semantic aliases (backwards compat) ───────────────── */
   --bg:           var(--cream-100);
@@ -188,8 +190,8 @@ body {
               transform 0.22s cubic-bezier(0.2,0.8,0.2,1);
 }
 .card:hover {
-  border-color: var(--ink-900);
-  box-shadow: 0 12px 32px -16px rgba(10,10,10,0.12);
+  border-color: var(--blue-200);
+  box-shadow: 0 12px 32px -12px rgba(59,130,246,0.12);
   transform: translateY(-2px);
 }
 
@@ -281,8 +283,8 @@ body {
   transition: all 0.2s ease;
 }
 .segmented-control button.active {
-  background: var(--ink-900);
-  color: var(--cream-50);
+  background: var(--blue-600);
+  color: #fff;
 }
 
 /* ── Input: bottom-border style ──────────────────────────── */

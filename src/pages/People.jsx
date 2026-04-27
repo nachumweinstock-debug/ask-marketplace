@@ -24,13 +24,13 @@ function MessageButton({ personId }) {
     <button onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(user ? `/messages/${personId}` : '/login'); }}
       style={{
         fontSize: 13, fontWeight: 500, padding: '7px 16px', borderRadius: 10,
-        background: 'transparent', color: 'var(--ink-900)',
-        border: '1px solid var(--ink-900)', cursor: 'pointer',
+        background: 'transparent', color: 'var(--blue-600)',
+        border: '1px solid var(--blue-600)', cursor: 'pointer',
         fontFamily: 'var(--font-ui)', flexShrink: 0,
         transition: 'all .15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ink-900)'; }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--blue-600)'; }}
     >
       Msg
     </button>
@@ -129,9 +129,9 @@ function PersonCard({ person, myClasses, onUpdate }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         background: 'var(--cream-50)',
-        border: `1px solid ${hovered ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+        border: `1px solid ${hovered ? 'var(--blue-200)' : 'var(--cream-200)'}`,
         borderRadius: 16, padding: 22,
-        boxShadow: hovered ? '0 12px 32px -16px rgba(10,10,10,0.12)' : 'none',
+        boxShadow: hovered ? '0 12px 32px -12px rgba(59,130,246,0.12)' : 'none',
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
         cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 14,
@@ -146,10 +146,10 @@ function PersonCard({ person, myClasses, onUpdate }) {
           ) : (
             <div style={{
               width: 48, height: 48, borderRadius: '50%',
-              background: 'var(--cream-100)', border: '1px solid var(--cream-300)',
+              background: 'var(--blue-50)', border: '1px solid var(--blue-200)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16,
-              color: 'var(--ink-700)',
+              color: 'var(--blue-600)',
             }}>
               {initials(person.name)}
             </div>

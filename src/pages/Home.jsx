@@ -47,14 +47,14 @@ export default function Home() {
                 <button
                   onClick={() => navigate('/browse')}
                   style={{
-                    background: 'var(--ink-900)', color: 'var(--cream-50)',
+                    background: 'var(--blue-600)', color: '#fff',
                     border: 'none', borderRadius: 12,
                     padding: '15px 32px', fontSize: 16, fontWeight: 500,
                     cursor: 'pointer', transition: 'background .2s, color .2s',
                     fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--ink-900)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; }}
                 >
                   Browse listings →
                 </button>
@@ -137,7 +137,7 @@ export default function Home() {
                   cursor: 'pointer', transition: 'all .15s',
                   fontFamily: 'var(--font-ui)',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; e.currentTarget.style.borderColor = 'var(--ink-900)'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--blue-600)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream-50)'; e.currentTarget.style.color = 'var(--ink-500)'; e.currentTarget.style.borderColor = 'var(--cream-200)'; }}
               >
                 {label}

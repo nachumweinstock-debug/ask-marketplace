@@ -53,9 +53,9 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
         style={{
           position: 'relative', cursor: 'pointer',
           background: 'var(--cream-50)',
-          border: `1px solid ${hovered ? 'var(--ink-900)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+          border: `1px solid ${hovered ? 'var(--blue-200)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
           borderRadius: 16, overflow: 'hidden',
-          boxShadow: hovered ? '0 12px 32px -16px rgba(10,10,10,0.12)' : 'none',
+          boxShadow: hovered ? '0 12px 32px -12px rgba(59,130,246,0.12)' : 'none',
           transform: hovered ? 'translateY(-2px)' : 'none',
           transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
         }}
@@ -134,15 +134,15 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
               ) : (
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
-                  background: 'var(--cream-100)', border: '1px solid var(--cream-300)',
+                  background: 'var(--blue-50)', border: '1px solid var(--blue-200)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 10,
-                  color: 'var(--ink-700)',
+                  color: 'var(--blue-600)',
                 }}>
                   {initials(provider.name)}
                 </div>
               )}
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 500, color: 'var(--ink-900)' }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 15, fontWeight: 600, color: 'var(--ink-900)' }}>
                 {provider.name}
               </span>
               <RatingBadge rating={provider.rating} count={provider.review_count} sessions={provider.completed_sessions} />
@@ -164,9 +164,9 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       style={{
         position: 'relative', cursor: 'pointer',
         background: isOwn ? '#FAFFF8' : 'var(--cream-50)',
-        border: `1px solid ${hovered ? 'var(--ink-900)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+        border: `1px solid ${hovered ? 'var(--blue-200)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
         borderRadius: 16, padding: 24, overflow: 'hidden',
-        boxShadow: hovered ? '0 12px 32px -16px rgba(10,10,10,0.12)' : 'none',
+        boxShadow: hovered ? '0 12px 32px -12px rgba(59,130,246,0.12)' : 'none',
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
       }}
@@ -312,7 +312,7 @@ function MultiListingPills({ allListings, navigate }) {
             cursor: 'pointer', fontFamily: 'var(--font-ui)',
             transition: 'background .12s, border-color .12s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; e.currentTarget.style.borderColor = 'var(--ink-900)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--blue-600)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream-50)'; e.currentTarget.style.color = 'var(--ink-900)'; e.currentTarget.style.borderColor = 'var(--cream-300)'; }}
         >
           {listingLabel(l)}

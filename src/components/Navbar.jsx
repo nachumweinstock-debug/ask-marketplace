@@ -238,14 +238,14 @@ export default function Navbar() {
                 <>
                   <NavLink to="/login" active={path === '/login'}>Log in</NavLink>
                   <Link to="/signup" style={{
-                    marginLeft: 8, background: 'var(--ink-900)', color: 'var(--cream-50)',
+                    marginLeft: 8, background: 'var(--blue-600)', color: '#fff',
                     padding: '9px 20px', borderRadius: 10,
                     fontSize: 13, fontWeight: 600, textDecoration: 'none',
                     fontFamily: 'var(--font-ui)', letterSpacing: '0.1px', flexShrink: 0,
                     transition: 'background 0.15s',
                   }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--ink-900)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--blue-600)'}
                   >
                     Sign up
                   </Link>
@@ -315,7 +315,7 @@ export default function Navbar() {
               <DrawerLink to="/login" onClick={() => setMobileOpen(false)}>Log in</DrawerLink>
               <div style={{ padding: '12px 20px' }}>
                 <Link to="/signup" onClick={() => setMobileOpen(false)} style={{
-                  display: 'block', background: 'var(--ink-900)', color: 'var(--cream-50)',
+                  display: 'block', background: 'var(--blue-600)', color: '#fff',
                   borderRadius: 10, padding: '13px 16px', textAlign: 'center',
                   fontSize: 15, fontWeight: 600, textDecoration: 'none',
                   fontFamily: 'var(--font-ui)',
