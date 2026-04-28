@@ -169,7 +169,21 @@ body {
   gap: 24px;
 }
 @media (max-width: 960px) { .provider-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
-@media (max-width: 560px) { .provider-grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
+@media (max-width: 560px) { .provider-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+
+/* ── Card image area (responsive height) ─────────────────── */
+.card-img-area { height: 200px; }
+@media (max-width: 560px) { .card-img-area { height: clamp(130px, 44vw, 180px); } }
+
+/* ── Card body padding ───────────────────────────────────── */
+.card-body-pad { padding: 14px 16px 16px; }
+@media (max-width: 560px) { .card-body-pad { padding: 10px 10px 12px; } }
+
+/* ── Mode/price pills on narrow cards ───────────────────── */
+@media (max-width: 560px) {
+  .card-mode-pill { font-size: 10px !important; padding: 2px 7px !important; }
+  .card-price { font-size: 16px !important; }
+}
 
 /* ── Shared card ─────────────────────────────────────────── */
 .card {
@@ -214,7 +228,8 @@ body {
 /* ── Touch targets ───────────────────────────────────────── */
 @media (max-width: 700px) {
   button, a { -webkit-tap-highlight-color: transparent; }
-  button { min-height: 44px; }
+  /* Only apply 44px to nav / primary CTAs, not inline pills/tags */
+  .touch-target { min-height: 44px; }
 }
 
 /* ── Utility ─────────────────────────────────────────────── */

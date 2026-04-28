@@ -134,22 +134,22 @@ export default function Browse() {
   const allFilters = [...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))];
 
   return (
-    <div className="page" style={{ paddingTop: 32 }}>
+    <div className="page" style={{ paddingTop: 24 }}>
 
       {/* ── Header row ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="browse-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{
             fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-            fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700,
+            fontSize: 'clamp(22px, 4vw, 38px)', fontWeight: 700,
             color: 'var(--text)', lineHeight: 1.05,
             letterSpacing: '-0.02em',
           }}>
             Campus marketplace
           </h1>
           {!loading && (
-            <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 4, fontFamily: 'var(--font-ui)' }}>
-              {providers.length} listing{providers.length !== 1 ? 's' : ''} from {grouped.length} student{grouped.length !== 1 ? 's' : ''}
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, fontFamily: 'var(--font-ui)' }}>
+              {providers.length} listing{providers.length !== 1 ? 's' : ''} · {grouped.length} student{grouped.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
@@ -162,7 +162,7 @@ export default function Browse() {
             { id: 'price_asc', label: 'Price ↑' },
           ].map(s => (
             <button key={s.id} onClick={() => handleSort(s.id)} style={{
-              padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
               border: 'none',
               background: sort === s.id ? '#fff' : 'transparent',
               color: sort === s.id ? 'var(--text)' : 'var(--muted)',
@@ -206,9 +206,9 @@ export default function Browse() {
       </div>
 
       {/* ── Session type filter ── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { id: 'all', label: 'Any format' },
+          { id: 'all', label: 'Any' },
           { id: 'in-person', label: 'In-person' },
           { id: 'zoom', label: 'Online' },
           { id: 'both', label: 'Both' },
@@ -216,7 +216,7 @@ export default function Browse() {
           const active = sessionType === id;
           return (
             <button key={id} onClick={() => handleSessionType(id)} style={{
-              padding: '8px 16px', borderRadius: 99, fontSize: 13, fontWeight: active ? 700 : 500,
+              padding: '7px 14px', borderRadius: 99, fontSize: 13, fontWeight: active ? 700 : 500,
               border: `1.5px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
               background: active ? 'var(--text)' : '#fff',
               color: active ? '#fff' : 'var(--text-secondary)',
@@ -269,6 +269,13 @@ export default function Browse() {
           })}
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 560px) {
+          .browse-header { align-items: flex-start; flex-direction: column; gap: 10px; }
+          .browse-header > div:last-child { align-self: flex-start; }
+        }
+      `}</style>
 
       {/* ── Results ── */}
       {loading ? (

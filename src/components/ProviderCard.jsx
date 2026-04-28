@@ -43,7 +43,7 @@ function cardGradient(category, customCategory) {
 function formatMode(sessionType) {
   if (!sessionType || sessionType === 'in-person') return 'In-person';
   if (sessionType === 'zoom') return 'Online';
-  return 'In-person & Online';
+  return 'Both';
 }
 
 export default function ProviderCard({ provider, isOwn, onDelete }) {
@@ -84,7 +84,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       }}
     >
       {/* ── Visual header ──────────────────────────────────────── */}
-      <div style={{ position: 'relative', height: 200, overflow: 'hidden', flexShrink: 0 }}>
+      <div className="card-img-area" style={{ position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
         {hasPhoto ? (
           <img
             src={provider.listing_image} alt={label}
@@ -98,11 +98,12 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           }}>
             <span style={{
               fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-              fontSize: 40, fontWeight: 700, color: 'rgba(255,255,255,0.9)',
-              textAlign: 'center', padding: '0 16px', lineHeight: 1.1,
+              fontSize: 'clamp(18px, 4.8vw, 36px)', fontWeight: 700, color: 'rgba(255,255,255,0.9)',
+              textAlign: 'center', padding: '0 12px', lineHeight: 1.1,
               textShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              overflow: 'hidden', display: '-webkit-box',
-              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              maxWidth: '100%', wordBreak: 'break-word',
+              display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>
               {label}
             </span>
@@ -116,20 +117,21 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
         }} />
 
         {/* Mode pill — bottom left */}
-        <div style={{
-          position: 'absolute', bottom: 10, left: 12,
+        <div className="card-mode-pill" style={{
+          position: 'absolute', bottom: 10, left: 10,
           fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
           color: '#fff', letterSpacing: '0.04em',
           background: 'rgba(0,0,0,0.45)',
           backdropFilter: 'blur(6px)',
-          borderRadius: 99, padding: '3px 10px',
+          borderRadius: 99, padding: '3px 9px',
+          maxWidth: 'calc(100% - 70px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {mode}
         </div>
 
         {/* Price — bottom right */}
-        <div style={{
-          position: 'absolute', bottom: 8, right: 12,
+        <div className="card-price" style={{
+          position: 'absolute', bottom: 8, right: 10,
           fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
           fontSize: 20, fontWeight: 700,
           color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)',
@@ -141,7 +143,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       </div>
 
       {/* ── Card body ──────────────────────────────────────────── */}
-      <div style={{ padding: '14px 16px 16px' }}>
+      <div className="card-body-pad">
         {/* Category tag */}
         <div style={{
           fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
@@ -182,11 +184,11 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           )
         )}
 
-        {/* Bio */}
+        {/* Bio — hidden on very small cards */}
         {provider.bio && (
-          <p style={{
-            fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--text-secondary)',
-            lineHeight: 1.5, marginBottom: 10,
+          <p className="card-bio" style={{
+            fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--text-secondary)',
+            lineHeight: 1.45, marginBottom: 8,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
             {provider.bio}
@@ -194,41 +196,32 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
         )}
 
         {/* ── Seller row ─────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: provider.bio ? 0 : 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: provider.bio ? 0 : 6 }}>
           {mediaUrl(provider.avatar_url) ? (
             <img src={mediaUrl(provider.avatar_url)} alt="" style={{
-              width: 30, height: 30, borderRadius: '50%', objectFit: 'cover',
+              width: 26, height: 26, borderRadius: '50%', objectFit: 'cover',
               border: '2px solid #fff', boxShadow: '0 0 0 1px var(--gray-200)',
               flexShrink: 0,
             }} />
           ) : (
             <div style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
               background: gradient,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 11, color: '#fff',
+              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, color: '#fff',
               border: '2px solid #fff', boxShadow: '0 0 0 1px var(--gray-200)',
             }}>
               {initials(provider.name)}
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {provider.name}
             </div>
-            {(provider.rating > 0 || provider.completed_sessions > 0) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {provider.rating > 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    <span style={{ color: '#F59E0B' }}>★</span> {provider.rating.toFixed(1)}
-                    <span style={{ opacity: 0.7 }}> ({provider.review_count})</span>
-                  </span>
-                )}
-                {provider.completed_sessions > 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    {provider.rating > 0 && '·'} {provider.completed_sessions} session{provider.completed_sessions !== 1 ? 's' : ''}
-                  </span>
-                )}
+            {provider.rating > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                <span style={{ color: '#F59E0B' }}>★</span> {provider.rating.toFixed(1)}
+                <span style={{ opacity: 0.7 }}> ({provider.review_count})</span>
               </div>
             )}
           </div>
