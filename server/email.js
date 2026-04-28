@@ -434,3 +434,22 @@ export async function sendConnectionAcceptedEmail({ toEmail, toName, fromName })
     `),
   });
 }
+
+export async function sendAdminNewUserNotification({ name, email, method = 'email' }) {
+  await send({
+    to: 'nachumweinstock@gmail.com',
+    subject: `New signup: ${name}`,
+    html: shell(`New user joined ASK`, `
+      ${header('🎉', 'New signup!', 'Someone just created an account on ASK Marketplace.')}
+      ${body(`
+        ${infoTable(
+          ['Name', name],
+          ['Email', email],
+          ['Method', method],
+          ['Time', new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })],
+        )}
+        ${btn('https://uask.live/admin', 'View admin panel')}
+      `)}
+    `),
+  });
+}

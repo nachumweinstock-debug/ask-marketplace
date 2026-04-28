@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { randomInt } from 'crypto';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
-import { sendPasswordResetCode, sendWelcomeEmail } from '../email.js';
+import { sendPasswordResetCode, sendWelcomeEmail, sendAdminNewUserNotification } from '../email.js';
 
 // Dummy hash used to prevent timing attacks when email doesn't exist
 const DUMMY_HASH = await bcrypt.hash('dummy-timing-prevention', 10);
@@ -64,6 +64,7 @@ router.post('/signup', async (req, res) => {
   sendWelcomeEmail(user.email, user.name).catch(err =>
     console.error('[AUTH] Welcome email failed:', err.message)
   );
+  sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'email' }).catch(() => {});
 
   res.json({ token, user });
 });
@@ -239,6 +240,7 @@ router.get('/google/callback', async (req, res) => {
           "INSERT INTO users (email, name, password, role, email_verified, google_id) VALUES (?, ?, '', 'student', 1, ?)"
         ).run(profile.email.toLowerCase(), profile.name || profile.email.split('@')[0], profile.id);
         user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
+        sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Google' }).catch(() => {});
       }
     }
 
@@ -340,6 +342,7 @@ router.post('/apple/callback', async (req, res) => {
         "INSERT INTO users (email, name, password, role, email_verified, apple_id) VALUES (?, ?, '', 'student', 1, ?)"
       ).run(finalEmail.toLowerCase(), finalName, appleId);
       user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
+      sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Apple' }).catch(() => {});
     }
 
     const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
