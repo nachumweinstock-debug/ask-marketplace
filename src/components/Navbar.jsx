@@ -144,22 +144,22 @@ export default function Navbar() {
       {toast && <DmToast toast={toast} onClose={() => setToast(null)} navigate={navigate} />}
 
       <nav style={{
-        background: 'var(--cream-50)',
-        borderBottom: '1px solid var(--cream-200)',
+        background: '#fff',
+        borderBottom: `1px solid ${scrolled ? 'var(--gray-200)' : 'var(--gray-100)'}`,
         position: 'sticky', top: 0, zIndex: 50,
-        boxShadow: scrolled ? 'var(--shadow-nav)' : 'none',
-        transition: 'box-shadow 0.3s ease',
+        boxShadow: scrolled ? '0 1px 0 var(--gray-200), 0 4px 16px -8px rgba(0,0,0,0.08)' : 'none',
+        transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
       }}>
         <div style={{
-          maxWidth: 1280, margin: '0 auto', padding: '0 48px',
-          height: 64, display: 'flex', alignItems: 'center',
+          maxWidth: 1200, margin: '0 auto', padding: '0 40px',
+          height: 60, display: 'flex', alignItems: 'center',
         }}>
           {/* Wordmark */}
           <Link to="/" className="ask-cursor" style={{
             textDecoration: 'none', fontFamily: 'var(--font-display)',
-            fontSize: 22, fontWeight: 600, color: 'var(--ink-900)',
-            marginRight: 40, flexShrink: 0,
-            fontOpticalSizing: 'auto',
+            fontSize: 20, fontWeight: 700, color: 'var(--text)',
+            marginRight: 36, flexShrink: 0,
+            fontOpticalSizing: 'auto', letterSpacing: '-0.02em',
           }}>
             ASK
           </Link>
@@ -183,48 +183,48 @@ export default function Navbar() {
               {user ? (
                 <div ref={dropRef} style={{ position: 'relative' }}>
                   <button onClick={() => setDropOpen(o => !o)} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                    background: dropOpen ? 'var(--cream-100)' : 'transparent',
-                    border: 'none', borderRadius: 10, cursor: 'pointer',
-                    transition: 'background .15s',
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '5px 8px',
+                    background: dropOpen ? 'var(--gray-100)' : 'transparent',
+                    border: 'none', borderRadius: 99, cursor: 'pointer',
+                    transition: 'background .12s',
                   }}
-                    onMouseEnter={e => { if (!dropOpen) e.currentTarget.style.background = 'var(--cream-100)'; }}
+                    onMouseEnter={e => { if (!dropOpen) e.currentTarget.style.background = 'var(--gray-100)'; }}
                     onMouseLeave={e => { if (!dropOpen) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div style={{
-                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                      background: 'var(--cream-100)', border: '1px solid var(--cream-300)',
+                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                      background: 'var(--gray-200)', border: '1.5px solid var(--gray-100)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       overflow: 'hidden',
-                      fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12,
-                      color: 'var(--ink-700)',
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 11,
+                      color: 'var(--gray-700)',
                     }}>
                       {mediaUrl(user.avatar_url)
                         ? <img src={mediaUrl(user.avatar_url)} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }}/>
                         : initials(user.name)}
                     </div>
                     <span style={{
-                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500,
-                      color: 'var(--ink-700)', maxWidth: 100,
+                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
+                      color: 'var(--text)', maxWidth: 90,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
                       {user.name.split(' ')[0]}
                     </span>
-                    <svg width="10" height="10" viewBox="0 0 10 10" style={{ color: 'var(--ink-500)' }}>
-                      <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    <svg width="10" height="6" viewBox="0 0 10 6" style={{ color: 'var(--muted)', flexShrink: 0 }}>
+                      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                     </svg>
                   </button>
 
                   {dropOpen && (
                     <div style={{
-                      position: 'absolute', right: 0, top: 48,
-                      background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
-                      borderRadius: 12, padding: '4px 0',
-                      minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                      position: 'absolute', right: 0, top: 46,
+                      background: '#fff', border: '1px solid var(--gray-200)',
+                      borderRadius: 14, padding: '6px 0',
+                      minWidth: 168, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                       zIndex: 100, animation: 'slideDown 0.15s ease both',
                     }}>
                       <DropItem to="/account" onClick={() => setDropOpen(false)}>My Profile</DropItem>
-                      <div style={{ height: 1, background: 'var(--cream-200)', margin: '4px 0' }}/>
+                      <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
                       <button onClick={handleSignOut} style={{
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '9px 16px', background: 'none', border: 'none',
@@ -238,14 +238,14 @@ export default function Navbar() {
                 <>
                   <NavLink to="/login" active={path === '/login'}>Log in</NavLink>
                   <Link to="/signup" style={{
-                    marginLeft: 8, background: 'var(--blue-600)', color: '#fff',
-                    padding: '9px 20px', borderRadius: 10,
+                    marginLeft: 6, background: 'var(--text)', color: '#fff',
+                    padding: '8px 18px', borderRadius: 99,
                     fontSize: 13, fontWeight: 600, textDecoration: 'none',
-                    fontFamily: 'var(--font-ui)', letterSpacing: '0.1px', flexShrink: 0,
-                    transition: 'background 0.15s',
+                    fontFamily: 'var(--font-ui)', flexShrink: 0,
+                    transition: 'opacity 0.15s',
                   }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--blue-600)'}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                   >
                     Sign up
                   </Link>
@@ -397,24 +397,23 @@ function Badge({ n, color = 'var(--accent)' }) {
 function NavLink({ to, active, admin, children }) {
   return (
     <Link to={to} style={{
-      display: 'flex', alignItems: 'center', height: '100%', padding: '0 14px',
-      fontSize: 14, fontWeight: 500, textDecoration: 'none',
+      display: 'flex', alignItems: 'center', height: '100%', padding: '0 12px',
+      fontSize: 13, fontWeight: active ? 600 : 500, textDecoration: 'none',
       whiteSpace: 'nowrap', gap: 4,
-      color: active ? 'var(--ink-900)' : 'var(--ink-700)',
+      color: active ? 'var(--text)' : 'var(--muted)',
       fontFamily: 'var(--font-ui)',
       position: 'relative',
-      transition: 'color .15s',
+      transition: 'color .12s',
       ...(admin ? { color: '#92400E', fontWeight: 600 } : {}),
     }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--ink-900)'; }}
-      onMouseLeave={e => { if (!active && !admin) e.currentTarget.style.color = 'var(--ink-700)'; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text)'; }}
+      onMouseLeave={e => { if (!active && !admin) e.currentTarget.style.color = 'var(--muted)'; }}
     >
       {children}
-      {/* Active underline in accent orange */}
       {active && (
         <span style={{
-          position: 'absolute', bottom: 0, left: 14, right: 14,
-          height: 2, background: 'var(--accent)', borderRadius: 1,
+          position: 'absolute', bottom: 0, left: 12, right: 12,
+          height: 2, background: 'var(--orange)', borderRadius: 1,
         }} />
       )}
     </Link>

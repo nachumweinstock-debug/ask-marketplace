@@ -294,60 +294,82 @@ export default function ProviderProfile() {
   }, {});
 
   return (
-    <div className="page" style={{ maxWidth: 840 }}>
+    <div className="page" style={{ maxWidth: 860 }}>
 
       {/* Back */}
-      <Link to="/browse" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none', display: 'inline-block', marginBottom: 28 }}
-        onMouseEnter={e => e.target.style.color = 'var(--text)'}
-        onMouseLeave={e => e.target.style.color = 'var(--muted)'}
+      <Link to="/browse" style={{
+        fontSize: 13, fontWeight: 500, color: 'var(--muted)', textDecoration: 'none',
+        display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 20,
+        transition: 'color .12s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
       >
-        ← Back to browse
+        ← Browse
       </Link>
 
       {/* Profile header */}
-      <div className="card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
-        {/* Listing cover image */}
-        {provider.listing_image && (
-          <img src={provider.listing_image} alt="listing cover"
-            style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
-        )}
+      <div style={{
+        background: '#fff', borderRadius: 20, marginBottom: 20, overflow: 'hidden',
+        border: '1px solid var(--gray-100)',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)',
+      }}>
+        {/* Cover image or gradient */}
+        <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
+          {provider.listing_image ? (
+            <img src={provider.listing_image} alt="listing cover"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ) : (
+            <div style={{
+              width: '100%', height: '100%',
+              background: provider.custom_category
+                ? (() => { let h = 0; for (const c of (provider.custom_category||'')) h = (h*31+c.charCodeAt(0))&0xffffffff; const hue = Math.abs(h)%360; return `linear-gradient(135deg,hsl(${hue},65%,72%),hsl(${(hue+30)%360},60%,52%))`; })()
+                : { tutor:'linear-gradient(135deg,#FDE68A,#F59E0B)', 'hebrew tutor':'linear-gradient(135deg,#A5B4FC,#4F46E5)', fitness:'linear-gradient(135deg,#6EE7B7,#059669)', barber:'linear-gradient(135deg,#FCA5A5,#DC2626)', other:'linear-gradient(135deg,#E2E8F0,#94A3B8)' }[provider.category] || 'linear-gradient(135deg,#E2E8F0,#94A3B8)',
+            }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 55%)' }} />
+        </div>
+
         {/* Owner controls */}
         {isOwner && (
           <div style={{
-            padding: '10px 20px', background: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '10px 20px', background: 'var(--gray-50)',
+            borderBottom: '1px solid var(--gray-100)',
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           }}>
-            <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1 }}>This is your listing</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1, fontWeight: 500 }}>Your listing</span>
             <ShareButton providerId={id} providerName={provider?.name} />
             <Link to="/dashboard/provider?tab=availability" style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--primary)',
+              fontSize: 12, fontWeight: 600, color: 'var(--text)',
               textDecoration: 'none', padding: '5px 14px',
-              border: '1.5px solid var(--primary)', borderRadius: 999,
+              border: '1.5px solid var(--gray-300)', borderRadius: 99,
+              fontFamily: 'var(--font-ui)',
             }}>
-              Edit listing
+              Edit
             </Link>
             <button onClick={handleDeleteListing} disabled={deleteLoading} style={{
               fontSize: 12, fontWeight: 600, color: '#DC2626', background: 'none',
-              border: '1.5px solid #FECACA', borderRadius: 999, padding: '5px 14px',
+              border: '1.5px solid #FECACA', borderRadius: 99, padding: '5px 14px',
               cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
               opacity: deleteLoading ? 0.6 : 1,
             }}>
-              {deleteLoading ? 'Deleting...' : 'Delete listing'}
+              {deleteLoading ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         )}
-      <div style={{ padding: '28px' }}>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+
+      <div style={{ padding: '24px 28px 28px' }}>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {mediaUrl(provider.avatar_url) ? (
             <img src={mediaUrl(provider.avatar_url)} alt={provider.name}
-              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }} />
+              style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '3px solid #fff', boxShadow: '0 0 0 1px var(--gray-200)', marginTop: -36 }} />
           ) : (
             <div style={{
-              width: 80, height: 80, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--accent)', color: 'var(--primary)',
+              width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg,#FDE68A,#F59E0B)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: 26, fontFamily: 'var(--font-ui)',
+              fontWeight: 700, fontSize: 24, fontFamily: 'var(--font-display)', color: '#fff',
+              border: '3px solid #fff', boxShadow: '0 0 0 1px var(--gray-200)', marginTop: -36,
             }}>
               {initials(provider.name)}
             </div>
@@ -355,7 +377,11 @@ export default function ProviderProfile() {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                <h1 style={{
+                  fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+                  fontSize: 30, fontWeight: 700, color: 'var(--text)',
+                  marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.1,
+                }}>
                   {provider.name}
                 </h1>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -364,30 +390,30 @@ export default function ProviderProfile() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 32, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
                   {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>per session</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>per session</div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               <Stars rating={Math.round(provider.rating)} />
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+              <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>
                 {provider.rating > 0 ? provider.rating.toFixed(1) : 'No reviews yet'}
               </span>
               {provider.review_count > 0 && (
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {provider.review_count} review{provider.review_count !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>({provider.review_count})</span>
               )}
               {provider.completed_sessions > 0 && (
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  · <strong style={{ color: 'var(--text)' }}>{provider.completed_sessions}</strong> session{provider.completed_sessions !== 1 ? 's' : ''} completed
+                  · {provider.completed_sessions} session{provider.completed_sessions !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             {provider.bio && (
-              <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 12, lineHeight: 1.65, maxWidth: 560 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 12, lineHeight: 1.7, maxWidth: 560 }}>
                 {provider.bio}
               </p>
             )}
@@ -395,8 +421,8 @@ export default function ProviderProfile() {
             {!isOwner && (
               <div style={{ marginTop: 16 }}>
                 <button onClick={handleMessage} style={{
-                  padding: '9px 22px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                  background: 'var(--ink-900)', color: '#fff', border: 'none',
+                  padding: '10px 24px', borderRadius: 99, fontSize: 14, fontWeight: 700,
+                  background: 'var(--text)', color: '#fff', border: 'none',
                   cursor: 'pointer', fontFamily: 'var(--font-ui)',
                   transition: 'opacity .15s',
                 }}
@@ -448,9 +474,9 @@ export default function ProviderProfile() {
       <div className="grid-3-2">
 
         {/* Availability */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 18 }}>
-            Book a Session
+        <div style={{ background: '#fff', borderRadius: 16, padding: '24px', border: '1px solid var(--gray-100)', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16, letterSpacing: '-0.01em' }}>
+            Book a session
           </div>
 
           {provider.availability.length === 0 ? (
@@ -617,8 +643,8 @@ export default function ProviderProfile() {
         </div>
 
         {/* Reviews */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 18 }}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: '24px', border: '1px solid var(--gray-100)', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16, letterSpacing: '-0.01em' }}>
             Reviews
           </div>
           {provider.reviews.length === 0 ? (
@@ -643,7 +669,7 @@ export default function ProviderProfile() {
 
         {/* Other listings by same person */}
         {otherListings.length > 0 && (
-          <div className="card" style={{ padding: '24px' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px', border: '1px solid var(--gray-100)', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05)' }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>
               Also offered by {provider.name}
             </div>
@@ -655,11 +681,11 @@ export default function ProviderProfile() {
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 14px', borderRadius: 10,
-                    border: '1px solid var(--border)', background: 'var(--bg)',
+                    border: '1px solid var(--gray-100)', background: '#fff',
                     textDecoration: 'none', transition: 'background .12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--gray-50)'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                 >
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>

@@ -215,6 +215,25 @@ if (!ppColsFinal.includes('subcategory')) {
 // Rename legacy 'tennis' category to 'fitness'
 db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
 
+// Normalize custom categories: trim whitespace + title-case
+db.prepare(`
+  UPDATE provider_profiles
+  SET custom_category = TRIM(custom_category)
+  WHERE custom_category IS NOT NULL AND custom_category != TRIM(custom_category)
+`).run();
+
+// Fix known typos in custom categories
+const CATEGORY_CORRECTIONS = [
+  ['guitar leasons', 'Guitar Lessons'],
+  ['guitar lesson',  'Guitar Lessons'],
+];
+for (const [bad, good] of CATEGORY_CORRECTIONS) {
+  db.prepare(`
+    UPDATE provider_profiles SET custom_category = ?
+    WHERE LOWER(TRIM(custom_category)) = ?
+  `).run(good, bad);
+}
+
 // Booking reminder tracking
 const bookingCols = db.pragma('table_info(bookings)').map(c => c.name);
 if (!bookingCols.includes('reminder_sent_at'))      db.exec('ALTER TABLE bookings ADD COLUMN reminder_sent_at DATETIME');
