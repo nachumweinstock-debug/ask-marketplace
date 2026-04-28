@@ -23,6 +23,7 @@ router.get('/:providerId', (req, res) => {
     JOIN provider_profiles pp ON a.provider_id = pp.id
     WHERE a.provider_id = ?
       AND a.is_booked = 0
+      AND (a.date NOT GLOB '[0-9]*' OR a.date >= date('now'))
       AND NOT EXISTS (
         SELECT 1
         FROM availability a2

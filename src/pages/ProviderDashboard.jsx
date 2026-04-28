@@ -91,7 +91,10 @@ const STATUS = {
   completed: { label: 'Completed', bg: 'var(--accent)', color: 'var(--primary)' },
   cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
 };
-const TABS = ['bookings', 'availability'];
+const TABS = [
+  { id: 'bookings',     label: 'Sessions'  },
+  { id: 'availability', label: 'Schedule'  },
+];
 
 
 export default function ProviderDashboard() {
@@ -212,7 +215,7 @@ export default function ProviderDashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
-            My Services
+            My Listings
           </h1>
           <p style={{ fontSize: 14, color: 'var(--muted)' }}>
             {displayCat} · Manage bookings and availability.
@@ -325,16 +328,16 @@ export default function ProviderDashboard() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 28 }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+        {TABS.map(({ id, label }) => (
+          <button key={id} onClick={() => setTab(id)} style={{
             padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 13.5, fontWeight: tab === t ? 600 : 400,
-            color: tab === t ? 'var(--primary)' : 'var(--muted)',
-            borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-            textTransform: 'capitalize', fontFamily: 'var(--font-ui)',
+            fontSize: 13.5, fontWeight: tab === id ? 600 : 400,
+            color: tab === id ? 'var(--primary)' : 'var(--muted)',
+            borderBottom: tab === id ? '2px solid var(--primary)' : '2px solid transparent',
+            fontFamily: 'var(--font-ui)',
             transition: 'color .15s',
           }}>
-            {t}
+            {label}
           </button>
         ))}
       </div>

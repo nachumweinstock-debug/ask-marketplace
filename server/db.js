@@ -311,6 +311,14 @@ if (!tablesLatest.includes('time_requests')) {
   `);
 }
 
+// Auto-expire past unbooked slots — runs on every boot so stale slots never pile up
+db.prepare(`
+  DELETE FROM availability
+  WHERE is_booked = 0
+    AND date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+    AND date < date('now')
+`).run();
+
 // Hardwired superadmins — grant admin on every server boot if the account exists
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 for (const email of SUPERADMINS) {

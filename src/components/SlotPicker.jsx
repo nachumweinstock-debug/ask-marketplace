@@ -126,8 +126,14 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
   );
 }
 
+const TODAY = new Date().toISOString().split('T')[0];
+function isRealDate(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }
+function isPast(d)     { return isRealDate(d) && d < TODAY; }
+
 // Slot list — shared between CreateListing and ProviderDashboard
 export function SlotList({ slots, onRemove, emptyText = 'No slots yet.' }) {
+  const [showPast, setShowPast] = useState(false);
+
   if (slots.length === 0) return (
     <div style={{
       textAlign: 'center', padding: '18px 14px', fontSize: 13, color: 'var(--muted)',
@@ -138,33 +144,82 @@ export function SlotList({ slots, onRemove, emptyText = 'No slots yet.' }) {
   );
 
   const sorted = sortSlots(slots);
+  const upcoming = sorted.filter(s => !isPast(s.date));
+  const past     = sorted.filter(s => isPast(s.date));
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
-      {sorted.map((slot, i) => (
-        <div key={slot.id ?? i} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px', background: 'var(--bg)',
-          border: '1px solid var(--border)', borderRadius: 8,
-        }}>
-          <div style={{ fontSize: 13.5, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
-            <strong style={{ fontWeight: 600 }}>{fmtDay(slot.date)}</strong>
-            <span style={{ color: 'var(--muted)', margin: '0 8px' }}>·</span>
-            {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
-            {slot.is_booked && (
-              <span style={{ marginLeft: 10, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
-                Booked
-              </span>
-            )}
-          </div>
-          {onRemove && !slot.is_booked && (
-            <button type="button" onClick={() => onRemove(slot.id ?? i)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)', padding: '2px 6px' }}>
-              Remove
-            </button>
+  function SlotRow({ slot, i, dim }) {
+    return (
+      <div key={slot.id ?? i} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', background: 'var(--bg)',
+        border: '1px solid var(--border)', borderRadius: 8,
+        opacity: dim ? 0.55 : 1,
+      }}>
+        <div style={{ fontSize: 13.5, color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
+          <strong style={{ fontWeight: 600 }}>{fmtDay(slot.date)}</strong>
+          <span style={{ color: 'var(--muted)', margin: '0 8px' }}>·</span>
+          {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+          {slot.is_booked && (
+            <span style={{ marginLeft: 10, fontSize: 11, background: '#FFF8E6', color: '#92600A', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
+              Booked
+            </span>
+          )}
+          {dim && (
+            <span style={{ marginLeft: 10, fontSize: 10, background: 'var(--gray-100)', color: 'var(--muted)', padding: '2px 7px', borderRadius: 999, fontWeight: 600 }}>
+              EXPIRED
+            </span>
           )}
         </div>
-      ))}
+        {onRemove && !slot.is_booked && (
+          <button type="button" onClick={() => onRemove(slot.id ?? i)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#DC2626', fontFamily: 'var(--font-ui)', padding: '2px 6px' }}>
+            Remove
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {upcoming.length === 0 && past.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '18px 14px', fontSize: 13, color: 'var(--muted)', border: '1.5px dashed var(--border)', borderRadius: 8 }}>
+          {emptyText}
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {upcoming.map((slot, i) => <SlotRow key={slot.id ?? i} slot={slot} i={i} dim={false} />)}
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div style={{ marginTop: upcoming.length > 0 ? 16 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button type="button" onClick={() => setShowPast(p => !p)} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.06em',
+              textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'var(--font-ui)',
+            }}>
+              {showPast ? '▾' : '▸'} {past.length} expired slot{past.length !== 1 ? 's' : ''}
+            </button>
+            {onRemove && showPast && (
+              <button type="button"
+                onClick={() => { if (confirm('Remove all expired slots?')) past.filter(s => !s.is_booked).forEach(s => onRemove(s.id)); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#DC2626', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>
+                Clear all
+              </button>
+            )}
+          </div>
+          {showPast && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {past.map((slot, i) => <SlotRow key={slot.id ?? i} slot={slot} i={i} dim={true} />)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
