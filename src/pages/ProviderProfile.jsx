@@ -6,10 +6,11 @@ import { mediaUrl } from '../lib/media';
 import { fmtTime, fmtDay, DAYS } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 import MiniCalendar from '../components/MiniCalendar';
+import { providerUrl, parseProviderSlug } from '../lib/providerUrl';
 
-function ShareButton({ providerId }) {
+function ShareButton({ providerId, providerName }) {
   const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}/providers/${providerId}`;
+  const url = `${window.location.origin}${providerUrl(providerName, providerId)}`;
   function handleCopy() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -44,8 +45,142 @@ function Stars({ rating }) {
   );
 }
 
+const TIME_SLOTS = [
+  '7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM',
+  '10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM',
+  '1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM',
+  '4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM','6:30 PM',
+  '7:00 PM','7:30 PM','8:00 PM','8:30 PM','9:00 PM',
+];
+
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function TimeRequestPicker({ reqDate, setReqDate, reqTime, setReqTime, reqMessage, setReqMessage, reqLoading, reqDayOffset, setReqDayOffset, onSubmit }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  function toISODate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function timeToValue(label) {
+    const [time, ampm] = label.split(' ');
+    let [h, m] = time.split(':').map(Number);
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+
+  const visibleDays = days.slice(reqDayOffset, reqDayOffset + 7);
+  const canNext = reqDayOffset + 7 < days.length;
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Day strip */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Pick a day</span>
+          <div style={{ display: 'flex', gap: 2 }}>
+            <button type="button" onClick={() => setReqDayOffset(o => Math.max(0, o - 7))}
+              disabled={reqDayOffset === 0}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 24, height: 24, cursor: reqDayOffset === 0 ? 'not-allowed' : 'pointer', opacity: reqDayOffset === 0 ? 0.3 : 1, fontSize: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ‹
+            </button>
+            <button type="button" onClick={() => setReqDayOffset(o => o + 7)}
+              disabled={!canNext}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 24, height: 24, cursor: !canNext ? 'not-allowed' : 'pointer', opacity: !canNext ? 0.3 : 1, fontSize: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ›
+            </button>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+          {visibleDays.map(d => {
+            const iso = toISODate(d);
+            const active = reqDate === iso;
+            const isToday = d.getTime() === today.getTime();
+            return (
+              <button key={iso} type="button" onClick={() => { setReqDate(iso); setReqTime(''); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '6px 2px', borderRadius: 8,
+                  border: `1.5px solid ${active ? 'var(--ink-900)' : 'var(--border)'}`,
+                  background: active ? 'var(--ink-900)' : 'var(--card)',
+                  color: active ? '#fff' : 'var(--text)',
+                  cursor: 'pointer', transition: 'all .12s',
+                  fontFamily: 'var(--font-ui)',
+                }}>
+                <span style={{ fontSize: 9, fontWeight: 600, opacity: active ? 0.7 : 0.5, letterSpacing: '0.04em' }}>
+                  {isToday ? 'TODAY' : DAY_LABELS[d.getDay()]}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{d.getDate()}</span>
+                <span style={{ fontSize: 9, opacity: active ? 0.6 : 0.4 }}>{MONTH_SHORT[d.getMonth()]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Time grid */}
+      {reqDate && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Pick a time</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
+            {TIME_SLOTS.map(label => {
+              const val = timeToValue(label);
+              const active = reqTime === val;
+              return (
+                <button key={label} type="button" onClick={() => setReqTime(active ? '' : val)}
+                  style={{
+                    padding: '7px 4px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+                    border: `1.5px solid ${active ? 'var(--ink-900)' : 'var(--border)'}`,
+                    background: active ? 'var(--ink-900)' : 'var(--card)',
+                    color: active ? '#fff' : 'var(--text)',
+                    cursor: 'pointer', transition: 'all .1s', fontFamily: 'var(--font-ui)',
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Note */}
+      <textarea value={reqMessage} onChange={e => setReqMessage(e.target.value)}
+        placeholder="Add a note (optional)"
+        maxLength={300} rows={2}
+        style={{
+          padding: '9px 12px', borderRadius: 10,
+          border: '1px solid var(--border)', fontSize: 13,
+          fontFamily: 'var(--font-ui)', background: 'var(--card)',
+          resize: 'none', outline: 'none', color: 'var(--text)',
+          lineHeight: 1.5,
+        }}
+      />
+
+      <button type="submit" disabled={reqLoading || !reqDate || !reqTime} style={{
+        width: '100%',
+        background: (!reqDate || !reqTime || reqLoading) ? 'var(--cream-200)' : 'var(--ink-900)',
+        color: (!reqDate || !reqTime || reqLoading) ? 'var(--muted)' : '#fff',
+        border: 'none', borderRadius: 10, padding: '12px', fontSize: 13, fontWeight: 600,
+        cursor: (!reqDate || !reqTime || reqLoading) ? 'not-allowed' : 'pointer',
+        fontFamily: 'var(--font-ui)', transition: 'background .15s',
+      }}>
+        {reqLoading ? 'Sending…' : (reqDate && reqTime) ? `Request ${new Date(reqDate + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${TIME_SLOTS.find(t => timeToValue(t) === reqTime) || reqTime}` : 'Select a day & time'}
+      </button>
+    </form>
+  );
+}
+
 export default function ProviderProfile() {
-  const { id } = useParams();
+  const { id: rawId, providerSlug } = useParams();
+  const id = rawId ?? String(parseProviderSlug(providerSlug ?? ''));
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [provider, setProvider] = useState(null);
@@ -62,6 +197,7 @@ export default function ProviderProfile() {
   const [reqMessage, setReqMessage] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
   const [reqSuccess, setReqSuccess] = useState('');
+  const [reqDayOffset, setReqDayOffset] = useState(0);
 
   useEffect(() => {
     setOtherListings([]);
@@ -183,7 +319,7 @@ export default function ProviderProfile() {
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1 }}>This is your listing</span>
-            <ShareButton providerId={id} />
+            <ShareButton providerId={id} providerName={provider?.name} />
             <Link to="/dashboard/provider?tab=availability" style={{
               fontSize: 12, fontWeight: 600, color: 'var(--primary)',
               textDecoration: 'none', padding: '5px 14px',
@@ -259,10 +395,14 @@ export default function ProviderProfile() {
             {!isOwner && (
               <div style={{ marginTop: 16 }}>
                 <button onClick={handleMessage} style={{
-                  padding: '9px 22px', borderRadius: 999, fontSize: 13, fontWeight: 600,
-                  background: 'var(--primary)', color: '#fff', border: 'none',
+                  padding: '9px 22px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: 'var(--ink-900)', color: '#fff', border: 'none',
                   cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                }}>
+                  transition: 'opacity .15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
                   Message {provider.name.split(' ')[0]}
                 </button>
               </div>
@@ -324,37 +464,14 @@ export default function ProviderProfile() {
                     {reqSuccess}
                   </div>
                 ) : (
-                  <form onSubmit={handleRequestTime} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date</label>
-                        <input type="date" value={reqDate} onChange={e => setReqDate(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Time</label>
-                        <input type="time" value={reqTime} onChange={e => setReqTime(e.target.value)}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
-                        />
-                      </div>
-                    </div>
-                    <input type="text" value={reqMessage} onChange={e => setReqMessage(e.target.value)}
-                      placeholder="Add a note (optional)"
-                      maxLength={300}
-                      style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-ui)', background: 'var(--bg)' }}
-                    />
-                    <button type="submit" disabled={reqLoading || !reqDate || !reqTime} style={{
-                      width: '100%', background: (!reqDate || !reqTime || reqLoading) ? 'var(--cream-300)' : 'var(--blue-600)',
-                      color: (!reqDate || !reqTime || reqLoading) ? 'var(--muted)' : '#fff',
-                      border: 'none', borderRadius: 999, padding: '11px', fontSize: 13, fontWeight: 600,
-                      cursor: (!reqDate || !reqTime || reqLoading) ? 'not-allowed' : 'pointer',
-                      fontFamily: 'var(--font-ui)', transition: 'background .15s',
-                    }}>
-                      {reqLoading ? 'Sending...' : 'Request This Time'}
-                    </button>
-                  </form>
+                  <TimeRequestPicker
+                    reqDate={reqDate} setReqDate={setReqDate}
+                    reqTime={reqTime} setReqTime={setReqTime}
+                    reqMessage={reqMessage} setReqMessage={setReqMessage}
+                    reqLoading={reqLoading}
+                    reqDayOffset={reqDayOffset} setReqDayOffset={setReqDayOffset}
+                    onSubmit={handleRequestTime}
+                  />
                 )}
               </div>
             ) : (
@@ -389,8 +506,8 @@ export default function ProviderProfile() {
                             onClick={() => setBooking(booking === slot.id ? null : slot.id)}
                             style={{
                               padding: '8px 18px', borderRadius: 999, fontSize: 13, fontWeight: 500,
-                              border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
-                              background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
+                              border: `1.5px solid ${booking === slot.id ? 'var(--ink-900)' : 'var(--border)'}`,
+                              background: booking === slot.id ? 'var(--ink-900)' : 'var(--card)',
                               color: booking === slot.id ? '#fff' : 'var(--text)',
                               cursor: 'pointer', transition: 'all .15s',
                               fontFamily: 'var(--font-ui)',
@@ -429,8 +546,8 @@ export default function ProviderProfile() {
                             onClick={() => setBooking(booking === slot.id ? null : slot.id)}
                             style={{
                               padding: '7px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500,
-                              border: `1.5px solid ${booking === slot.id ? 'var(--primary)' : 'var(--border)'}`,
-                              background: booking === slot.id ? 'var(--primary)' : 'var(--card)',
+                              border: `1.5px solid ${booking === slot.id ? 'var(--ink-900)' : 'var(--border)'}`,
+                              background: booking === slot.id ? 'var(--ink-900)' : 'var(--card)',
                               color: booking === slot.id ? '#fff' : 'var(--text)',
                               cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
                             }}>
@@ -460,11 +577,12 @@ export default function ProviderProfile() {
             <button onClick={handleBook} disabled={!booking || bookingLoading}
               style={{
                 marginTop: 20, width: '100%',
-                background: !booking || bookingLoading ? '#93C5FD' : 'var(--primary)',
-                color: '#fff', border: 'none', borderRadius: 999,
+                background: !booking || bookingLoading ? 'var(--cream-200)' : 'var(--ink-900)',
+                color: !booking || bookingLoading ? 'var(--muted)' : '#fff',
+                border: 'none', borderRadius: 10,
                 padding: '12px', fontSize: 14, fontWeight: 600,
                 cursor: !booking || bookingLoading ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-ui)', transition: 'opacity .15s',
+                fontFamily: 'var(--font-ui)', transition: 'all .15s',
               }}>
               {bookingLoading ? 'Booking...' : booking ? 'Request Booking' : 'Select a time to book'}
             </button>
@@ -472,8 +590,8 @@ export default function ProviderProfile() {
 
           {!user && (
             <div style={{
-              marginTop: 20, background: 'var(--accent)',
-              border: '1.5px solid #BFDBFE', borderRadius: 12,
+              marginTop: 20, background: 'var(--cream-100)',
+              border: '1px solid var(--cream-300)', borderRadius: 12,
               padding: '18px 20px', textAlign: 'center',
             }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
@@ -484,14 +602,14 @@ export default function ProviderProfile() {
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link to={`/signup${redirectParam}`} style={{
-                  background: 'var(--primary)', color: '#fff', textDecoration: 'none',
-                  borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
+                  background: 'var(--ink-900)', color: '#fff', textDecoration: 'none',
+                  borderRadius: 10, padding: '9px 22px', fontSize: 13, fontWeight: 600,
                   fontFamily: 'var(--font-ui)',
                 }}>Sign up free</Link>
                 <Link to={`/login${redirectParam}`} style={{
-                  background: 'none', color: 'var(--primary)', textDecoration: 'none',
-                  borderRadius: 999, padding: '9px 22px', fontSize: 13, fontWeight: 600,
-                  fontFamily: 'var(--font-ui)', border: '1.5px solid #BFDBFE',
+                  background: 'none', color: 'var(--ink-700)', textDecoration: 'none',
+                  borderRadius: 10, padding: '9px 22px', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-ui)', border: '1.5px solid var(--cream-300)',
                 }}>Log in</Link>
               </div>
             </div>
@@ -533,7 +651,7 @@ export default function ProviderProfile() {
               {otherListings.map(l => (
                 <Link
                   key={l.id}
-                  to={`/providers/${l.id}`}
+                  to={providerUrl(provider?.name, l.id)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 14px', borderRadius: 10,

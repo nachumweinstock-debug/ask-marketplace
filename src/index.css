@@ -12,7 +12,7 @@
   --ink-700:    #334155;
   --ink-500:    #64748B;
 
-  /* ── Brand blue ────────────────────────────────────────── */
+  /* ── Brand blue (secondary UI only) ───────────────────── */
   --blue-600:   #3B82F6;
   --blue-700:   #2563EB;
   --blue-50:    #EFF6FF;
@@ -22,7 +22,7 @@
   /* ── Accent (warm orange — pops of energy) ─────────────── */
   --accent:     #F97316;
 
-  /* ── Semantic aliases (backwards compat) ───────────────── */
+  /* ── Semantic aliases ──────────────────────────────────── */
   --bg:           var(--cream-100);
   --bg-elevated:  var(--cream-50);
   --card:         var(--cream-50);
@@ -31,9 +31,10 @@
   --text:         var(--ink-900);
   --text-secondary: var(--ink-700);
   --muted:        var(--ink-500);
-  --primary:      var(--blue-600);
-  --primary-hover: var(--blue-700);
-  --primary-light: var(--blue-50);
+  /* Primary is now editorial ink, not default blue */
+  --primary:      var(--ink-900);
+  --primary-hover: #000;
+  --primary-light: var(--cream-100);
   --success:      #0E8345;
   --danger:       #D03333;
   --warning:      #C77D15;
@@ -190,8 +191,8 @@ body {
               transform 0.22s cubic-bezier(0.2,0.8,0.2,1);
 }
 .card:hover {
-  border-color: var(--blue-200);
-  box-shadow: 0 12px 32px -12px rgba(59,130,246,0.12);
+  border-color: var(--cream-300);
+  box-shadow: 0 8px 28px -8px rgba(10,10,10,0.10);
   transform: translateY(-2px);
 }
 

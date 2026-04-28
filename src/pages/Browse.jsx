@@ -191,11 +191,11 @@ export default function Browse() {
               const active = sessionType === id;
               return (
                 <button key={id} type="button" onClick={() => handleSessionType(id)} style={{
-                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: active ? 600 : 500,
                   border: 'none',
-                  background: active ? 'var(--blue-600)' : 'transparent',
+                  background: active ? 'var(--ink-900)' : 'transparent',
                   color: active ? '#fff' : 'var(--ink-500)',
-                  cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                  cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
                 }}>
                   {label}
                 </button>
@@ -212,12 +212,13 @@ export default function Browse() {
             const active = category === id;
             return (
               <button key={id} onClick={() => handleCategory(id)} style={{
-                padding: '7px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
-                background: active ? 'var(--blue-600)' : 'var(--cream-50)',
-                color: active ? '#fff' : 'var(--ink-500)',
-                cursor: 'pointer', transition: 'all .15s',
+                padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: active ? 600 : 500,
+                border: `1.5px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--ink-900)' : 'transparent',
+                color: active ? '#fff' : 'var(--ink-700)',
+                cursor: 'pointer', transition: 'all .12s',
                 fontFamily: 'var(--font-ui)',
+                letterSpacing: active ? '-0.01em' : 'normal',
               }}>
                 {label}
               </button>
@@ -256,9 +257,9 @@ export default function Browse() {
             const active = subcategory === id;
             return (
               <button key={id} onClick={() => handleSubcategory(id)} style={{
-                padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                border: `1px solid ${active ? 'var(--blue-600)' : 'var(--cream-200)'}`,
-                background: active ? 'var(--blue-600)' : 'var(--cream-50)',
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: active ? 600 : 500,
+                border: `1.5px solid ${active ? 'var(--ink-900)' : 'var(--cream-200)'}`,
+                background: active ? 'var(--ink-900)' : 'transparent',
                 color: active ? '#fff' : 'var(--ink-500)',
                 cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
               }}>

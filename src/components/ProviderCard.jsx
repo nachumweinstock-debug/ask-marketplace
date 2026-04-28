@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mediaUrl } from '../lib/media';
+import { providerUrl } from '../lib/providerUrl';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -49,13 +50,13 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onClick={() => navigate(`/providers/${provider.id}`)}
+        onClick={() => navigate(providerUrl(provider.name, provider.id))}
         style={{
           position: 'relative', cursor: 'pointer',
           background: 'var(--cream-50)',
-          border: `1px solid ${hovered ? 'var(--blue-200)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+          border: `1px solid ${hovered ? 'var(--cream-300)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
           borderRadius: 16, overflow: 'hidden',
-          boxShadow: hovered ? '0 12px 32px -12px rgba(59,130,246,0.12)' : 'none',
+          boxShadow: hovered ? '0 8px 28px -8px rgba(10,10,10,0.10)' : 'none',
           transform: hovered ? 'translateY(-2px)' : 'none',
           transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
         }}
@@ -120,7 +121,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
             lineHeight: 1.55, marginBottom: 14,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
-            {provider.bio || 'No description provided.'}
+            {provider.bio}
           </p>
 
           {/* Bottom row */}
@@ -164,9 +165,9 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
       style={{
         position: 'relative', cursor: 'pointer',
         background: isOwn ? '#FAFFF8' : 'var(--cream-50)',
-        border: `1px solid ${hovered ? 'var(--blue-200)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
+        border: `1px solid ${hovered ? 'var(--cream-300)' : isOwn ? '#86EFAC' : 'var(--cream-200)'}`,
         borderRadius: 16, padding: 24, overflow: 'hidden',
-        boxShadow: hovered ? '0 12px 32px -12px rgba(59,130,246,0.12)' : 'none',
+        boxShadow: hovered ? '0 8px 28px -8px rgba(10,10,10,0.10)' : 'none',
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'box-shadow .22s cubic-bezier(0.2,0.8,0.2,1), transform .22s cubic-bezier(0.2,0.8,0.2,1), border-color .22s cubic-bezier(0.2,0.8,0.2,1)',
       }}
@@ -247,7 +248,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
         {/* Price */}
         <div style={{
           fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: 20,
-          color: hovered ? 'var(--accent)' : 'var(--ink-900)',
+          color: 'var(--ink-900)',
           transition: 'color .22s cubic-bezier(0.2,0.8,0.2,1)',
           display: 'flex', alignItems: 'baseline', gap: 3,
         }}>
@@ -304,7 +305,7 @@ function MultiListingPills({ allListings, navigate }) {
       {allListings.map(l => (
         <button
           key={l.id}
-          onClick={e => { e.stopPropagation(); navigate(`/providers/${l.id}`); }}
+          onClick={e => { e.stopPropagation(); navigate(providerUrl(l.name || provider.name, l.id)); }}
           style={{
             padding: '5px 14px', borderRadius: 999, fontSize: 13, fontWeight: 500,
             border: '1px solid var(--cream-300)',

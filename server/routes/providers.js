@@ -62,10 +62,12 @@ router.get('/price-stats', (req, res) => {
 
 // GET /providers/categories
 router.get('/categories', (req, res) => {
+  // Group case-insensitively, return the most recently-created spelling for each group
   const rows = db.prepare(`
-    SELECT DISTINCT custom_category FROM provider_profiles
+    SELECT custom_category FROM provider_profiles
     WHERE custom_category IS NOT NULL AND custom_category != ''
-    ORDER BY custom_category
+    GROUP BY LOWER(TRIM(custom_category))
+    ORDER BY LOWER(TRIM(custom_category))
   `).all();
   res.json(rows.map(r => r.custom_category));
 });
@@ -142,7 +144,7 @@ router.get('/', (req, res) => {
       query += ' AND pp.category = ?';
       params.push(category);
     } else {
-      query += ' AND pp.custom_category = ?';
+      query += ' AND LOWER(TRIM(pp.custom_category)) = LOWER(TRIM(?))';
       params.push(category);
     }
   }
@@ -242,7 +244,11 @@ async function updateProfile(req, res, profile) {
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
-    if (custom_category && custom_category.length > 50) return res.status(400).json({ error: 'Category name too long (max 50 chars)' });
+    // Normalize: trim + title-case so "guitar lessons" / "Guitar Leasons" don't fork
+    const normalizedCustom = custom_category !== undefined
+      ? (custom_category?.trim().replace(/\b\w/g, c => c.toUpperCase()) || null)
+      : undefined;
+    if (normalizedCustom && normalizedCustom.length > 50) return res.status(400).json({ error: 'Category name too long (max 50 chars)' });
     if (subcategory && subcategory.length > 60) return res.status(400).json({ error: 'Specialty too long (max 60 chars)' });
     if (bio !== undefined && bio.trim().length < 20) return res.status(400).json({ error: 'Description required (at least 20 characters)' });
     if (bio && bio.length > 2000) return res.status(400).json({ error: 'Bio too long (max 2000 chars)' });
@@ -275,7 +281,7 @@ async function updateProfile(req, res, profile) {
       price_per_session ?? profile.price_per_session,
       zelle ?? profile.zelle,
       venmo ?? profile.venmo,
-      custom_category !== undefined ? custom_category : profile.custom_category,
+      normalizedCustom !== undefined ? normalizedCustom : profile.custom_category,
       subcategory !== undefined ? subcategory : profile.subcategory,
       listing_image,
       session_type ?? profile.session_type ?? 'in-person',

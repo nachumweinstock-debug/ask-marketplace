@@ -127,6 +127,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        {/* Pretty URLs: /sacha-feit-7 → ProviderProfile (ID parsed from slug) */}
+        <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
