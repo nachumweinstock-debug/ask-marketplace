@@ -213,6 +213,9 @@ export default function CreateListing() {
   const [zelle, setZelle] = useState('');
   const [venmo, setVenmo] = useState('');
   const [listingImage, setListingImage] = useState(null);
+  const [college, setCollege] = useState('');
+  const [allowGroup, setAllowGroup] = useState(false);
+  const [maxGroupSize, setMaxGroupSize] = useState(4);
   const [slots, setSlots] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -257,6 +260,9 @@ export default function CreateListing() {
         price_per_session: price || 0,
         zelle,
         venmo,
+        college: ['in-person', 'both'].includes(sessionType) ? college : '',
+        allow_group: allowGroup,
+        max_group_size: allowGroup ? maxGroupSize : 1,
         ...(listingImage ? { listing_image_data_url: listingImage } : {}),
       });
 
@@ -399,6 +405,65 @@ export default function CreateListing() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* ── College (in-person) ── */}
+            {['in-person', 'both'].includes(sessionType) && (
+              <div style={{ marginBottom: 28 }}>
+                <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>CAMPUS / COLLEGE</label>
+                <input value={college} onChange={e => setCollege(e.target.value)}
+                  placeholder="e.g. Yeshiva University, NYU, Fordham..."
+                  className="input-underline"
+                />
+                <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 8, fontFamily: 'var(--font-ui)' }}>
+                  So students know where to meet you in person.
+                </div>
+              </div>
+            )}
+
+            {/* ── Group bookings ── */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>GROUP SESSIONS</label>
+              <button type="button" onClick={() => setAllowGroup(g => !g)} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              }}>
+                <div style={{
+                  width: 40, height: 22, borderRadius: 99,
+                  background: allowGroup ? 'var(--blue-600)' : 'var(--cream-300)',
+                  position: 'relative', transition: 'background .2s',
+                  flexShrink: 0,
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 2, transition: 'left .2s',
+                    left: allowGroup ? 20 : 2,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--ink-700)', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>
+                  Allow multiple people to book this slot together
+                </span>
+              </button>
+
+              {allowGroup && (
+                <div style={{ marginTop: 14, paddingLeft: 50 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>
+                    Max group size (including the booker)
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[2, 3, 4, 5, 6, 8, 10].map(n => (
+                      <button key={n} type="button" onClick={() => setMaxGroupSize(n)} style={{
+                        width: 38, height: 38, borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        border: `1.5px solid ${maxGroupSize === n ? 'var(--blue-600)' : 'var(--cream-300)'}`,
+                        background: maxGroupSize === n ? 'var(--blue-600)' : 'var(--cream-50)',
+                        color: maxGroupSize === n ? '#fff' : 'var(--ink-700)',
+                        cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                      }}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Cover photo ── */}

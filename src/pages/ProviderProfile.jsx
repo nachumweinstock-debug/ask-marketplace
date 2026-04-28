@@ -7,6 +7,7 @@ import { fmtTime, fmtDay, DAYS } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 import MiniCalendar from '../components/MiniCalendar';
 import { providerUrl, parseProviderSlug } from '../lib/providerUrl';
+import GroupInvitePicker from '../components/GroupInvitePicker';
 
 function ShareButton({ providerId, providerName }) {
   const [copied, setCopied] = useState(false);
@@ -198,6 +199,8 @@ export default function ProviderProfile() {
   const [reqLoading, setReqLoading] = useState(false);
   const [reqSuccess, setReqSuccess] = useState('');
   const [reqDayOffset, setReqDayOffset] = useState(0);
+  const [groupMode, setGroupMode] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState([]);
 
   useEffect(() => {
     setOtherListings([]);
@@ -238,10 +241,15 @@ export default function ProviderProfile() {
     if (!booking) return setBookingError('Please select a time slot.');
     setBookingLoading(true); setBookingError(''); setBookingSuccess('');
     try {
-      await api.post('/bookings', { availability_id: booking });
-      setBookingSuccess('Booking requested! Check your dashboard.');
+      await api.post('/bookings', {
+        availability_id: booking,
+        ...(groupMode && invitedUsers.length > 0 ? { group_invite_ids: invitedUsers } : {}),
+      });
+      setBookingSuccess(groupMode && invitedUsers.length > 0
+        ? `Booking requested! ${invitedUsers.length} invite${invitedUsers.length !== 1 ? 's' : ''} sent.`
+        : 'Booking requested! Check your dashboard.');
       setProvider(p => ({ ...p, availability: p.availability.filter(s => s.id !== booking) }));
-      setBooking(null);
+      setBooking(null); setGroupMode(false); setInvitedUsers([]);
     } catch (err) {
       console.error('[booking]', err.response?.status, err.response?.data);
       setBookingError(err.response?.data?.error || `Booking failed (${err.response?.status || 'network error'})`);
@@ -387,6 +395,24 @@ export default function ProviderProfile() {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <CategoryPill category={provider.category} customCategory={provider.custom_category} size="md" />
                   <SessionTypePill sessionType={provider.session_type} />
+                  {provider.college && (
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                      background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
+                      fontFamily: 'var(--font-ui)',
+                    }}>
+                      {provider.college}
+                    </span>
+                  )}
+                  {provider.allow_group && (
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                      background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                      fontFamily: 'var(--font-ui)',
+                    }}>
+                      Group sessions
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -599,10 +625,46 @@ export default function ProviderProfile() {
             </div>
           )}
 
+          {/* Group booking toggle — only when provider allows it and user selected a slot */}
+          {provider.allow_group && !isOwner && user && booking && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{
+                display: 'flex', background: 'var(--gray-100)', borderRadius: 10, padding: 3, gap: 2,
+              }}>
+                {[
+                  { id: false, label: 'Solo' },
+                  { id: true, label: `Group (up to ${provider.max_group_size})` },
+                ].map(({ id, label }) => (
+                  <button key={String(id)} type="button" onClick={() => { setGroupMode(id); if (!id) setInvitedUsers([]); }} style={{
+                    flex: 1, padding: '8px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    border: 'none',
+                    background: groupMode === id ? '#fff' : 'transparent',
+                    color: groupMode === id ? 'var(--text)' : 'var(--muted)',
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    boxShadow: groupMode === id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all .12s',
+                  }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {groupMode && (
+                <div style={{ marginTop: 12 }}>
+                  <GroupInvitePicker
+                    selected={invitedUsers}
+                    onChange={setInvitedUsers}
+                    maxGroupSize={provider.max_group_size || 6}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {provider.availability.length > 0 && (
             <button onClick={handleBook} disabled={!booking || bookingLoading}
               style={{
-                marginTop: 20, width: '100%',
+                marginTop: 16, width: '100%',
                 background: !booking || bookingLoading ? 'var(--cream-200)' : 'var(--ink-900)',
                 color: !booking || bookingLoading ? 'var(--muted)' : '#fff',
                 border: 'none', borderRadius: 10,
@@ -610,7 +672,10 @@ export default function ProviderProfile() {
                 cursor: !booking || bookingLoading ? 'not-allowed' : 'pointer',
                 fontFamily: 'var(--font-ui)', transition: 'all .15s',
               }}>
-              {bookingLoading ? 'Booking...' : booking ? 'Request Booking' : 'Select a time to book'}
+              {bookingLoading ? 'Booking...'
+                : !booking ? 'Select a time to book'
+                : groupMode ? `Request Group Booking${invitedUsers.length > 0 ? ` + ${invitedUsers.length} invite${invitedUsers.length !== 1 ? 's' : ''}` : ''}`
+                : 'Request Booking'}
             </button>
           )}
 

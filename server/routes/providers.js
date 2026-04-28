@@ -240,7 +240,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 
 async function updateProfile(req, res, profile) {
   try {
-    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, title } = req.body;
+    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, title, college, allow_group, max_group_size } = req.body;
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
@@ -273,7 +273,8 @@ async function updateProfile(req, res, profile) {
     db.prepare(`
       UPDATE provider_profiles
       SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
-          custom_category = ?, subcategory = ?, listing_image = ?, session_type = ?, title = ?
+          custom_category = ?, subcategory = ?, listing_image = ?, session_type = ?, title = ?,
+          college = ?, allow_group = ?, max_group_size = ?
       WHERE id = ?
     `).run(
       bio ?? profile.bio,
@@ -286,6 +287,9 @@ async function updateProfile(req, res, profile) {
       listing_image,
       session_type ?? profile.session_type ?? 'in-person',
       title !== undefined ? title : profile.title,
+      college !== undefined ? (college?.trim() || null) : profile.college,
+      allow_group !== undefined ? (allow_group ? 1 : 0) : profile.allow_group,
+      max_group_size !== undefined ? (parseInt(max_group_size) || 6) : profile.max_group_size,
       profile.id
     );
 

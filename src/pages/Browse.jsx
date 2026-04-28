@@ -177,7 +177,7 @@ export default function Browse() {
       </div>
 
       {/* ── Search bar ── */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 12 }}>
         <form onSubmit={handleSearch} style={{
           display: 'flex', alignItems: 'center',
           background: '#fff',
@@ -202,28 +202,31 @@ export default function Browse() {
               color: 'var(--text)', fontFamily: 'var(--font-ui)',
             }}
           />
-          <div style={{ width: 1, height: 24, background: 'var(--gray-200)', flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: '0 6px', flexShrink: 0 }}>
-            {[
-              { id: 'all', label: 'Any' },
-              { id: 'in-person', label: 'In-person' },
-              { id: 'zoom', label: 'Online' },
-            ].map(({ id, label }) => {
-              const active = sessionType === id;
-              return (
-                <button key={id} type="button" onClick={() => handleSessionType(id)} style={{
-                  padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: active ? 700 : 500,
-                  border: 'none',
-                  background: active ? 'var(--text)' : 'transparent',
-                  color: active ? '#fff' : 'var(--muted)',
-                  cursor: 'pointer', transition: 'all .1s', fontFamily: 'var(--font-ui)',
-                }}>
-                  {label}
-                </button>
-              );
-            })}
-          </div>
         </form>
+      </div>
+
+      {/* ── Session type filter ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {[
+          { id: 'all', label: 'Any format' },
+          { id: 'in-person', label: 'In-person' },
+          { id: 'zoom', label: 'Online' },
+          { id: 'both', label: 'Both' },
+        ].map(({ id, label }) => {
+          const active = sessionType === id;
+          return (
+            <button key={id} onClick={() => handleSessionType(id)} style={{
+              padding: '8px 16px', borderRadius: 99, fontSize: 13, fontWeight: active ? 700 : 500,
+              border: `1.5px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
+              background: active ? 'var(--text)' : '#fff',
+              color: active ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
+              whiteSpace: 'nowrap',
+            }}>
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Category filters ── */}

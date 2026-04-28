@@ -57,7 +57,12 @@ router.get('/notifications', requireAuth, (req, res) => {
     'SELECT COUNT(*) as n FROM direct_messages WHERE receiver_id = ? AND read_at IS NULL'
   ).get(req.user.id).n;
 
-  res.json({ pending_bookings, dm_unread, total: pending_bookings + dm_unread });
+  // Pending group invites
+  const group_invites = db.prepare(
+    "SELECT COUNT(*) as n FROM booking_group_invites WHERE invitee_id = ? AND status = 'pending'"
+  ).get(req.user.id).n;
+
+  res.json({ pending_bookings, dm_unread, group_invites, total: pending_bookings + dm_unread + group_invites });
 });
 
 router.get('/mine', requireAuth, (req, res) => {
@@ -96,7 +101,7 @@ router.get('/mine', requireAuth, (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { availability_id } = req.body;
+    const { availability_id, group_invite_ids } = req.body;
     console.log('[BOOKING] POST by user', req.user.id, 'availability_id:', availability_id, typeof availability_id);
 
     if (!availability_id) return res.status(400).json({ error: 'availability_id required' });
@@ -173,6 +178,21 @@ router.post('/', requireAuth, async (req, res) => {
       console.error('[BOOKING] auto-DM error:', dmErr.message);
     }
 
+    // Group invites
+    if (Array.isArray(group_invite_ids) && group_invite_ids.length > 0) {
+      const student = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+      const providerUser = db.prepare(`SELECT u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?`).get(slot.provider_id);
+      for (const invitee_id of group_invite_ids) {
+        try {
+          db.prepare('INSERT OR IGNORE INTO booking_group_invites (booking_id, inviter_id, invitee_id) VALUES (?, ?, ?)').run(result.lastInsertRowid, req.user.id, invitee_id);
+          db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body, is_system) VALUES (?, ?, ?, 1)').run(
+            req.user.id, invitee_id,
+            `${student?.name} invited you to a group session with ${providerUser?.name} on ${slot.date} at ${slot.start_time}. Check your dashboard to accept.`
+          );
+        } catch (e) { console.error('[BOOKING] group invite error:', e.message); }
+      }
+    }
+
     // Send email notifications (non-blocking)
     sendBookingEmails(booking, slot, req.user).catch(err =>
       console.error('[BOOKING] email error:', err.message)
@@ -183,6 +203,46 @@ router.post('/', requireAuth, async (req, res) => {
     console.error('[BOOKING] ERROR:', err.message, err.stack);
     res.status(500).json({ error: err.message || 'Booking failed — please try again.' });
   }
+});
+
+// GET /bookings/group-invites/mine
+router.get('/group-invites/mine', requireAuth, (req, res) => {
+  const invites = db.prepare(`
+    SELECT bgi.*,
+           b.status as booking_status,
+           a.date, a.start_time, a.end_time,
+           inviter.name as inviter_name,
+           pu.name as provider_name,
+           pp.category, pp.custom_category
+    FROM booking_group_invites bgi
+    JOIN bookings b ON bgi.booking_id = b.id
+    JOIN availability a ON b.availability_id = a.id
+    JOIN users inviter ON bgi.inviter_id = inviter.id
+    JOIN provider_profiles pp ON b.provider_id = pp.id
+    JOIN users pu ON pp.user_id = pu.id
+    WHERE bgi.invitee_id = ? AND bgi.status = 'pending'
+    ORDER BY bgi.created_at DESC
+  `).all(req.user.id);
+  res.json(invites);
+});
+
+// POST /bookings/group-invites/:id/accept
+router.post('/group-invites/:id/accept', requireAuth, (req, res) => {
+  const invite = db.prepare('SELECT * FROM booking_group_invites WHERE id = ? AND invitee_id = ?').get(req.params.id, req.user.id);
+  if (!invite) return res.status(404).json({ error: 'Invite not found' });
+  if (invite.status !== 'pending') return res.status(400).json({ error: 'Already responded' });
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(invite.booking_id);
+  if (!booking || booking.status === 'cancelled') return res.status(400).json({ error: 'Booking no longer available' });
+  db.prepare("UPDATE booking_group_invites SET status = 'accepted' WHERE id = ?").run(invite.id);
+  res.json({ ok: true });
+});
+
+// POST /bookings/group-invites/:id/decline
+router.post('/group-invites/:id/decline', requireAuth, (req, res) => {
+  const invite = db.prepare('SELECT * FROM booking_group_invites WHERE id = ? AND invitee_id = ?').get(req.params.id, req.user.id);
+  if (!invite) return res.status(404).json({ error: 'Invite not found' });
+  db.prepare("UPDATE booking_group_invites SET status = 'declined' WHERE id = ?").run(invite.id);
+  res.json({ ok: true });
 });
 
 router.patch('/:id', requireAuth, (req, res) => {

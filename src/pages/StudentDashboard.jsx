@@ -86,13 +86,29 @@ export default function StudentDashboard() {
   const [reviewTarget, setReviewTarget] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(null);
   const [doneLoading, setDoneLoading] = useState(null);
+  const [groupInvites, setGroupInvites] = useState([]);
+  const [inviteLoading, setInviteLoading] = useState(null);
 
-  useEffect(() => { fetchBookings(); }, []);
+  useEffect(() => { fetchBookings(); fetchGroupInvites(); }, []);
 
   async function fetchBookings() {
     try { const { data } = await api.get('/bookings/mine'); setBookings(data); }
     catch (err) { console.error(err); }
     finally { setLoading(false); }
+  }
+
+  async function fetchGroupInvites() {
+    try { const { data } = await api.get('/bookings/group-invites/mine'); setGroupInvites(data); }
+    catch { /* ignore */ }
+  }
+
+  async function handleInviteResponse(inviteId, action) {
+    setInviteLoading(inviteId);
+    try {
+      await api.post(`/bookings/group-invites/${inviteId}/${action}`);
+      setGroupInvites(gs => gs.filter(g => g.id !== inviteId));
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setInviteLoading(null); }
   }
 
   async function handleCancel(id) {
@@ -137,6 +153,42 @@ export default function StudentDashboard() {
           {user?.role === 'provider' ? 'Edit listing' : 'Post a listing'}
         </button>
       </div>
+
+      {/* Group invites */}
+      {groupInvites.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
+            Group Invites ({groupInvites.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {groupInvites.map(inv => (
+              <div key={inv.id} className="card" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                    {inv.inviter_name} invited you to a group session
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+                    {inv.custom_category || inv.category} with {inv.provider_name}
+                    {' · '}{fmtDay(inv.date)}{' · '}{fmtTime(inv.start_time)}–{fmtTime(inv.end_time)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button onClick={() => handleInviteResponse(inv.id, 'accept')}
+                    disabled={inviteLoading === inv.id}
+                    style={{ fontSize: 12, fontWeight: 600, padding: '6px 16px', borderRadius: 999, border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
+                    {inviteLoading === inv.id ? '...' : 'Join'}
+                  </button>
+                  <button onClick={() => handleInviteResponse(inv.id, 'decline')}
+                    disabled={inviteLoading === inv.id}
+                    style={{ fontSize: 12, fontWeight: 500, padding: '6px 14px', borderRadius: 999, border: '1.5px solid var(--border)', background: 'none', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>

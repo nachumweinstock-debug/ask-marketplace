@@ -208,8 +208,26 @@ if (ppSchema && /user_id\s+INTEGER\s+UNIQUE/i.test(ppSchema.sql)) {
 
 // ── Subcategory column ─────────────────────────────────────────────────────────
 const ppColsFinal = db.pragma('table_info(provider_profiles)').map(c => c.name);
-if (!ppColsFinal.includes('subcategory')) {
-  db.exec('ALTER TABLE provider_profiles ADD COLUMN subcategory TEXT');
+if (!ppColsFinal.includes('subcategory'))      db.exec('ALTER TABLE provider_profiles ADD COLUMN subcategory TEXT');
+if (!ppColsFinal.includes('college'))          db.exec('ALTER TABLE provider_profiles ADD COLUMN college TEXT');
+if (!ppColsFinal.includes('allow_group'))      db.exec('ALTER TABLE provider_profiles ADD COLUMN allow_group INTEGER DEFAULT 0');
+if (!ppColsFinal.includes('max_group_size'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN max_group_size INTEGER DEFAULT 6');
+
+// ── Group booking invites ──────────────────────────────────────────────────────
+const tablesAll = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+if (!tablesAll.includes('booking_group_invites')) {
+  db.exec(`
+    CREATE TABLE booking_group_invites (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      booking_id  INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      inviter_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      invitee_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status      TEXT NOT NULL DEFAULT 'pending'
+                  CHECK(status IN ('pending','accepted','declined')),
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(booking_id, invitee_id)
+    )
+  `);
 }
 
 // Rename legacy 'tennis' category to 'fitness'
