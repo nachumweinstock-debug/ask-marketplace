@@ -133,7 +133,8 @@ export default function Browse() {
     }
   }
 
-  const allFilters = [...BASE_FILTERS, ...customCats.map(c => ({ id: c, label: c }))];
+  const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
+  const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
 
   return (
     <div className="page" style={{ paddingTop: 24 }}>
