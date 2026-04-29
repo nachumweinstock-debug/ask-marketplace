@@ -9,11 +9,12 @@ const BASE_FILTERS = [
   { id: 'tutor',        label: 'Tutors'        },
   { id: 'fitness',      label: 'Fitness'       },
   { id: 'barber',       label: 'Barbers'       },
-  { id: 'hebrew tutor', label: 'Language'       },
+  { id: 'languages',    label: 'Languages'     },
+  { id: 'music',        label: 'Music'         },
   { id: 'Torah Studies',label: 'Torah Studies' },
 ];
 
-const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness']);
+const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness', 'languages', 'music']);
 
 export default function Browse() {
   const { user, refreshUser } = useAuth();

@@ -76,16 +76,81 @@ router.get('/categories', (req, res) => {
 router.get('/subcategories', (req, res) => {
   const { category } = req.query;
   if (!category) return res.json([]);
-  // treat tutor + 'fitness'/'tennis' as buckets
-  const cats = category === 'fitness' ? ['fitness', 'tennis'] : [category];
-  const placeholders = cats.map(() => '?').join(',');
-  const rows = db.prepare(`
-    SELECT DISTINCT subcategory FROM provider_profiles
-    WHERE category IN (${placeholders})
-      AND subcategory IS NOT NULL AND subcategory != ''
-    ORDER BY subcategory
-  `).all(...cats);
+  let rows;
+  if (category === 'fitness') {
+    rows = db.prepare(`SELECT DISTINCT subcategory FROM provider_profiles WHERE category IN ('fitness','tennis') AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory`).all();
+  } else if (category === 'languages') {
+    rows = db.prepare(`SELECT DISTINCT subcategory FROM provider_profiles WHERE (category = 'hebrew tutor' OR LOWER(TRIM(custom_category)) = 'languages') AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory`).all();
+  } else if (category === 'music') {
+    rows = db.prepare(`SELECT DISTINCT subcategory FROM provider_profiles WHERE LOWER(TRIM(custom_category)) = 'music' AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory`).all();
+  } else {
+    rows = db.prepare(`SELECT DISTINCT subcategory FROM provider_profiles WHERE category = ? AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory`).all(category);
+  }
   res.json(rows.map(r => r.subcategory));
+});
+
+// GET /providers/photo-suggestions?query=guitar
+router.get('/photo-suggestions', async (req, res) => {
+  const { query } = req.query;
+  if (!query || query.trim().length < 2) return res.json([]);
+  const q = query.trim();
+
+  const pexelsKey = process.env.PEXELS_API_KEY;
+  if (pexelsKey) {
+    try {
+      const r = await fetch(
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=6&orientation=landscape`,
+        { headers: { Authorization: pexelsKey }, signal: AbortSignal.timeout(5000) }
+      );
+      if (r.ok) {
+        const data = await r.json();
+        const urls = (data.photos || []).map(p => p.src.medium);
+        if (urls.length) return res.json(urls);
+      }
+    } catch {}
+  }
+
+  // Keyword-matched curated fallback
+  const lower = q.toLowerCase();
+  const CURATED = {
+    guitar:        ['https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?w=400&h=260&fit=crop'],
+    piano:         ['https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1552422535-c45813c61732?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=260&fit=crop'],
+    violin:        ['https://images.unsplash.com/photo-1465821185615-20b3c2fbf41b?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1612225330812-01a9c6b355ec?w=400&h=260&fit=crop'],
+    drum:          ['https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1524230572899-a752b3835840?w=400&h=260&fit=crop'],
+    vocal:         ['https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&h=260&fit=crop'],
+    music:         ['https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=260&fit=crop'],
+    hebrew:        ['https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop'],
+    ivrit:         ['https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop'],
+    spanish:       ['https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=400&h=260&fit=crop'],
+    french:        ['https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1499856871958-5b9357976b82?w=400&h=260&fit=crop'],
+    language:      ['https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1555374018-13a8994ab246?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=260&fit=crop'],
+    math:          ['https://images.unsplash.com/photo-1509869175650-a1d97972541a?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=260&fit=crop'],
+    chemistry:     ['https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?w=400&h=260&fit=crop'],
+    biology:       ['https://images.unsplash.com/photo-1530026186-6b52b750b9c9?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=260&fit=crop'],
+    physics:       ['https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1564325724739-bae0bd08762c?w=400&h=260&fit=crop'],
+    coding:        ['https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=260&fit=crop'],
+    excel:         ['https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=260&fit=crop'],
+    tutor:         ['https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=260&fit=crop'],
+    tennis:        ['https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=260&fit=crop'],
+    weightlifting: ['https://images.unsplash.com/photo-1581009137042-c552e485697a?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=400&h=260&fit=crop'],
+    yoga:          ['https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=260&fit=crop'],
+    running:       ['https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=400&h=260&fit=crop'],
+    basketball:    ['https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1504450758481-7338eba7524a?w=400&h=260&fit=crop'],
+    soccer:        ['https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&h=260&fit=crop'],
+    boxing:        ['https://images.unsplash.com/photo-1549476464-37392f717541?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1517438122650-eed8f8e8da54?w=400&h=260&fit=crop'],
+    golf:          ['https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=400&h=260&fit=crop'],
+    fitness:       ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=260&fit=crop'],
+    barber:        ['https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1599351447248-e7ae3f77f5a3?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1622288432450-277d0fef5ed6?w=400&h=260&fit=crop'],
+    haircut:       ['https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&h=260&fit=crop'],
+    gemara:        ['https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop'],
+    torah:         ['https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop'],
+    halacha:       ['https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop'],
+  };
+
+  for (const [key, urls] of Object.entries(CURATED)) {
+    if (lower.includes(key) || key.includes(lower)) return res.json(urls);
+  }
+  res.json([]);
 });
 
 // GET /providers/mine — all listings owned by logged-in user
@@ -138,8 +203,9 @@ router.get('/', (req, res) => {
   const params = [];
   if (category && category !== 'all') {
     if (category === 'fitness') {
-      // fitness covers both 'fitness' and legacy 'tennis'
       query += " AND pp.category IN ('fitness', 'tennis')";
+    } else if (category === 'languages') {
+      query += " AND (pp.category = 'hebrew tutor' OR LOWER(TRIM(pp.custom_category)) = 'languages')";
     } else if (STANDARD_CATS.includes(category)) {
       query += ' AND pp.category = ?';
       params.push(category);
