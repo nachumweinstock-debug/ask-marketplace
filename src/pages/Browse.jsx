@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
 
 const BASE_FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'tutor', label: 'Tutors' },
-  { id: 'fitness', label: 'Fitness' },
-  { id: 'barber', label: 'Barbers' },
-  { id: 'hebrew tutor', label: 'Hebrew' },
+  { id: 'all',          label: 'All'           },
+  { id: 'tutor',        label: 'Tutors'        },
+  { id: 'fitness',      label: 'Fitness'       },
+  { id: 'barber',       label: 'Barbers'       },
+  { id: 'hebrew tutor', label: 'Language'       },
+  { id: 'Torah Studies',label: 'Torah Studies' },
 ];
 
 const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness']);

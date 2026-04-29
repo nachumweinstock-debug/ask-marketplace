@@ -242,8 +242,9 @@ db.prepare(`
 
 // Fix known typos in custom categories
 const CATEGORY_CORRECTIONS = [
-  ['guitar leasons', 'Guitar Lessons'],
-  ['guitar lesson',  'Guitar Lessons'],
+  ['guitar leasons', 'Music'],
+  ['guitar lesson',  'Music'],
+  ['guitar lessons', 'Music'],
 ];
 for (const [bad, good] of CATEGORY_CORRECTIONS) {
   db.prepare(`

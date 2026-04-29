@@ -5,22 +5,77 @@ import { useAuth } from '../context/AuthContext';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 
 const CATEGORIES = [
-  { id: 'tutor',   label: 'Tutoring' },
-  { id: 'barber',  label: 'Barber'   },
-  { id: 'fitness', label: 'Fitness'  },
-  { id: 'other',   label: 'Other'    },
+  { id: 'tutor',   label: 'Tutoring'      },
+  { id: 'barber',  label: 'Barber'        },
+  { id: 'fitness', label: 'Fitness'       },
+  { id: 'torah',   label: 'Torah Studies' },
+  { id: 'other',   label: 'Other'         },
 ];
 
 const BIO_PLACEHOLDERS = {
-  tutor: 'e.g. I tutor Calc 1 & 2 and Orgo. 3 years experience, patient.',
-  barber: 'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
+  tutor:   'e.g. I tutor Calc 1 & 2 and Orgo. 3 years experience, patient.',
+  barber:  'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
   fitness: 'e.g. USTA rated player, great with beginners and intermediates.',
-  other: "Describe what you offer and who it's for...",
+  torah:   'e.g. I teach Gemara and Halacha. Patient with all levels, from beginners to advanced.',
+  other:   "Describe what you offer and who it's for...",
 };
 
 const SUBCATEGORY_SUGGESTIONS = {
-  tutor: ['Math', 'Chemistry', 'Biology', 'Physics', 'Excel', 'Coding', 'English', 'History', 'Economics', 'SAT/ACT', 'Calculus', 'Statistics', 'Gemara', 'Hebrew'],
+  tutor:   ['Math', 'Chemistry', 'Biology', 'Physics', 'Excel', 'Coding', 'English', 'History', 'Economics', 'SAT/ACT', 'Calculus', 'Statistics', 'Gemara', 'Hebrew'],
   fitness: ['Tennis', 'Golf', 'Basketball', 'Soccer', 'Baseball', 'Swimming', 'Squash', 'Yoga', 'Weightlifting', 'Running', 'Boxing', 'Volleyball'],
+  torah:   ['Gemara', 'Halacha', 'Chumash', 'Mishna', 'Tefilla', 'Parsha', 'Tanach', 'Jewish History', 'Mussar', 'Chassidus'],
+};
+
+// Curated photo suggestions per category/subcategory (Unsplash CDN — stable direct links)
+const PHOTO_SUGGESTIONS = {
+  tutor: [
+    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=260&fit=crop&auto=format',
+  ],
+  barber: [
+    'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1599351447248-e7ae3f77f5a3?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1622288432450-277d0fef5ed6?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400&h=260&fit=crop&auto=format',
+  ],
+  fitness: [
+    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=260&fit=crop&auto=format',
+  ],
+  torah: [
+    'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400&h=260&fit=crop&auto=format',
+  ],
+  other: [
+    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=260&fit=crop&auto=format',
+    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=260&fit=crop&auto=format',
+  ],
+};
+const PHOTO_SUGGESTIONS_SUB = {
+  'Tennis':       ['https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=260&fit=crop&auto=format'],
+  'Weightlifting':['https://images.unsplash.com/photo-1581009137042-c552e485697a?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=400&h=260&fit=crop&auto=format'],
+  'Yoga':         ['https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=260&fit=crop&auto=format'],
+  'Running':      ['https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=400&h=260&fit=crop&auto=format'],
+  'Basketball':   ['https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1504450758481-7338eba7524a?w=400&h=260&fit=crop&auto=format'],
+  'Soccer':       ['https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&h=260&fit=crop&auto=format'],
+  'Swimming':     ['https://images.unsplash.com/photo-1530549387789-4c1017266635?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1560090995-dde4dbd46b95?w=400&h=260&fit=crop&auto=format'],
+  'Coding':       ['https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=260&fit=crop&auto=format'],
+  'Math':         ['https://images.unsplash.com/photo-1509869175650-a1d97972541a?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=260&fit=crop&auto=format'],
+  'Biology':      ['https://images.unsplash.com/photo-1530026186-6b52b750b9c9?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=260&fit=crop&auto=format'],
+  'Chemistry':    ['https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?w=400&h=260&fit=crop&auto=format'],
+  'Physics':      ['https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1564325724739-bae0bd08762c?w=400&h=260&fit=crop&auto=format'],
+  'Golf':         ['https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=400&h=260&fit=crop&auto=format'],
+  'Boxing':       ['https://images.unsplash.com/photo-1549476464-37392f717541?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1517438122650-eed8f8e8da54?w=400&h=260&fit=crop&auto=format'],
+  'Gemara':       ['https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop&auto=format'],
+  'Chumash':      ['https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop&auto=format','https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop&auto=format'],
 };
 
 function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
@@ -110,8 +165,8 @@ function ImageDrop({ value, onChange }) {
 // ── Live Preview Card ─────────────────────────────────────────────────────────
 function LivePreview({ category, customCategory, subcategory, bio, price, listingImage, sessionType }) {
   const label = subcategory || customCategory ||
-    { tutor: 'Tutoring', barber: 'Haircuts', fitness: 'Fitness', other: 'Service' }[category] || '';
-  const eyebrow = (customCategory || { tutor: 'TUTORING', barber: 'BARBER', fitness: 'FITNESS', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
+    { tutor: 'Tutoring', barber: 'Haircuts', fitness: 'Fitness', torah: 'Torah Studies', other: 'Service' }[category] || '';
+  const eyebrow = (customCategory || { tutor: 'TUTORING', barber: 'BARBER', fitness: 'FITNESS', torah: 'TORAH STUDIES', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
   const fmt = sessionType === 'zoom' ? { color: '#7C3AED', label: 'ZOOM' }
     : sessionType === 'both' ? { color: '#7C3AED', label: 'ZOOM & IN-PERSON' }
     : { color: '#0E8345', label: 'IN-PERSON' };
@@ -234,7 +289,7 @@ export default function CreateListing() {
 
   useEffect(() => {
     if (!category) { setPriceStats(null); return; }
-    const cat = category === 'other' ? customCategory : category;
+    const cat = (category === 'other' || category === 'torah') ? (category === 'torah' ? 'Torah Studies' : customCategory) : category;
     if (!cat) { setPriceStats(null); return; }
     const params = { category: cat };
     if (subcategory) params.subcategory = subcategory;
@@ -251,10 +306,11 @@ export default function CreateListing() {
     try {
       const { data: becomeData } = await api.post('/providers/become');
       const profileId = becomeData.profile_id;
+      const isTorah = category === 'torah';
       await api.put(`/providers/${profileId}`, {
-        category,
-        custom_category: category === 'other' ? customCategory : '',
-        subcategory: ['tutor', 'fitness'].includes(category) ? subcategory : '',
+        category: isTorah ? 'other' : category,
+        custom_category: isTorah ? 'Torah Studies' : (category === 'other' ? customCategory : ''),
+        subcategory: ['tutor', 'fitness', 'torah'].includes(category) ? subcategory : '',
         session_type: sessionType,
         bio,
         price_per_session: price || 0,
@@ -337,7 +393,7 @@ export default function CreateListing() {
             {SUBCATEGORY_SUGGESTIONS[category] && (
               <div style={{ marginBottom: 28 }}>
                 <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>
-                  {category === 'tutor' ? 'SUBJECT' : 'ACTIVITY'}
+                  {category === 'tutor' ? 'SUBJECT' : category === 'torah' ? 'TOPIC' : 'ACTIVITY'}
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   {SUBCATEGORY_SUGGESTIONS[category].map(s => {
@@ -359,7 +415,7 @@ export default function CreateListing() {
                 <input
                   value={subcategory}
                   onChange={e => setSubcategory(e.target.value)}
-                  placeholder={category === 'tutor' ? 'Or type your own: Organic Chemistry, LSAT...' : 'Or type your own: Pickleball, Crossfit...'}
+                  placeholder={category === 'tutor' ? 'Or type your own: Organic Chemistry, LSAT...' : category === 'torah' ? 'Or type your own: Tefilla, Moed, Nach...' : 'Or type your own: Pickleball, Crossfit...'}
                   className="input-underline"
                 />
               </div>
@@ -472,6 +528,33 @@ export default function CreateListing() {
                 COVER PHOTO <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional)</span>
               </label>
               <ImageDrop value={listingImage} onChange={setListingImage} />
+              {/* Photo suggestions */}
+              {category && (() => {
+                const subPhotos = subcategory && PHOTO_SUGGESTIONS_SUB[subcategory];
+                const catPhotos = PHOTO_SUGGESTIONS[category];
+                const photos = subPhotos || catPhotos;
+                if (!photos) return null;
+                return (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>
+                      SUGGESTED PHOTOS — click to use
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                      {photos.map((url, i) => (
+                        <button key={i} type="button" onClick={() => setListingImage(url)}
+                          style={{
+                            flexShrink: 0, width: 90, height: 60, padding: 0, border: 'none',
+                            borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                            outline: listingImage === url ? '2.5px solid var(--blue-600)' : 'none',
+                            outlineOffset: 2,
+                          }}>
+                          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* ── Bio ── */}
