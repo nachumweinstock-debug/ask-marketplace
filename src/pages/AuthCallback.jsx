@@ -20,10 +20,13 @@ export default function AuthCallback() {
   const { loginWithToken } = useAuth();
   const navigate = useNavigate();
 
-  const [step, setStep]       = useState('loading'); // 'loading' | 'phone' | 'done'
+  const [step, setStep]       = useState('loading'); // 'loading' | 'tos' | 'phone' | 'done'
   const [dest, setDest]       = useState('/dashboard/student');
   const [phone, setPhone]     = useState('');
   const [saving, setSaving]   = useState(false);
+  const [tosChecked, setTosChecked] = useState(false);
+  const [tosError, setTosError]     = useState(false);
+  const [needsPhone, setNeedsPhone] = useState(false);
 
   useEffect(() => {
     async function handle() {
@@ -44,9 +47,10 @@ export default function AuthCallback() {
         const { data: user } = await api.get('/auth/me');
         const destination = next || (user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
         const isNew = user.created_at && (Date.now() - new Date(user.created_at).getTime() < 60000);
-        if (!user.phone && isNew) {
-          setDest(destination);
-          setStep('phone');
+        setDest(destination);
+        if (isNew) {
+          setNeedsPhone(!user.phone);
+          setStep('tos');
         } else {
           navigate(destination, { replace: true });
         }
@@ -57,6 +61,14 @@ export default function AuthCallback() {
     handle();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function handleTosAccept(e) {
+    e.preventDefault();
+    if (!tosChecked) { setTosError(true); return; }
+    setTosError(false);
+    if (needsPhone) setStep('phone');
+    else navigate(dest, { replace: true });
+  }
+
   async function handlePhoneSubmit(e) {
     e.preventDefault();
     if (phone.trim()) {
@@ -65,6 +77,56 @@ export default function AuthCallback() {
     }
     navigate(dest, { replace: true });
   }
+
+  if (step === 'tos') return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+      <div style={{ width: '100%', maxWidth: 380 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)' }}>ASK</span>
+        </div>
+        <div className="card" style={{ padding: '32px 28px' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', marginBottom: 6 }}>
+            Before you continue
+          </h1>
+          <p style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 24, lineHeight: 1.6 }}>
+            Please review and accept our terms before using ASK.
+          </p>
+          <form onSubmit={handleTosAccept}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 20 }}>
+              <input
+                type="checkbox"
+                checked={tosChecked}
+                onChange={e => { setTosChecked(e.target.checked); setTosError(false); }}
+                style={{ marginTop: 3, cursor: 'pointer', accentColor: 'var(--primary)', flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.55 }}>
+                I agree to the{' '}
+                <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                  Terms of Service & Privacy Policy
+                </a>
+              </span>
+            </label>
+            {tosError && (
+              <div style={{
+                background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8,
+                padding: '9px 14px', fontSize: 12.5, color: '#DC2626', marginBottom: 14,
+              }}>
+                You must agree to continue.
+              </div>
+            )}
+            <button type="submit" style={{
+              width: '100%', background: 'var(--primary)', color: '#fff',
+              border: 'none', borderRadius: 9, padding: '12px',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+            }}>
+              I agree — continue
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 
   if (step === 'loading') return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>

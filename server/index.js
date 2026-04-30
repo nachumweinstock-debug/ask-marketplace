@@ -21,6 +21,7 @@ import helpWantedRoutes from './routes/helpwanted.js';
 import timeRequestRoutes from './routes/timerequests.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
+import posthog from './posthog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -119,6 +120,15 @@ app.use('/api/help-wanted', helpWantedRoutes);
 app.use('/api/time-requests', timeRequestRoutes);
 
 startReminderJobs();
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
 
 app.listen(PORT, () => {
   console.log(`ASK API running on http://localhost:${PORT}`);

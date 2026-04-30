@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
+const CATEGORIES = [
+  { id: 'tutor', label: 'Tutoring' },
+  { id: 'barber', label: 'Barber' },
+  { id: 'fitness', label: 'Fitness' },
+  { id: 'languages', label: 'Languages' },
+  { id: 'music', label: 'Music' },
+  { id: 'torah', label: 'Torah' },
+  { id: 'other', label: 'Other' },
+];
+
+const SUBCATEGORY_SUGGESTIONS = {
+  tutor:     ['Math', 'Chemistry', 'Biology', 'Physics', 'Excel', 'Coding', 'English', 'History', 'Economics', 'SAT/ACT', 'Calculus', 'Statistics'],
+  fitness:   ['Tennis', 'Golf', 'Basketball', 'Soccer', 'Baseball', 'Swimming', 'Squash', 'Yoga', 'Weightlifting', 'Running', 'Boxing', 'Volleyball'],
+  languages: ['Hebrew', 'Ivrit', 'Spanish', 'French', 'Yiddish', 'Arabic', 'Russian', 'Mandarin', 'Italian', 'German'],
+  music:     ['Guitar', 'Piano', 'Violin', 'Drums', 'Vocals', 'Bass', 'Ukulele', 'Flute', 'Music Theory', 'Saxophone'],
+  torah:     ['Gemara', 'Halacha', 'Chumash', 'Mishna', 'Tefilla', 'Parsha', 'Tanach', 'Jewish History', 'Mussar', 'Chassidus'],
+};
+
 const STATUS_COLORS = {
   student:  { bg: 'var(--accent)', color: 'var(--primary)' },
   provider: { bg: '#F0FDF4', color: '#166534' },
@@ -16,6 +34,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [duplicates, setDuplicates] = useState([]);
+  const [editModal, setEditModal] = useState(null); // { profileId, form }
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [userModal, setUserModal] = useState(null); // user object
 
   useEffect(() => {
     if (!user?.is_admin) { navigate('/'); return; }
@@ -70,6 +92,53 @@ export default function AdminDashboard() {
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
   }
 
+  async function openEdit(profileId) {
+    try {
+      const { data } = await api.get(`/providers/${profileId}`);
+      const catMap = { 'Torah Studies': 'torah', 'Languages': 'languages', 'Music': 'music' };
+      const cat = catMap[data.custom_category] || data.category || 'other';
+      setEditError('');
+      setEditModal({
+        profileId,
+        form: {
+          category: cat,
+          custom_category: data.custom_category || '',
+          subcategory: data.subcategory || '',
+          bio: data.bio || '',
+          price_per_session: data.price_per_session ?? '',
+          zelle: data.zelle || '',
+          venmo: data.venmo || '',
+          session_type: data.session_type || 'in-person',
+        },
+      });
+    } catch { alert('Failed to load listing'); }
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    setEditError(''); setEditLoading(true);
+    const { profileId, form } = editModal;
+    const CUSTOM_CAT_MAP = { torah: 'Torah Studies', languages: 'Languages', music: 'Music' };
+    const isCustom = !!CUSTOM_CAT_MAP[form.category];
+    try {
+      await api.put(`/admin/listings/${profileId}`, {
+        category: isCustom ? 'other' : form.category,
+        custom_category: isCustom ? CUSTOM_CAT_MAP[form.category] : (form.category === 'other' ? form.custom_category : ''),
+        subcategory: ['tutor', 'fitness', 'torah', 'languages', 'music'].includes(form.category) ? form.subcategory : '',
+        bio: form.bio,
+        price_per_session: form.price_per_session === '' ? 0 : Number(form.price_per_session),
+        zelle: form.zelle,
+        venmo: form.venmo,
+        session_type: form.session_type,
+      });
+      setEditModal(null);
+    } catch (err) {
+      setEditError(err.response?.data?.error || 'Save failed');
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
@@ -82,97 +151,89 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '48px 32px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 36, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
-            Admin
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)' }}>Manage users and platform activity.</p>
-        </div>
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', alignSelf: 'center' }}>
+    <div style={{ maxWidth: 920, margin: '0 auto', padding: '48px 24px 80px' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--text)', letterSpacing: '-0.5px', flex: 1 }}>
+          Admin
+        </h1>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
           Admin
         </span>
       </div>
 
       {/* Stats */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 36 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
           {[
-            { label: 'Total users', value: stats.users },
+            { label: 'Users', value: stats.users },
             { label: 'Providers', value: stats.providers },
             { label: 'Bookings', value: stats.bookings },
             { label: 'Reviews', value: stats.reviews },
           ].map(s => (
-            <div key={s.label} className="card" style={{ padding: '20px 24px' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text)' }}>{s.value}</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{s.label}</div>
+            <div key={s.label} className="card" style={{ padding: '18px 20px' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>{s.label}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Grant admin section */}
-      <div className="card" style={{ padding: '20px 24px', marginBottom: 24 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 14 }}>
-          Grant Admin Access
+      {/* Tools row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>
+            Grant Admin
+          </div>
+          <BootstrapForm onSuccess={email => {
+            setUsers(us => us.map(u => u.email === email ? { ...u, is_admin: 1 } : u));
+          }} />
         </div>
-        <BootstrapForm onSuccess={email => {
-          setUsers(us => us.map(u => u.email === email ? { ...u, is_admin: 1 } : u));
-        }} />
-      </div>
-
-      {/* Bulk import */}
-      <div style={{ marginBottom: 24 }}>
-        <ImportCard onImported={() => {
-          // Refresh user list after import
-          api.get('/admin/users').then(r => setUsers(r.data)).catch(() => {});
-          api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
-        }} />
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <ImportCard onImported={() => {
+            api.get('/admin/users').then(r => setUsers(r.data)).catch(() => {});
+            api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+          }} compact />
+        </div>
       </div>
 
       {/* Duplicate accounts */}
       {duplicates.length > 0 && (
-        <div className="card" style={{ padding: '24px', marginBottom: 24, border: '1.5px solid #FED7AA' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#C2410C', marginBottom: 16 }}>
-            Duplicate Accounts ({duplicates.length} name{duplicates.length > 1 ? 's' : ''} with multiple accounts)
+        <div className="card" style={{ padding: '20px 22px', marginBottom: 24, borderColor: '#FED7AA' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#C2410C', marginBottom: 14 }}>
+            Duplicate Accounts — {duplicates.length} group{duplicates.length > 1 ? 's' : ''}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {duplicates.map(group => (
               <div key={group.name}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-                  {group.name} — {group.count} accounts
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  {group.name} ({group.count})
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {group.accounts.map((a, i) => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {group.accounts.map(a => (
                     <div key={a.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                      border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
-                      flexWrap: 'wrap',
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                      border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', flexWrap: 'wrap',
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 600 }}>{a.email}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          ID {a.id} · {a.role} · joined {new Date(a.created_at).toLocaleDateString()}
-                          {' · '}{a.bookings_as_student} student booking{a.bookings_as_student !== 1 ? 's' : ''}
-                          {' · '}{a.bookings_as_provider} provider booking{a.bookings_as_provider !== 1 ? 's' : ''}
-                          {' · '}{a.messages_sent} message{a.messages_sent !== 1 ? 's' : ''}
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>{a.email}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>
+                          ID {a.id} · {a.role} · {new Date(a.created_at).toLocaleDateString()} · {a.bookings_as_student}b · {a.messages_sent}msg
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                         {group.accounts.filter(b => b.id !== a.id).map(target => (
                           <button key={target.id} onClick={() => mergeInto(a.id, target.id, a.email)} style={{
-                            fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                            border: '1px solid #BBF7D0', background: '#F0FDF4', color: '#166534',
-                            fontFamily: 'var(--font-ui)',
+                            fontSize: 11, padding: '3px 9px', borderRadius: 999, cursor: 'pointer',
+                            border: '1px solid #BBF7D0', background: '#F0FDF4', color: '#166534', fontFamily: 'var(--font-ui)',
                           }}>
-                            Merge → ID {target.id}
+                            Merge → {target.id}
                           </button>
                         ))}
                         <button onClick={() => deleteUser(a.id, a.email)} style={{
-                          fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                          border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626',
-                          fontFamily: 'var(--font-ui)',
+                          fontSize: 11, padding: '3px 9px', borderRadius: 999, cursor: 'pointer',
+                          border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontFamily: 'var(--font-ui)',
                         }}>
                           Delete
                         </button>
@@ -186,79 +247,318 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Users table */}
-      <div className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
-            All Users ({filtered.length})
+      {/* Users list */}
+      <div className="card" style={{ padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', flex: 1 }}>
+            Users ({filtered.length})
           </div>
           <input
-            type="text" placeholder="Search name or email..." value={search}
+            type="text" placeholder="Search..." value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              border: '1.5px solid var(--border)', borderRadius: 8, padding: '7px 14px',
+              border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px',
               fontSize: 13, outline: 'none', background: '#fff', fontFamily: 'var(--font-ui)',
-              color: 'var(--text)', width: 220,
+              color: 'var(--text)', width: 200,
             }}
           />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {filtered.map(u => (
-            <div key={u.id} style={{
-              display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px',
-              border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{u.email}</div>
+            <button key={u.id} onClick={() => setUserModal(u)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+                border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
+                cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'var(--font-ui)',
+                transition: 'border-color .12s, background .12s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--accent)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)'; }}
+            >
+              {/* Avatar */}
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                background: 'var(--accent)', color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 700,
+              }}>
+                {(u.name || u.email)[0].toUpperCase()}
               </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {u.name}
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {u.email}
+                </div>
+              </div>
+              {/* Badges */}
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+                {u.is_admin && (
+                  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
+                    Admin
+                  </span>
+                )}
                 <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                  fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 999,
                   background: STATUS_COLORS[u.role]?.bg || 'var(--accent)',
                   color: STATUS_COLORS[u.role]?.color || 'var(--primary)',
                 }}>
                   {u.role}
                 </span>
-                {u.is_admin ? (
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
-                    Admin
-                  </span>
-                ) : null}
                 {u.rating > 0 && (
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>★ {u.rating.toFixed(1)}</span>
                 )}
+                <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>›</span>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button onClick={() => toggleAdmin(u.id, u.is_admin)} style={{
-                  fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                  border: '1px solid var(--border)', background: 'var(--card)',
-                  color: u.is_admin ? '#92400E' : 'var(--muted)', fontFamily: 'var(--font-ui)',
-                }}>
-                  {u.is_admin ? 'Revoke admin' : 'Make admin'}
-                </button>
-                {u.role === 'provider' && u.provider_profile_id && (
-                  <button onClick={() => deleteListing(u.provider_profile_id, u.name)} style={{
-                    fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                    border: '1px solid #FED7AA', background: '#FFF7ED', color: '#C2410C',
-                    fontFamily: 'var(--font-ui)',
-                  }}>
-                    Delete listing
-                  </button>
-                )}
-                <button onClick={() => deleteUser(u.id, u.name)} style={{
-                  fontSize: 11, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                  border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626',
-                  fontFamily: 'var(--font-ui)',
-                }}>
-                  Delete user
-                </button>
-              </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {/* User detail modal */}
+      {userModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 900,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
+        }} onClick={e => { if (e.target === e.currentTarget) setUserModal(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 440, padding: '28px 28px 24px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 22 }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: '50%', flexShrink: 0,
+                background: 'var(--accent)', color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 700,
+              }}>
+                {(userModal.name || userModal.email)[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{userModal.name}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{userModal.email}</div>
+                <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                    background: STATUS_COLORS[userModal.role]?.bg || 'var(--accent)',
+                    color: STATUS_COLORS[userModal.role]?.color || 'var(--primary)',
+                  }}>{userModal.role}</span>
+                  {userModal.is_admin && (
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>Admin</span>
+                  )}
+                  {userModal.rating > 0 && (
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--bg)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                      ★ {userModal.rating.toFixed(1)} ({userModal.review_count})
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setUserModal(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--muted)', padding: 2, flexShrink: 0 }}>✕</button>
+            </div>
+
+            {/* Meta */}
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 22, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <span>ID: {userModal.id}</span>
+              <span>Joined {new Date(userModal.created_at).toLocaleDateString()}</span>
+              {userModal.category && <span>Category: {userModal.custom_category || userModal.category}</span>}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => {
+                toggleAdmin(userModal.id, userModal.is_admin);
+                setUserModal(u => ({ ...u, is_admin: !u.is_admin }));
+              }} style={{
+                width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+              }}>
+                {userModal.is_admin ? 'Revoke admin access' : 'Grant admin access'}
+              </button>
+
+              {userModal.role === 'provider' && userModal.provider_profile_id && (
+                <>
+                  <button onClick={() => { openEdit(userModal.provider_profile_id); }} style={{
+                    width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                    border: '1.5px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8',
+                  }}>
+                    Edit listing
+                  </button>
+                  <button onClick={() => {
+                    deleteListing(userModal.provider_profile_id, userModal.name);
+                    setUserModal(null);
+                  }} style={{
+                    width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                    border: '1.5px solid #FED7AA', background: '#FFF7ED', color: '#C2410C',
+                  }}>
+                    Delete listing
+                  </button>
+                </>
+              )}
+
+              <button onClick={() => {
+                deleteUser(userModal.id, userModal.name);
+                setUserModal(null);
+              }} style={{
+                width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                border: '1.5px solid #FECACA', background: '#FEF2F2', color: '#DC2626',
+              }}>
+                Delete user
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit listing modal */}
+      {editModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
+        }} onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 520, padding: '28px 28px 24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Edit Listing</div>
+              <button onClick={() => setEditModal(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--muted)', padding: 4 }}>✕</button>
+            </div>
+            <form onSubmit={saveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Category</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {CATEGORIES.map(c => (
+                    <button key={c.id} type="button"
+                      onClick={() => setEditModal(m => ({ ...m, form: { ...m.form, category: c.id, subcategory: '', custom_category: '' } }))}
+                      style={{
+                        padding: '5px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                        fontFamily: 'var(--font-ui)', border: '1.5px solid',
+                        borderColor: editModal.form.category === c.id ? 'var(--primary)' : 'var(--border)',
+                        background: editModal.form.category === c.id ? 'var(--accent)' : '#fff',
+                        color: editModal.form.category === c.id ? 'var(--primary)' : 'var(--text)',
+                      }}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {editModal.form.category === 'other' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Service name</label>
+                  <input value={editModal.form.custom_category}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: e.target.value } }))}
+                    placeholder="e.g. Photography, Golf Lessons…"
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+
+              {SUBCATEGORY_SUGGESTIONS[editModal.form.category] && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>
+                    {{ tutor: 'Subject', languages: 'Language', music: 'Instrument', fitness: 'Sport', torah: 'Topic' }[editModal.form.category]}
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
+                    {SUBCATEGORY_SUGGESTIONS[editModal.form.category].map(s => (
+                      <button key={s} type="button"
+                        onClick={() => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: m.form.subcategory === s ? '' : s } }))}
+                        style={{
+                          padding: '3px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+                          fontFamily: 'var(--font-ui)', border: '1.5px solid',
+                          borderColor: editModal.form.subcategory === s ? 'var(--primary)' : 'var(--border)',
+                          background: editModal.form.subcategory === s ? 'var(--accent)' : '#fff',
+                          color: editModal.form.subcategory === s ? 'var(--primary)' : 'var(--text)',
+                        }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <input value={editModal.form.subcategory}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: e.target.value } }))}
+                    placeholder="Or type your own…"
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</label>
+                <textarea value={editModal.form.bio}
+                  onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, bio: e.target.value } }))}
+                  rows={4} required
+                  style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Price / session ($)</label>
+                  <input type="number" min="0" max="10000" value={editModal.form.price_per_session}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, price_per_session: e.target.value } }))}
+                    placeholder="0"
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Session type</label>
+                  <select value={editModal.form.session_type}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value } }))}
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
+                    <option value="in-person">In-person</option>
+                    <option value="zoom">Zoom</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Zelle</label>
+                  <input value={editModal.form.zelle}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, zelle: e.target.value } }))}
+                    placeholder="Phone or email"
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Venmo</label>
+                  <input value={editModal.form.venmo}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, venmo: e.target.value } }))}
+                    placeholder="@handle"
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {editError && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, color: '#DC2626' }}>
+                  {editError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button type="button" onClick={() => setEditModal(null)} style={{
+                  border: '1.5px solid var(--border)', background: 'none', color: 'var(--muted)',
+                  borderRadius: 999, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={editLoading} style={{
+                  background: editLoading ? '#93C5FD' : 'var(--primary)', color: '#fff', border: 'none',
+                  borderRadius: 999, padding: '9px 24px', fontSize: 13, fontWeight: 600,
+                  cursor: editLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+                }}>
+                  {editLoading ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -396,7 +696,7 @@ function normalizeGoogleFormRow(row) {
 
 // ── Import card ───────────────────────────────────────────────────────────────
 
-function ImportCard({ onImported }) {
+function ImportCard({ onImported, compact }) {
   const fileRef = useRef(null);
   const [rows, setRows]       = useState(null);
   const [isGF, setIsGF]       = useState(false);
@@ -438,18 +738,26 @@ function ImportCard({ onImported }) {
 
   function reset() { setRows(null); setResults(null); setIsGF(false); if (fileRef.current) fileRef.current.value = ''; }
 
-  return (
-    <div className="card" style={{ padding: '20px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-        onClick={() => setOpen(o => !o)}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          Bulk Import Providers
+  const isOpen = compact || open;
+  const inner = (
+    <>
+      {!compact && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          onClick={() => setOpen(o => !o)}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            Bulk Import Providers
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{open ? '▲' : '▼'}</span>
         </div>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{open ? '▲' : '▼'}</span>
-      </div>
+      )}
+      {compact && (
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>
+          Bulk Import
+        </div>
+      )}
 
-      {open && (
-        <div style={{ marginTop: 16 }}>
+      {isOpen && (
+        <div style={compact ? {} : { marginTop: 16 }}>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>
             Upload any CSV — your Google Form export works directly.{' '}
             <a href={TEMPLATE_URL} download="ask-import-template.csv"
@@ -577,8 +885,12 @@ function ImportCard({ onImported }) {
           )}
         </div>
       )}
-    </div>
+    </>
   );
+
+  return compact
+    ? inner
+    : <div className="card" style={{ padding: '20px 24px' }}>{inner}</div>;
 }
 
 function BootstrapForm({ onSuccess }) {

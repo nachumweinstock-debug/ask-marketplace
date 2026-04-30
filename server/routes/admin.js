@@ -101,6 +101,47 @@ router.post('/users/:id/merge-into/:targetId', requireAuth, requireAdmin, (req, 
   }
 });
 
+// PUT /api/admin/listings/:profileId — admin edit any listing's fields
+router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
+  const profile = db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(req.params.profileId);
+  if (!profile) return res.status(404).json({ error: 'Listing not found' });
+
+  const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, session_type, title } = req.body;
+
+  if (price_per_session !== undefined && (isNaN(Number(price_per_session)) || Number(price_per_session) < 0 || Number(price_per_session) > 10000)) {
+    return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
+  }
+  if (bio !== undefined && bio.trim().length < 20) {
+    return res.status(400).json({ error: 'Description required (at least 20 characters)' });
+  }
+  if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
+    return res.status(400).json({ error: 'Invalid session type' });
+  }
+  const normalizedCustom = custom_category !== undefined
+    ? (custom_category?.trim().replace(/\b\w/g, c => c.toUpperCase()) || null)
+    : undefined;
+
+  db.prepare(`
+    UPDATE provider_profiles
+    SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
+        custom_category = ?, subcategory = ?, session_type = ?, title = ?
+    WHERE id = ?
+  `).run(
+    bio ?? profile.bio,
+    category ?? profile.category,
+    price_per_session !== undefined ? Number(price_per_session) : profile.price_per_session,
+    zelle !== undefined ? zelle : profile.zelle,
+    venmo !== undefined ? venmo : profile.venmo,
+    normalizedCustom !== undefined ? normalizedCustom : profile.custom_category,
+    subcategory !== undefined ? subcategory : profile.subcategory,
+    session_type ?? profile.session_type ?? 'in-person',
+    title !== undefined ? title : profile.title,
+    profile.id
+  );
+
+  res.json(db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(profile.id));
+});
+
 // DELETE /api/admin/listings/:profileId — delete a provider listing only (keeps user account)
 router.delete('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   const profile = db.prepare('SELECT id, user_id FROM provider_profiles WHERE id = ?').get(req.params.profileId);

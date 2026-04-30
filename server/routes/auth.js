@@ -5,6 +5,7 @@ import { randomInt } from 'crypto';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
 import { sendPasswordResetCode, sendWelcomeEmail, sendAdminNewUserNotification } from '../email.js';
+import posthog from '../posthog.js';
 
 // Dummy hash used to prevent timing attacks when email doesn't exist
 const DUMMY_HASH = await bcrypt.hash('dummy-timing-prevention', 10);
@@ -66,6 +67,16 @@ router.post('/signup', async (req, res) => {
   );
   sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'email' }).catch(() => {});
 
+  posthog.identify({
+    distinctId: String(user.id),
+    properties: { $set: { name: user.name, email: user.email, role: user.role } },
+  });
+  posthog.capture({
+    distinctId: String(user.id),
+    event: 'user_signed_up',
+    properties: { method: 'email', name: user.name, email: user.email },
+  });
+
   res.json({ token, user });
 });
 
@@ -94,6 +105,13 @@ router.post('/login', async (req, res) => {
 
   const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role, token_version: user.token_version });
   const { password: _, ...safeUser } = user;
+
+  posthog.capture({
+    distinctId: String(user.id),
+    event: 'user_logged_in',
+    properties: { method: 'email', role: user.role },
+  });
+
   res.json({ token, user: safeUser });
 });
 
@@ -248,9 +266,21 @@ router.get('/google/callback', async (req, res) => {
     const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
     const next = redirect ? `&next=${encodeURIComponent(redirect)}` : '';
     console.log(`[AUTH] Google login: ${user.email}`);
+
+    posthog.identify({
+      distinctId: String(fullUser.id),
+      properties: { $set: { name: fullUser.name, email: fullUser.email, role: fullUser.role } },
+    });
+    posthog.capture({
+      distinctId: String(fullUser.id),
+      event: 'google_oauth_completed',
+      properties: { is_new_user: !user.google_id, email: fullUser.email, role: fullUser.role },
+    });
+
     res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);
   } catch (err) {
     console.error('[AUTH] Google callback error:', err.message);
+    posthog.captureException(err);
     res.redirect(`${FRONTEND}/login?error=google_failed`);
   }
 });
@@ -349,9 +379,21 @@ router.post('/apple/callback', async (req, res) => {
     const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
     const next = redirect ? `&next=${encodeURIComponent(redirect)}` : '';
     console.log(`[AUTH] Apple login: ${user.email}`);
+
+    posthog.identify({
+      distinctId: String(fullUser.id),
+      properties: { $set: { name: fullUser.name, email: fullUser.email, role: fullUser.role } },
+    });
+    posthog.capture({
+      distinctId: String(fullUser.id),
+      event: 'apple_oauth_completed',
+      properties: { is_new_user: !user.apple_id, email: fullUser.email, role: fullUser.role },
+    });
+
     res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);
   } catch (err) {
     console.error('[AUTH] Apple callback error:', err.message);
+    posthog.captureException(err);
     res.redirect(`${FRONTEND}/login?error=apple_failed`);
   }
 });

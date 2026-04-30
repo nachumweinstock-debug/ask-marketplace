@@ -191,6 +191,7 @@ export function SignUp() {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [error, setError] = useState(searchParams.get('error') === 'google_failed' ? 'Google sign-in failed — please try again.' : searchParams.get('error') === 'apple_failed' ? 'Apple sign-in failed — please try again.' : '');
   const [loading, setLoading] = useState(false);
 
@@ -199,6 +200,11 @@ export function SignUp() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(''); setLoading(true);
+    if (!agreedToPrivacy) {
+      setError('Please agree to the Terms of Service & Privacy Policy to continue.');
+      setLoading(false);
+      return;
+    }
     try {
       const { data } = await api.post('/auth/signup', {
         email: form.email.toLowerCase(),
@@ -236,6 +242,21 @@ export function SignUp() {
         <Field label="Phone number (for booking texts)">
           <TextInput type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={set('phone')} autoComplete="tel" />
         </Field>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16 }}>
+          <input
+            type="checkbox"
+            id="privacy-agree"
+            checked={agreedToPrivacy}
+            onChange={e => setAgreedToPrivacy(e.target.checked)}
+            style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--primary)', flexShrink: 0 }}
+          />
+          <label htmlFor="privacy-agree" style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, cursor: 'pointer' }}>
+            I agree to the{' '}
+            <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+              Terms of Service & Privacy Policy
+            </a>
+          </label>
+        </div>
         <Err msg={error} />
         <Btn loading={loading} label="Create account" loadingLabel="Creating..." />
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', marginTop: 20, marginBottom: 0 }}>

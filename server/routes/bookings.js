@@ -12,6 +12,7 @@ function icsToken(bookingId) {
 import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification } from '../email.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
+import posthog from '../posthog.js';
 
 const router = Router();
 
@@ -198,9 +199,23 @@ router.post('/', requireAuth, async (req, res) => {
       console.error('[BOOKING] email error:', err.message)
     );
 
+    posthog.capture({
+      distinctId: String(req.user.id),
+      event: 'booking_created',
+      properties: {
+        booking_id: booking.id,
+        provider_id: slot.provider_id,
+        slot_date: slot.date,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        group_invite_count: group_invite_ids?.length || 0,
+      },
+    });
+
     res.json(booking);
   } catch (err) {
     console.error('[BOOKING] ERROR:', err.message, err.stack);
+    posthog.captureException(err, String(req.user?.id));
     res.status(500).json({ error: err.message || 'Booking failed — please try again.' });
   }
 });
@@ -278,6 +293,19 @@ router.patch('/:id', requireAuth, (req, res) => {
 
   db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
   const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+
+  const eventName = status === 'confirmed' ? 'booking_confirmed'
+    : status === 'completed' ? 'booking_completed'
+    : 'booking_cancelled';
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: eventName,
+    properties: {
+      booking_id: booking.id,
+      provider_id: booking.provider_id,
+      cancelled_by: cancelledByStudent ? 'student' : cancelledByProvider ? 'provider' : undefined,
+    },
+  });
 
   // Email on cancellation
   if (cancelledByStudent || cancelledByProvider) {

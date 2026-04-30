@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import posthog from '../posthog.js';
 
 const router = Router();
 
@@ -28,7 +29,21 @@ router.post('/', requireAuth, (req, res) => {
     'UPDATE provider_profiles SET rating = ?, review_count = ? WHERE id = ?'
   ).run(Math.round(stats.avg * 10) / 10, stats.count, booking.provider_id);
 
-  res.json(db.prepare('SELECT * FROM reviews WHERE id = ?').get(result.lastInsertRowid));
+  const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(result.lastInsertRowid);
+
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'review_submitted',
+    properties: {
+      review_id: review.id,
+      booking_id,
+      provider_id: booking.provider_id,
+      rating: Number(rating),
+      has_comment: !!comment,
+    },
+  });
+
+  res.json(review);
 });
 
 export default router;

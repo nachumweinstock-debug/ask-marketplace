@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
+import posthog from '../posthog.js';
 
 const router = Router();
 
@@ -53,6 +54,19 @@ router.post('/', requireAuth, (req, res) => {
   `).run(req.user.id, title.trim(), description?.trim() || null, category || null, budget || null, validUrgency);
 
   const row = db.prepare('SELECT * FROM help_wanted WHERE id = ?').get(result.lastInsertRowid);
+
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'help_wanted_posted',
+    properties: {
+      help_wanted_id: row.id,
+      category: row.category,
+      urgency: row.urgency,
+      has_budget: !!row.budget,
+      has_description: !!row.description,
+    },
+  });
+
   res.json(row);
 });
 

@@ -5,7 +5,7 @@ const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'tutor', label: 'Tutors' },
   { id: 'barber', label: 'Barbers' },
-  { id: 'hebrew tutor', label: 'Hebrew' },
+  { id: 'languages', label: 'Languages' },
   { id: 'fitness', label: 'Fitness' },
   { id: 'other', label: 'Other' },
 ];

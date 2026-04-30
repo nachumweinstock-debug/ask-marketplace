@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
 import { storeImage } from '../storage.js';
+import posthog from '../posthog.js';
 
 /**
  * Returns true if requesterId is allowed to see zelle/venmo for providerUserId.
@@ -242,6 +243,13 @@ router.post('/become', requireAuth, (req, res) => {
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
   const user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(req.user.id);
+
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'listing_created',
+    properties: { listing_id: profile.id },
+  });
+
   res.json({ user, profile_id: profile.id });
 });
 
@@ -361,9 +369,24 @@ async function updateProfile(req, res, profile) {
       profile.id
     );
 
-    res.json(db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(profile.id));
+    const updated = db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(profile.id);
+
+    posthog.capture({
+      distinctId: String(req.user.id),
+      event: 'listing_updated',
+      properties: {
+        listing_id: profile.id,
+        category: updated.category,
+        custom_category: updated.custom_category,
+        price_per_session: updated.price_per_session,
+        session_type: updated.session_type,
+      },
+    });
+
+    res.json(updated);
   } catch (err) {
     console.error('updateProfile error:', err);
+    posthog.captureException(err, String(req.user.id));
     res.status(500).json({ error: 'Failed to save listing' });
   }
 }
@@ -375,6 +398,13 @@ function deleteProfile(userId, profileId, res) {
   if (remaining.n === 0) {
     db.prepare("UPDATE users SET role = 'student' WHERE id = ?").run(userId);
   }
+
+  posthog.capture({
+    distinctId: String(userId),
+    event: 'listing_deleted',
+    properties: { listing_id: profileId, listings_remaining: remaining.n },
+  });
+
   res.json({ ok: true });
 }
 

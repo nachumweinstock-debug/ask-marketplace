@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import { sendBookingNotification } from '../email.js';
+import posthog from '../posthog.js';
 
 const router = Router();
 
@@ -49,6 +50,18 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const row = db.prepare('SELECT * FROM time_requests WHERE id = ?').get(result.lastInsertRowid);
+
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'time_request_created',
+    properties: {
+      time_request_id: row.id,
+      provider_id,
+      requested_date,
+      has_message: !!message,
+    },
+  });
+
   res.json(row);
 });
 
@@ -81,6 +94,18 @@ router.patch('/:id', requireAuth, (req, res) => {
   if (!['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
   db.prepare('UPDATE time_requests SET status = ? WHERE id = ?').run(status, tr.id);
+
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'time_request_responded',
+    properties: {
+      time_request_id: tr.id,
+      provider_id: tr.provider_id,
+      student_id: tr.student_id,
+      status,
+    },
+  });
+
   res.json({ ...tr, status });
 });
 
