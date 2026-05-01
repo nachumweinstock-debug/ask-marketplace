@@ -1,5 +1,7 @@
 export const dynamic = 'force-static'
 
+import { schools } from '../../src/seo/schools.js'
+
 export async function GET() {
   const baseUrl = 'https://www.uask.live'
 
@@ -7,7 +9,7 @@ export async function GET() {
     '',
     '/tutors',
     '/become-a-tutor',
-    '/yeshiva-university-tutoring',
+    ...schools.map((school) => `/schools/${school.slug}`),
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
