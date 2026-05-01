@@ -138,17 +138,17 @@ function PersonCard({ person, myClasses, onUpdate }) {
       }}
     >
       {/* Top row: avatar + name + actions */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <div className="person-card-top">
         <div style={{ flexShrink: 0 }}>
           {mediaUrl(person.avatar_url) ? (
             <img src={mediaUrl(person.avatar_url)} alt={person.name}
-              style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--cream-200)' }} />
+              style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--cream-200)' }} />
           ) : (
             <div style={{
-              width: 48, height: 48, borderRadius: '50%',
+              width: 44, height: 44, borderRadius: '50%',
               background: 'var(--blue-50)', border: '1px solid var(--blue-200)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16,
+              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15,
               color: 'var(--blue-600)',
             }}>
               {initials(person.name)}
@@ -159,26 +159,27 @@ function PersonCard({ person, myClasses, onUpdate }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-            fontSize: 20, fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.2,
+            fontSize: 18, fontWeight: 600, color: 'var(--ink-900)', lineHeight: 1.2,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {person.name}
           </div>
           {catLabel && (
             <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500,
-              letterSpacing: '0.08em', color: 'var(--ink-500)', marginTop: 3,
+              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
+              letterSpacing: '0.08em', color: 'var(--ink-500)', marginTop: 2,
             }}>
               {catLabel}
             </div>
           )}
           {!catLabel && person.major && (
-            <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 2, fontFamily: 'var(--font-ui)' }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2, fontFamily: 'var(--font-ui)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {person.major}
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+        <div className="person-card-actions" onClick={e => e.stopPropagation()}>
           <MessageButton personId={person.id} />
           <ConnectButton person={person} onUpdate={onUpdate} />
         </div>
@@ -386,7 +387,7 @@ export default function People() {
           </form>
 
           {loading ? (
-            <div className="provider-grid">
+            <div className="people-grid">
               {[...Array(6)].map((_, i) => (
                 <div key={i} style={{
                   background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
@@ -424,7 +425,7 @@ export default function People() {
               }}>
                 {sorted.length} {sorted.length === 1 ? 'person' : 'people'}
               </div>
-              <div className="provider-grid">
+              <div className="people-grid">
                 {sorted.map(p => (
                   <PersonCard key={p.id} person={p} myClasses={myClasses} onUpdate={handleUpdate} />
                 ))}

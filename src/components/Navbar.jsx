@@ -150,8 +150,8 @@ export default function Navbar() {
         boxShadow: scrolled ? '0 1px 0 var(--gray-200), 0 4px 16px -8px rgba(0,0,0,0.08)' : 'none',
         transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
       }}>
-        <div style={{
-          maxWidth: 1200, margin: '0 auto', padding: '0 40px',
+        <div className="nav-inner" style={{
+          maxWidth: 1200, margin: '0 auto',
           height: 60, display: 'flex', alignItems: 'center',
         }}>
           {/* Wordmark */}

@@ -130,6 +130,9 @@ body {
 }
 
 /* ── Navbar ───────────────────────────────────────────────── */
+.nav-inner { padding: 0 40px; }
+@media (max-width: 860px) { .nav-inner { padding: 0 16px; } }
+
 .nav-desktop { display: flex; align-items: stretch; flex: 1; height: 64px; gap: 0; }
 .nav-mobile  { display: none; align-items: center; gap: 8px; }
 .nav-drawer {
@@ -170,6 +173,46 @@ body {
 }
 @media (max-width: 960px) { .provider-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
 @media (max-width: 560px) { .provider-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+
+/* ── People grid (single-column on mobile) ───────────────── */
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 700px) { .people-grid { grid-template-columns: 1fr; gap: 10px; } }
+
+/* ── Person card top row ─────────────────────────────────── */
+.person-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.person-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+@media (max-width: 480px) {
+  .person-card-top { flex-wrap: wrap; }
+  .person-card-actions {
+    width: 100%;
+    padding-left: 56px; /* align under name, skip avatar+gap */
+    gap: 8px;
+  }
+}
+
+/* ── Browse filter pills (horizontal scroll on mobile) ───── */
+.filter-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.filter-scroll::-webkit-scrollbar { display: none; }
 
 /* ── Card image area (responsive height) ─────────────────── */
 .card-img-area { height: 200px; }

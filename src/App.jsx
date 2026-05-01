@@ -36,68 +36,65 @@ function ProtectedRoute({ children, role }) {
 
 const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
 
-function InstagramIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-      <circle cx="12" cy="12" r="4"/>
-      <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
-    </svg>
-  );
-}
 
 function Footer() {
   return (
-    <footer style={{ borderTop: '1px solid var(--border)' }}>
-      {/* Instagram promo strip */}
-      <a href={IG_URL} target="_blank" rel="noopener noreferrer" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-        padding: '14px 24px', textDecoration: 'none',
-        background: 'linear-gradient(90deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-      }}>
-        <InstagramIcon style={{ color: '#fff' }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-ui)', letterSpacing: '0.01em' }}>
-          Follow us @uasklive
-        </span>
+    <footer style={{
+      borderTop: '1px solid var(--border)',
+      padding: '20px 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: 24, flexWrap: 'wrap',
+    }}>
+      <span style={{ fontSize: 12, color: 'var(--muted)' }}>© {new Date().getFullYear()} ASK</span>
+      <Link to="/faq" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        FAQ
+      </Link>
+      <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+        style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Privacy & Terms
       </a>
-
-      {/* Links row */}
-      <div style={{
-        padding: '20px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 24, flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>© {new Date().getFullYear()} ASK</span>
-        <Link to="/faq" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-          FAQ
-        </Link>
-        <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-          Privacy & Terms
-        </a>
-        <Link to="/help-wanted" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-          Request a service
-        </Link>
-        <a href={IG_URL} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-          onMouseEnter={e => e.currentTarget.style.color = '#bc1888'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-          <InstagramIcon /> Instagram
-        </a>
-      </div>
+      <Link to="/help-wanted" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Request a service
+      </Link>
+      <a href={IG_URL} target="_blank" rel="noopener noreferrer"
+        style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+        onMouseEnter={e => e.currentTarget.style.color = '#bc1888'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Instagram
+      </a>
     </footer>
+  );
+}
+
+function IgBar() {
+  return (
+    <a href={IG_URL} target="_blank" rel="noopener noreferrer" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      padding: '9px 16px', textDecoration: 'none',
+      background: 'linear-gradient(90deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
+    }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="0.8" fill="#fff" stroke="none"/>
+      </svg>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-ui)', letterSpacing: '0.01em' }}>
+        Follow us on Instagram @uasklive
+      </span>
+    </a>
   );
 }
 
 function Layout({ children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <IgBar />
       <Navbar />
       <main style={{ flex: 1 }}>{children}</main>
       <Footer />
