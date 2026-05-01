@@ -7,6 +7,7 @@ export async function GET() {
     '',
     '/tutors',
     '/become-a-tutor',
+    '/yeshiva-university-tutoring',
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
