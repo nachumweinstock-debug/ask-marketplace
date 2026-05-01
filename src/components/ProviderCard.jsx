@@ -72,7 +72,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(providerUrl(provider.name, provider.id))}
+      onClick={() => navigate(providerUrl(provider.name, provider.id, provider.username))}
       style={{
         position: 'relative', cursor: 'pointer',
         background: '#fff',

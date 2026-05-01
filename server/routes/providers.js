@@ -167,6 +167,21 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json(listings);
 });
 
+// GET /providers/u/:username — look up all listings for a user by their username slug
+router.get('/u/:username', optionalAuth, (req, res) => {
+  const user = db.prepare('SELECT id, name, username FROM users WHERE username = ?').get(req.params.username);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const listings = db.prepare(`
+    SELECT pp.*, u.name, u.username,
+      (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
+    FROM provider_profiles pp
+    JOIN users u ON pp.user_id = u.id
+    WHERE pp.user_id = ?
+    ORDER BY pp.id DESC
+  `).all(user.id);
+  res.json({ user, listings });
+});
+
 // GET /providers/by-user/:userId — all public listings for a given user
 // Payment info stripped — use the individual /:id endpoint for that after auth check
 router.get('/by-user/:userId', (req, res) => {
@@ -174,7 +189,7 @@ router.get('/by-user/:userId', (req, res) => {
     SELECT pp.id, pp.user_id, pp.bio, pp.category, pp.custom_category, pp.subcategory,
            pp.price_per_session, pp.rating, pp.review_count, pp.listing_image,
            pp.session_type, pp.title,
-           u.name,
+           u.name, u.username,
            (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
@@ -195,7 +210,7 @@ router.get('/me/profile', requireAuth, (req, res) => {
 router.get('/', (req, res) => {
   const { category, subcategory, search, sort, session_type } = req.query;
   let query = `
-    SELECT pp.*, u.name, u.email,
+    SELECT pp.*, u.name, u.email, u.username,
       (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
@@ -241,8 +256,16 @@ router.get('/', (req, res) => {
 router.post('/become', requireAuth, (req, res) => {
   db.prepare('INSERT INTO provider_profiles (user_id, category) VALUES (?, ?)').run(req.user.id, 'other');
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
+  // Auto-assign username if not already set
+  const existing = db.prepare('SELECT username, name FROM users WHERE id = ?').get(req.user.id);
+  if (!existing.username) {
+    const base = (existing.name || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
+    let slug = base, n = 2;
+    while (db.prepare('SELECT 1 FROM users WHERE username = ?').get(slug)) slug = `${base}-${n++}`;
+    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(slug, req.user.id);
+  }
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
-  const user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, email, name, role, username FROM users WHERE id = ?').get(req.user.id);
 
   posthog.capture({
     distinctId: String(req.user.id),
@@ -284,7 +307,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 // GET /providers/:id — public listing page (payment info gated behind connection/booking)
 router.get('/:id', optionalAuth, (req, res) => {
   const provider = db.prepare(`
-    SELECT pp.*, u.name, u.email,
+    SELECT pp.*, u.name, u.email, u.username,
       (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id

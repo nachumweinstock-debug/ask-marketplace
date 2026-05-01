@@ -4,6 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
+import { providerUrl } from '../lib/providerUrl';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -118,7 +119,7 @@ const TABS = [
 export default function ProviderDashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [tab, setTab] = useState(searchParams.get('tab') || 'bookings');
   const isNew = searchParams.get('new') === '1';
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -135,6 +136,7 @@ export default function ProviderDashboard() {
 
   const [myListings, setMyListings] = useState([]);
   const [shareCopied, setShareCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [editModal, setEditModal] = useState(null); // { form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
@@ -320,44 +322,128 @@ export default function ProviderDashboard() {
       </div>
 
       {/* Share your listing */}
-      {profile?.id && (
-        <div style={{
-          background: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 12, padding: '16px 20px', marginBottom: 24,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-        }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
-              Share your listing
-            </div>
+      {profile?.id && (() => {
+        const profileUrl = `${window.location.origin}${providerUrl(user?.name, profile.id, user?.username)}`;
+        const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=12&data=${encodeURIComponent(profileUrl)}`;
+        return (
+          <>
             <div style={{
-              fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-ui)',
-              wordBreak: 'break-all', lineHeight: 1.5,
+              background: 'var(--card)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+              display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
             }}>
-              {`${window.location.origin}/providers/${profile.id}`}
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+                  Your profile link
+                </div>
+                <div style={{
+                  fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-mono)',
+                  wordBreak: 'break-all', lineHeight: 1.5,
+                }}>
+                  {profileUrl}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(profileUrl).then(() => {
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                    });
+                  }}
+                  style={{
+                    fontSize: 13, fontWeight: 600,
+                    color: shareCopied ? '#166534' : 'var(--primary)',
+                    background: shareCopied ? '#F0FDF4' : 'var(--accent)',
+                    border: `1.5px solid ${shareCopied ? '#BBF7D0' : '#BFDBFE'}`,
+                    borderRadius: 999, padding: '8px 16px',
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {shareCopied ? '✓ Copied!' : '🔗 Copy link'}
+                </button>
+                <button
+                  onClick={() => setQrOpen(true)}
+                  style={{
+                    fontSize: 13, fontWeight: 600,
+                    color: 'var(--primary)',
+                    background: 'var(--gray-100)',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: 999, padding: '8px 16px',
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    transition: 'all .15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--gray-200)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--gray-100)'}
+                >
+                  QR Code
+                </button>
+              </div>
             </div>
-          </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/providers/${profile.id}`).then(() => {
-                setShareCopied(true);
-                setTimeout(() => setShareCopied(false), 2000);
-              });
-            }}
-            style={{
-              flexShrink: 0, fontSize: 13, fontWeight: 600,
-              color: shareCopied ? '#166534' : 'var(--primary)',
-              background: shareCopied ? '#F0FDF4' : 'var(--accent)',
-              border: `1.5px solid ${shareCopied ? '#BBF7D0' : '#BFDBFE'}`,
-              borderRadius: 999, padding: '8px 20px',
-              cursor: 'pointer', fontFamily: 'var(--font-ui)',
-              transition: 'all .15s',
-            }}
-          >
-            {shareCopied ? '✓ Copied!' : '🔗 Copy link'}
-          </button>
-        </div>
-      )}
+
+            {/* QR Code modal */}
+            {qrOpen && (
+              <div
+                onClick={() => setQrOpen(false)}
+                style={{
+                  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 2000, padding: 24,
+                }}
+              >
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    background: 'var(--white)', borderRadius: 20,
+                    padding: '32px 28px', maxWidth: 340, width: '100%',
+                    textAlign: 'center', boxShadow: 'var(--shadow-lg)',
+                  }}
+                >
+                  <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                    Your QR Code
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20, fontFamily: 'var(--font-mono)' }}>
+                    {profileUrl}
+                  </div>
+                  <img
+                    src={qrSrc}
+                    alt="QR code"
+                    style={{ width: 220, height: 220, borderRadius: 12, border: '1px solid var(--border)' }}
+                  />
+                  <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center' }}>
+                    <a
+                      href={qrSrc}
+                      download={`${user?.username || 'qr'}-ask.png`}
+                      style={{
+                        fontSize: 13, fontWeight: 600,
+                        color: 'var(--primary)', background: 'var(--accent)',
+                        border: '1.5px solid #BFDBFE',
+                        borderRadius: 999, padding: '9px 20px',
+                        textDecoration: 'none', fontFamily: 'var(--font-ui)',
+                      }}
+                    >
+                      Download
+                    </a>
+                    <button
+                      onClick={() => setQrOpen(false)}
+                      style={{
+                        fontSize: 13, fontWeight: 600,
+                        color: 'var(--muted)', background: 'var(--gray-100)',
+                        border: '1.5px solid var(--border)',
+                        borderRadius: 999, padding: '9px 20px',
+                        cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* All listings overview */}
       {myListings.length > 1 && (

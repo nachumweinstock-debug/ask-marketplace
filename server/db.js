@@ -96,6 +96,17 @@ if (!ppCols.includes('session_type'))    db.exec("ALTER TABLE provider_profiles 
 if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
 if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
 if (!cols.includes('pubkey'))       db.exec('ALTER TABLE users ADD COLUMN pubkey TEXT');
+if (!cols.includes('username')) {
+  db.exec('ALTER TABLE users ADD COLUMN username TEXT UNIQUE');
+  // Backfill existing users: generate slug from name, append -2/-3 on conflict
+  const existing = db.prepare('SELECT id, name FROM users').all();
+  for (const u of existing) {
+    const base = (u.name || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
+    let slug = base, n = 2;
+    while (db.prepare('SELECT 1 FROM users WHERE username = ?').get(slug)) slug = `${base}-${n++}`;
+    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(slug, u.id);
+  }
+}
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

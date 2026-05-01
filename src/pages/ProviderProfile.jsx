@@ -6,12 +6,12 @@ import { mediaUrl } from '../lib/media';
 import { fmtTime, fmtDay, DAYS } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 import MiniCalendar from '../components/MiniCalendar';
-import { providerUrl, parseProviderSlug } from '../lib/providerUrl';
+import { providerUrl, parseProviderSlug, isUsernameSlug } from '../lib/providerUrl';
 import GroupInvitePicker from '../components/GroupInvitePicker';
 
-function ShareButton({ providerId, providerName }) {
+function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}${providerUrl(providerName, providerId)}`;
+  const url = `${window.location.origin}${providerUrl(providerName, providerId, username)}`;
   function handleCopy() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -181,7 +181,10 @@ function TimeRequestPicker({ reqDate, setReqDate, reqTime, setReqTime, reqMessag
 
 export default function ProviderProfile() {
   const { id: rawId, providerSlug } = useParams();
-  const id = rawId ?? String(parseProviderSlug(providerSlug ?? ''));
+  const slug = providerSlug ?? '';
+  const numericId = rawId ?? (isUsernameSlug(slug) ? null : String(parseProviderSlug(slug)));
+  const usernameSlug = (!rawId && isUsernameSlug(slug) && slug) ? slug : null;
+
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [provider, setProvider] = useState(null);
@@ -204,17 +207,21 @@ export default function ProviderProfile() {
 
   useEffect(() => {
     setOtherListings([]);
-    api.get(`/providers/${id}`)
-      .then(({ data }) => {
-        setProvider(data);
-        // Fetch other listings by same user
-        api.get(`/providers/by-user/${data.user_id}`)
-          .then(({ data: all }) => setOtherListings(all.filter(l => l.id !== data.id)))
-          .catch(() => {});
-      })
-      .catch(() => navigate('/browse'))
-      .finally(() => setLoading(false));
-  }, [id]);
+    const fetch = usernameSlug
+      ? api.get(`/providers/u/${usernameSlug}`).then(({ data }) => {
+          if (!data.listings?.length) throw new Error('no listings');
+          // Show the most recent listing; stash the rest as otherListings
+          setProvider(data.listings[0]);
+          setOtherListings(data.listings.slice(1));
+        })
+      : api.get(`/providers/${numericId}`).then(({ data }) => {
+          setProvider(data);
+          api.get(`/providers/by-user/${data.user_id}`)
+            .then(({ data: all }) => setOtherListings(all.filter(l => l.id !== data.id)))
+            .catch(() => {});
+        });
+    fetch.catch(() => navigate('/browse')).finally(() => setLoading(false));
+  }, [numericId, usernameSlug]);
 
   async function handleDeleteListing() {
     if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
@@ -346,7 +353,7 @@ export default function ProviderProfile() {
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: 12, color: 'var(--muted)', flexGrow: 1, fontWeight: 500 }}>Your listing</span>
-            <ShareButton providerId={id} providerName={provider?.name} />
+            <ShareButton providerId={provider?.id} providerName={provider?.name} username={provider?.username} />
             <Link to="/dashboard/provider?tab=availability" style={{
               fontSize: 12, fontWeight: 600, color: 'var(--text)',
               textDecoration: 'none', padding: '5px 14px',
@@ -742,7 +749,7 @@ export default function ProviderProfile() {
               {otherListings.map(l => (
                 <Link
                   key={l.id}
-                  to={providerUrl(provider?.name, l.id)}
+                  to={providerUrl(l.name || provider?.name, l.id, l.username || provider?.username)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 14px', borderRadius: 10,
