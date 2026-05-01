@@ -46,7 +46,7 @@ function formatMode(sessionType) {
   return 'Both';
 }
 
-export default function ProviderCard({ provider, isOwn, onDelete }) {
+export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmin }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -139,7 +139,23 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
           {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
         </div>
 
-        {isOwn && <OwnMenu menuRef={menuRef} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} onDelete={onDelete} />}
+        {isOwn && <OwnMenu menuRef={menuRef} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} onDelete={onDelete} onEdit={onEdit} />}
+        {isAdmin && !isOwn && (
+          <button
+            onClick={e => { e.stopPropagation(); onEdit && onEdit(provider.id); }}
+            style={{
+              position: 'absolute', top: 10, left: 10,
+              background: 'rgba(29,78,216,0.85)', color: '#fff',
+              border: 'none', borderRadius: 99, padding: '4px 11px',
+              fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'var(--font-ui)', letterSpacing: '0.02em',
+              backdropFilter: 'blur(4px)',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.2)',
+            }}
+          >
+            Edit
+          </button>
+        )}
       </div>
 
       {/* ── Card body ──────────────────────────────────────────── */}
@@ -231,7 +247,7 @@ export default function ProviderCard({ provider, isOwn, onDelete }) {
   );
 }
 
-function OwnMenu({ menuRef, menuOpen, setMenuOpen, navigate, onDelete }) {
+function OwnMenu({ menuRef, menuOpen, setMenuOpen, navigate, onDelete, onEdit }) {
   return (
     <div ref={menuRef} style={{ position: 'absolute', top: 10, right: 10 }}
       onClick={e => e.stopPropagation()}>
@@ -255,7 +271,11 @@ function OwnMenu({ menuRef, menuOpen, setMenuOpen, navigate, onDelete }) {
           minWidth: 156, zIndex: 50, overflow: 'hidden',
         }}>
           <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(false); navigate('/dashboard/provider?tab=availability'); }}
+            onClick={e => {
+              e.stopPropagation(); setMenuOpen(false);
+              if (onEdit) onEdit();
+              else navigate('/dashboard/provider');
+            }}
             style={{
               display: 'block', width: '100%', textAlign: 'left',
               padding: '10px 16px', background: 'none', border: 'none',
