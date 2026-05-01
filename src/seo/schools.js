@@ -7,6 +7,84 @@ export const tutoringSubjects = [
   { slug: 'exam-prep', name: 'Exam prep', description: 'midterm prep, final exam review, quizzes, and cumulative study plans' },
 ];
 
+export const schoolSeoSubjects = [
+  {
+    slug: 'finance-tutors',
+    shortSlug: 'finance',
+    name: 'Finance',
+    titleSubject: 'Finance Tutors',
+    searchTerm: 'Finance',
+    description: 'corporate finance, investments, valuation, Excel modeling, capital markets, and finance problem sets',
+    tutoringCopy: 'Finance tutoring works best when students can slow down the formulas, connect concepts to real cases, and practice the exact style of problems they see in class. Ask Marketplace helps students find tutors for corporate finance, investments, valuation, Excel modeling, and exam review.',
+    painPointCopy: 'Finance classes often combine theory, calculator work, spreadsheets, and fast exam pacing. A tutor can help turn confusing lecture notes into a practical study plan with targeted practice.',
+    faqs: [
+      ['What can a finance tutor help with?', 'A finance tutor can help with time value of money, valuation, investments, capital budgeting, Excel models, homework review, and exam preparation.'],
+      ['Is finance tutoring useful for business school classes?', 'Yes. Finance tutoring is especially useful for business school core classes, upper-level electives, and students preparing for internship technical questions.'],
+      ['Can I find online finance tutoring?', 'Tutor listings can support online, in-person, or hybrid sessions depending on the tutor availability.'],
+    ],
+  },
+  {
+    slug: 'accounting-tutors',
+    shortSlug: 'accounting',
+    name: 'Accounting',
+    titleSubject: 'Accounting Tutors',
+    searchTerm: 'Accounting',
+    description: 'financial accounting, managerial accounting, journal entries, debits and credits, statements, and exam review',
+    tutoringCopy: 'Accounting tutoring helps students build the foundation that later business courses rely on. Ask Marketplace connects students with help for journal entries, financial statements, managerial accounting, cost concepts, homework review, and test prep.',
+    painPointCopy: 'Accounting can feel unforgiving because one missed concept can make an entire problem fall apart. A tutor can help students practice step by step until the logic becomes repeatable.',
+    faqs: [
+      ['What topics can an accounting tutor cover?', 'Accounting tutors can help with debits and credits, journal entries, adjusting entries, financial statements, managerial accounting, cost accounting, and exam review.'],
+      ['Can tutoring help with introductory accounting?', 'Yes. Intro accounting is one of the most common tutoring needs because the course introduces a new way of thinking about transactions and statements.'],
+      ['Can I get help before an accounting exam?', 'Yes. Tutors can review weak areas, walk through practice problems, and help organize a focused exam prep plan.'],
+    ],
+  },
+  {
+    slug: 'economics-tutors',
+    shortSlug: 'economics',
+    name: 'Economics',
+    titleSubject: 'Economics Tutors',
+    searchTerm: 'Economics',
+    description: 'microeconomics, macroeconomics, graphs, models, problem sets, and quantitative economic reasoning',
+    tutoringCopy: 'Economics tutoring helps students connect graphs, formulas, models, and written explanations. Ask Marketplace supports microeconomics, macroeconomics, intermediate theory, quantitative problem sets, and exam prep.',
+    painPointCopy: 'Economics classes often move between intuition and math quickly. A tutor can help students understand what the model means before they memorize the answer pattern.',
+    faqs: [
+      ['What does an economics tutor help with?', 'Economics tutors can help with supply and demand, elasticity, consumer theory, producer theory, macro models, graphs, and quantitative problem sets.'],
+      ['Can tutoring help with economics graphs?', 'Yes. Tutors can help students understand how to read, draw, shift, and explain economics graphs clearly.'],
+      ['Is economics tutoring only for majors?', 'No. Tutoring can help majors, business students, and students taking economics as a requirement.'],
+    ],
+  },
+  {
+    slug: 'math-tutors',
+    shortSlug: 'math',
+    name: 'Math',
+    titleSubject: 'Math Tutors',
+    searchTerm: 'Math',
+    description: 'calculus, statistics, algebra, quantitative methods, proofs, and problem-solving practice',
+    tutoringCopy: 'Math tutoring gives students a place to work through problems carefully, catch gaps early, and prepare for quizzes and exams. Ask Marketplace helps students find support for calculus, statistics, algebra, quantitative methods, and related courses.',
+    painPointCopy: 'Math courses build quickly, so small misunderstandings can become bigger issues before an exam. A tutor can help students diagnose the gap and practice the right problem types.',
+    faqs: [
+      ['What math subjects can tutors help with?', 'Math tutors can help with calculus, statistics, algebra, quantitative methods, business math, and course-specific problem sets.'],
+      ['Can a math tutor help with exam prep?', 'Yes. Tutors can help organize formulas, practice representative problems, and review the concepts most likely to appear on exams.'],
+      ['Is math tutoring available for non-STEM students?', 'Yes. Many students use math tutoring for business, economics, social science, and general education requirements.'],
+    ],
+  },
+  {
+    slug: 'writing-tutors',
+    shortSlug: 'writing',
+    name: 'Writing',
+    titleSubject: 'Writing Tutors',
+    searchTerm: 'Writing',
+    description: 'essays, research papers, outlines, thesis development, citations, revisions, and writing assignments',
+    tutoringCopy: 'Writing tutoring helps students turn ideas into clear, organized papers. Ask Marketplace supports outlines, thesis development, research papers, citations, revision, class essays, and writing-heavy assignments.',
+    painPointCopy: 'College writing can be hard because the assignment is often broad and feedback arrives late. A tutor can help students clarify the argument, structure the paper, and revise with purpose.',
+    faqs: [
+      ['What can a writing tutor help with?', 'Writing tutors can help with brainstorming, outlines, thesis statements, essay structure, research papers, citations, editing, and revision planning.'],
+      ['Will a writing tutor write my paper for me?', 'No. The goal is to help students improve their own work through feedback, structure, and revision support.'],
+      ['Can writing tutoring help with non-English classes?', 'Yes. Writing support can help with papers in history, business, economics, humanities, social science, and other writing-heavy courses.'],
+    ],
+  },
+];
+
 export const schools = [
   {
     slug: 'nyu',
@@ -239,6 +317,20 @@ export function getSchoolBySlug(slug) {
   return schools.find((school) => school.slug === slug);
 }
 
+export function getSchoolSeoSubjectBySlug(slug) {
+  return schoolSeoSubjects.find((subject) => subject.slug === slug);
+}
+
 export function schoolUrl(slug) {
   return `/schools/${slug}`;
+}
+
+export function schoolSubjectUrl(schoolSlug, subjectSlug) {
+  return `/schools/${schoolSlug}/${subjectSlug}`;
+}
+
+export function schoolSubjectUrls() {
+  return schools.flatMap((school) =>
+    schoolSeoSubjects.map((subject) => schoolSubjectUrl(school.slug, subject.slug))
+  );
 }

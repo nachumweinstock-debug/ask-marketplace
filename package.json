@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite\"",
+    "prebuild": "node scripts/generate-school-seo-pages.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
