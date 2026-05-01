@@ -7,6 +7,8 @@ import {
   schoolSubjectUrl,
   schoolSubjectUrls,
   schoolUrl,
+  subjectUrl,
+  subjectUrls,
   tutoringSubjects,
 } from '../src/seo/schools.js';
 
@@ -38,6 +40,14 @@ function subjectPageTitle(school, subject) {
 
 function subjectPageDescription(school, subject) {
   return `Find ${subject.name.toLowerCase()} tutors for ${school.fullName} students. Get help with ${subject.description} through Ask Marketplace.`;
+}
+
+function generalSubjectPageTitle(subject) {
+  return `${subject.titleSubject} for College Students | Ask Marketplace`;
+}
+
+function generalSubjectPageDescription(subject) {
+  return `Find college ${subject.name.toLowerCase()} tutors for ${subject.description}. Ask Marketplace helps students connect with trusted academic support.`;
 }
 
 function organizationJsonLd() {
@@ -89,6 +99,20 @@ function subjectFaqs(school, subject) {
     [
       `Is ${subject.name.toLowerCase()} tutoring useful for ${school.fullName} classes?`,
       `Yes. ${school.fullName} students use tutoring to review class concepts, work through assignments, and prepare for exams in a way that fits ${school.name}'s academic pace.`,
+    ],
+    ...subject.faqs,
+  ];
+}
+
+function generalSubjectFaqs(subject) {
+  return [
+    [
+      `How do students find ${subject.name.toLowerCase()} tutors?`,
+      `Students can browse Ask Marketplace for ${subject.name.toLowerCase()} tutors, compare listings, and look for support with ${subject.description}.`,
+    ],
+    [
+      `What makes a good ${subject.name.toLowerCase()} tutor?`,
+      `A strong tutor explains concepts clearly, adapts to the student's course, and gives practical feedback without taking over the student's own work.`,
     ],
     ...subject.faqs,
   ];
@@ -147,6 +171,32 @@ function renderSubjectCards(school) {
         </article>`).join('');
 }
 
+function renderSubjectCategoryCards() {
+  const categories = ['STEM', 'Business', 'Humanities'];
+  return categories.map((category) => {
+    const subjects = schoolSeoSubjects.filter((subject) => subject.category === category);
+    return `
+        <article>
+          <h3>${esc(category)} tutoring</h3>
+          <p>${esc(subjects.map((subject) => subject.name).join(', '))}</p>
+          <div class="link-list">
+            ${subjects.map((subject) => `<a href="${subjectUrl(subject.slug)}">${esc(subject.name)}</a>`).join('\n            ')}
+          </div>
+        </article>`;
+  }).join('');
+}
+
+function relatedSubjectLinks(subject, school) {
+  return subject.relatedSubjects
+    .map((slug) => schoolSeoSubjects.find((item) => item.slug === slug))
+    .filter(Boolean)
+    .map((item) => {
+      const href = school ? schoolSubjectUrl(school.slug, item.slug) : subjectUrl(item.slug);
+      return `<a href="${href}">${esc(item.name)} tutors</a>`;
+    })
+    .join('\n          ');
+}
+
 function renderGeneralSubjectCards(school) {
   return tutoringSubjects.map((subject) => `
         <article>
@@ -197,6 +247,11 @@ ${head}
         </div>
       </section>
       <section>
+        <h2>Browse by academic area</h2>
+        <div class="grid">${renderSubjectCategoryCards()}
+        </div>
+      </section>
+      <section>
         <h2>More popular tutoring subjects at ${esc(school.name)}</h2>
         <div class="grid">${renderGeneralSubjectCards(school)}
         </div>
@@ -225,11 +280,11 @@ function renderSubjectPage(school, subject) {
   const title = subjectPageTitle(school, subject);
   const description = subjectPageDescription(school, subject);
   const faqs = subjectFaqs(school, subject);
-  const relatedSubjects = schoolSeoSubjects.filter((item) => item.slug !== subject.slug);
   const keywords = [
     `${school.name} ${subject.name.toLowerCase()} tutor`,
     `${school.fullName} ${subject.name.toLowerCase()} tutoring`,
     `${school.name} ${subject.name.toLowerCase()} tutors`,
+    ...subject.keywords,
     ...school.keywords,
   ];
   const programStrengths = school.strengths.slice(0, 4).join(', ');
@@ -287,12 +342,92 @@ ${head}
       <section class="panel">
         <h2>Related tutoring pages for ${esc(school.name)}</h2>
         <div class="link-list">
-          ${relatedSubjects.map((item) => `<a href="${schoolSubjectUrl(school.slug, item.slug)}">${esc(item.name)} tutors</a>`).join('\n          ')}
+          ${relatedSubjectLinks(subject, school)}
           <a href="${schoolUrl(school.slug)}">All ${esc(school.name)} tutoring</a>
+          <a href="${subjectUrl(subject.slug)}">General ${esc(subject.name.toLowerCase())} tutoring</a>
         </div>
       </section>
       <section class="faq">
         <h2>${esc(school.name)} ${esc(subject.name.toLowerCase())} tutoring FAQ</h2>
+        ${faqs.map(([question, answer]) => `<article><h3>${esc(question)}</h3><p>${esc(answer)}</p></article>`).join('\n        ')}
+      </section>
+    </main>
+  </body>
+</html>
+`;
+}
+
+function renderGeneralSubjectPage(subject) {
+  const path = subjectUrl(subject.slug);
+  const canonical = `${baseUrl}${path}`;
+  const title = generalSubjectPageTitle(subject);
+  const description = generalSubjectPageDescription(subject);
+  const faqs = generalSubjectFaqs(subject);
+  const matchingSchools = schools.filter((school) =>
+    school.strengths.join(' ').toLowerCase().includes(subject.shortSlug.replaceAll('-', ' ')) ||
+    school.description.toLowerCase().includes(subject.shortSlug.replaceAll('-', ' ')) ||
+    school.keywords.join(' ').toLowerCase().includes(subject.shortSlug.replaceAll('-', ' '))
+  );
+  const featuredSchools = (matchingSchools.length ? matchingSchools : schools).slice(0, 8);
+  const head = renderHead({
+    title,
+    description,
+    canonical,
+    keywords: subject.keywords,
+    imageAlt: `${subject.name} tutoring on Ask Marketplace`,
+    jsonLd: [
+      organizationJsonLd(),
+      faqJsonLd(faqs),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: `${subject.name} tutors`, path },
+      ]),
+    ],
+  });
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+${head}
+  </head>
+  <body>
+    <main>
+      <nav class="crumbs"><a href="/">Home</a><span>/</span><span>${esc(subject.name)} tutors</span></nav>
+      <p class="eyebrow">${esc(subject.category)} tutoring</p>
+      <h1>${esc(subject.titleSubject)} for College Students</h1>
+      <p class="intro">${esc(subject.tutoringCopy)}</p>
+      <div class="actions">
+        <a href="/tutors?search=${encodeURIComponent(subject.searchTerm)}">Find ${esc(subject.name.toLowerCase())} tutors</a>
+        <a href="/become-a-tutor">Become a tutor</a>
+      </div>
+      <section class="panel">
+        <h2>Why students look for ${esc(subject.name.toLowerCase())} help</h2>
+        <p>${esc(subject.painPointCopy)}</p>
+        <ul>${subject.painPoints.map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
+      </section>
+      <section>
+        <h2>Common ${esc(subject.name.toLowerCase())} tutoring goals</h2>
+        <div class="grid">
+          <article><h3>Understand the material</h3><p>Turn lectures, readings, formulas, code, labs, or source material into a clearer study path.</p></article>
+          <article><h3>Practice with feedback</h3><p>Work through assignments, problems, drafts, or projects with targeted feedback on what to improve.</p></article>
+          <article><h3>Prepare for exams</h3><p>Review weak areas, build a practice plan, and focus study time before quizzes, midterms, and finals.</p></article>
+          <article><h3>Stay on pace</h3><p>Use tutoring to keep moving during busy weeks when multiple classes and deadlines overlap.</p></article>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Related subjects</h2>
+        <div class="link-list">
+          ${relatedSubjectLinks(subject)}
+        </div>
+      </section>
+      <section class="panel">
+        <h2>${esc(subject.name)} tutoring by school</h2>
+        <div class="link-list">
+          ${featuredSchools.map((school) => `<a href="${schoolSubjectUrl(school.slug, subject.slug)}">${esc(school.name)} ${esc(subject.name.toLowerCase())} tutors</a>`).join('\n          ')}
+        </div>
+      </section>
+      <section class="faq">
+        <h2>${esc(subject.name)} tutoring FAQ</h2>
         ${faqs.map(([question, answer]) => `<article><h3>${esc(question)}</h3><p>${esc(answer)}</p></article>`).join('\n        ')}
       </section>
     </main>
@@ -315,12 +450,21 @@ function writeSchoolPages() {
   }
 }
 
+function writeGeneralSubjectPages() {
+  for (const subject of schoolSeoSubjects) {
+    const dir = join(root, 'public', 'subjects', subject.slug);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), renderGeneralSubjectPage(subject));
+  }
+}
+
 function writeSitemap() {
   const paths = [
     '',
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => schoolUrl(school.slug)),
+    ...subjectUrls(),
     ...schoolSubjectUrls(),
   ];
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -334,6 +478,7 @@ ${paths.map((path) => `  <url>
   writeFileSync(join(root, 'public', 'sitemap.xml'), sitemap);
 }
 
+writeGeneralSubjectPages();
 writeSchoolPages();
 writeSitemap();
-console.log(`Generated ${schools.length} school pages, ${schoolSubjectUrls().length} subject pages, and sitemap.xml`);
+console.log(`Generated ${schools.length} school pages, ${subjectUrls().length} general subject pages, ${schoolSubjectUrls().length} school subject pages, and sitemap.xml`);

@@ -1,6 +1,6 @@
 export const dynamic = 'force-static'
 
-import { schools, schoolSubjectUrls } from '../../src/seo/schools.js'
+import { schools, schoolSubjectUrls, subjectUrls } from '../../src/seo/schools.js'
 
 export async function GET() {
   const baseUrl = 'https://www.uask.live'
@@ -10,6 +10,7 @@ export async function GET() {
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => `/schools/${school.slug}`),
+    ...subjectUrls(),
     ...schoolSubjectUrls(),
   ]
 

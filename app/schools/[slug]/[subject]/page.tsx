@@ -37,6 +37,7 @@ export function generateMetadata({ params }: Props): Metadata {
       `${school.name} ${subject.name.toLowerCase()} tutor`,
       `${school.fullName} ${subject.name.toLowerCase()} tutoring`,
       `${school.name} ${subject.name.toLowerCase()} tutors`,
+      ...subject.keywords,
       ...school.keywords,
     ],
     alternates: { canonical },
@@ -182,12 +183,13 @@ export default function SchoolSubjectTutoringPage({ params }: Props) {
       <section>
         <h2>Related tutoring pages for {school.name}</h2>
         {schoolSeoSubjects
-          .filter((item) => item.slug !== subject.slug)
+          .filter((item) => subject.relatedSubjects.includes(item.slug))
           .map((item) => (
             <Link key={item.slug} href={`/schools/${school.slug}/${item.slug}`}>
               {item.name} tutors
             </Link>
           ))}
+        <Link href={`/subjects/${subject.slug}`}>General {subject.name.toLowerCase()} tutoring</Link>
       </section>
 
       <section>

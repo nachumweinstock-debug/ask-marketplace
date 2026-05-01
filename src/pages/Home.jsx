@@ -10,6 +10,43 @@ const FILTERS = [
   { id: 'other', label: 'Other' },
 ];
 
+const ACADEMIC_CATEGORIES = [
+  {
+    title: 'STEM tutoring',
+    copy: 'Support for pre-health, engineering, CS, data, math, and lab-heavy classes.',
+    subjects: [
+      ['Biology', '/subjects/biology-tutors'],
+      ['Chemistry', '/subjects/chemistry-tutors'],
+      ['Organic Chemistry', '/subjects/organic-chemistry-tutors'],
+      ['Physics', '/subjects/physics-tutors'],
+      ['Calculus', '/subjects/calculus-tutors'],
+      ['Statistics', '/subjects/statistics-tutors'],
+      ['Computer Science', '/subjects/computer-science-tutors'],
+      ['Engineering', '/subjects/engineering-tutors'],
+      ['Data Science', '/subjects/data-science-tutors'],
+    ],
+  },
+  {
+    title: 'Business tutoring',
+    copy: 'Course help for core business classes, quantitative work, and exam prep.',
+    subjects: [
+      ['Accounting', '/subjects/accounting-tutors'],
+      ['Finance', '/subjects/finance-tutors'],
+      ['Economics', '/subjects/economics-tutors'],
+    ],
+  },
+  {
+    title: 'Humanities tutoring',
+    copy: 'Writing, research, reading-heavy courses, and social science support.',
+    subjects: [
+      ['Psychology', '/subjects/psychology-tutors'],
+      ['Writing', '/subjects/writing-tutors'],
+      ['History', '/subjects/history-tutors'],
+      ['Political Science', '/subjects/political-science-tutors'],
+    ],
+  },
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -142,6 +179,74 @@ export default function Home() {
               >
                 {label}
               </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Academic tutoring */}
+      <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '56px 48px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div className="section-label" style={{ marginBottom: 16 }}>
+            COLLEGE TUTORING
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 18,
+          }}>
+            {ACADEMIC_CATEGORIES.map((category) => (
+              <section
+                key={category.title}
+                style={{
+                  border: '1px solid var(--cream-200)',
+                  borderRadius: 12,
+                  padding: 24,
+                  background: 'var(--cream-100)',
+                }}
+              >
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontOpticalSizing: 'auto',
+                  fontSize: 26,
+                  lineHeight: 1.1,
+                  color: 'var(--ink-900)',
+                  marginBottom: 10,
+                  letterSpacing: 0,
+                }}>
+                  {category.title}
+                </h2>
+                <p style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 14,
+                  color: 'var(--ink-500)',
+                  lineHeight: 1.55,
+                  marginBottom: 18,
+                }}>
+                  {category.copy}
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {category.subjects.map(([label, href]) => (
+                    <a
+                      key={href}
+                      href={href}
+                      style={{
+                        border: '1px solid var(--cream-300)',
+                        borderRadius: 999,
+                        padding: '8px 11px',
+                        color: 'var(--ink-700)',
+                        textDecoration: 'none',
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: 'var(--cream-50)',
+                      }}
+                    >
+                      {label}
+                    </a>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>
