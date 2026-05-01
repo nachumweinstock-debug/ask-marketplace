@@ -1,24 +1,18 @@
-import type { MetadataRoute } from 'next'
+import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://uask.live',
+      url: 'https://www.uask.live',
       lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1,
     },
     {
-      url: 'https://uask.live/tutors',
+      url: 'https://www.uask.live/tutors',
       lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
     },
     {
-      url: 'https://uask.live/become-a-tutor',
+      url: 'https://www.uask.live/become-a-tutor',
       lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
     },
   ]
 }
