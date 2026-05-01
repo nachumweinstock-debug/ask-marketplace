@@ -98,8 +98,8 @@ export default function FAQ() {
 
       <div style={{ textAlign: 'center', marginTop: 48, fontSize: 13, color: 'var(--muted)' }}>
         More questions?{' '}
-        <a href="mailto:hello@uask.live" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-          hello@uask.live
+        <a href="mailto:ask914142@gmail.com" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+          ask914142@gmail.com
         </a>
       </div>
     </div>
