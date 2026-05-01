@@ -11,6 +11,7 @@ import {
   subjectUrls,
   tutoringSubjects,
 } from '../src/seo/schools.js';
+import { seoTutors, tutorUrl, tutorUrls } from '../src/seo/tutors.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -90,6 +91,54 @@ function breadcrumbJsonLd(items) {
   };
 }
 
+function personJsonLd(tutor) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: tutor.name,
+    url: `${baseUrl}${tutorUrl(tutor.slug)}`,
+    image: `${baseUrl}${tutor.profileImage}`,
+    description: tutor.bio,
+    jobTitle: 'College tutor',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: tutor.rating,
+      reviewCount: tutor.reviewCount,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    knowsAbout: tutor.subjects
+      .map((slug) => schoolSeoSubjects.find((subject) => subject.slug === slug)?.name)
+      .filter(Boolean),
+    alumniOf: tutor.schools
+      .map((slug) => schools.find((school) => school.slug === slug)?.fullName)
+      .filter(Boolean),
+  };
+}
+
+function reviewJsonLd(tutor) {
+  return tutor.testimonials.map((testimonial) => ({
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed: {
+      '@type': 'Person',
+      name: tutor.name,
+      url: `${baseUrl}${tutorUrl(tutor.slug)}`,
+    },
+    author: {
+      '@type': 'Person',
+      name: testimonial.name,
+    },
+    reviewRating: {
+      '@type': 'Rating',
+      ratingValue: testimonial.rating,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    reviewBody: testimonial.text,
+  }));
+}
+
 function subjectFaqs(school, subject) {
   return [
     [
@@ -118,7 +167,7 @@ function generalSubjectFaqs(subject) {
   ];
 }
 
-function renderHead({ title, description, canonical, keywords, imageAlt, jsonLd }) {
+function renderHead({ title, description, canonical, keywords, imageAlt, jsonLd, imageUrl = `${baseUrl}/og-image.png` }) {
   return `    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${esc(title)}</title>
@@ -130,12 +179,12 @@ function renderHead({ title, description, canonical, keywords, imageAlt, jsonLd 
     <meta property="og:site_name" content="Ask Marketplace" />
     <meta property="og:title" content="${esc(title)}" />
     <meta property="og:description" content="${esc(description)}" />
-    <meta property="og:image" content="${baseUrl}/og-image.png" />
+    <meta property="og:image" content="${imageUrl}" />
     <meta property="og:image:alt" content="${esc(imageAlt)}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${esc(title)}" />
     <meta name="twitter:description" content="${esc(description)}" />
-    <meta name="twitter:image" content="${baseUrl}/og-image.png" />
+    <meta name="twitter:image" content="${imageUrl}" />
 ${jsonLd.map((item) => `    <script type="application/ld+json">${JSON.stringify(item)}</script>`).join('\n')}
     <style>
       body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#fff;line-height:1.6}
@@ -152,6 +201,7 @@ ${jsonLd.map((item) => `    <script type="application/ld+json">${JSON.stringify(
       .actions a+a{background:#fff;color:#111;border:1px solid #c4c4c4}
       .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:24px 0 42px}
       article,.panel{border:1px solid #e0e0e0;border-radius:8px;padding:22px;background:#fff}
+      .profile-image{width:120px;height:120px;border-radius:50%;object-fit:cover;border:1px solid #e0e0e0;background:#fff;margin-bottom:18px}
       .panel{margin:18px 0}
       .link-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
       .link-list a{border:1px solid #d7d7d7;border-radius:999px;padding:8px 12px;text-decoration:none}
@@ -195,6 +245,45 @@ function relatedSubjectLinks(subject, school) {
       return `<a href="${href}">${esc(item.name)} tutors</a>`;
     })
     .join('\n          ');
+}
+
+function tutorsFor(schoolSlug, subjectSlug) {
+  return seoTutors.filter((tutor) =>
+    tutor.schools.includes(schoolSlug) && tutor.subjects.includes(subjectSlug)
+  );
+}
+
+function relatedTutorsFor(tutor) {
+  return seoTutors
+    .filter((candidate) => candidate.slug !== tutor.slug)
+    .map((candidate) => ({
+      tutor: candidate,
+      score:
+        candidate.subjects.filter((subject) => tutor.subjects.includes(subject)).length * 2 +
+        candidate.schools.filter((school) => tutor.schools.includes(school)).length,
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => item.tutor);
+}
+
+function renderTopTutorsForSchoolSubject(school, subject) {
+  const matches = tutorsFor(school.slug, subject.slug);
+  if (!matches.length) return '';
+
+  return `
+      <section>
+        <h2>Top tutors for ${esc(subject.name.toLowerCase())} at ${esc(school.name)}</h2>
+        <div class="grid">
+          ${matches.map((tutor) => `<article>
+            <h3>${esc(tutor.name)}</h3>
+            <p>${esc(tutor.title)}</p>
+            <p>${esc(tutor.rating)} / 5 from ${esc(tutor.reviewCount)} reviews</p>
+            <a href="${tutorUrl(tutor.slug)}">View ${esc(tutor.name.split(' ')[0])}'s profile</a>
+          </article>`).join('\n          ')}
+        </div>
+      </section>`;
 }
 
 function renderGeneralSubjectCards(school) {
@@ -339,6 +428,7 @@ ${head}
           <article><h3>Stay consistent</h3><p>Use tutoring to keep up during busy weeks, especially when classes, work, clubs, or internships overlap.</p></article>
         </div>
       </section>
+      ${renderTopTutorsForSchoolSubject(school, subject)}
       <section class="panel">
         <h2>Related tutoring pages for ${esc(school.name)}</h2>
         <div class="link-list">
@@ -350,6 +440,145 @@ ${head}
       <section class="faq">
         <h2>${esc(school.name)} ${esc(subject.name.toLowerCase())} tutoring FAQ</h2>
         ${faqs.map(([question, answer]) => `<article><h3>${esc(question)}</h3><p>${esc(answer)}</p></article>`).join('\n        ')}
+      </section>
+    </main>
+  </body>
+</html>
+`;
+}
+
+function tutorPageTitle(tutor) {
+  return `${tutor.name} | ${tutor.title} | Ask Marketplace`;
+}
+
+function tutorPageDescription(tutor) {
+  const subjectNames = tutor.subjects
+    .map((slug) => schoolSeoSubjects.find((subject) => subject.slug === slug)?.name)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(', ');
+  const schoolNames = tutor.schools
+    .map((slug) => schools.find((school) => school.slug === slug)?.name)
+    .filter(Boolean)
+    .join(' and ');
+  return `${tutor.name} tutors ${subjectNames} for ${schoolNames} students. View bio, courses, tutoring style, availability, reviews, and FAQs.`;
+}
+
+function renderTutorProfilePage(tutor) {
+  const path = tutorUrl(tutor.slug);
+  const canonical = `${baseUrl}${path}`;
+  const title = tutorPageTitle(tutor);
+  const description = tutorPageDescription(tutor);
+  const tutorSubjects = tutor.subjects
+    .map((slug) => schoolSeoSubjects.find((subject) => subject.slug === slug))
+    .filter(Boolean);
+  const tutorSchools = tutor.schools
+    .map((slug) => schools.find((school) => school.slug === slug))
+    .filter(Boolean);
+  const relatedTutors = relatedTutorsFor(tutor);
+  const keywords = [
+    `${tutor.name} tutor`,
+    ...tutorSubjects.flatMap((subject) => subject.keywords.slice(0, 2)),
+    ...tutorSchools.map((school) => `${school.name} tutor`),
+  ];
+  const head = renderHead({
+    title,
+    description,
+    canonical,
+    keywords,
+    imageAlt: `${tutor.name} tutor profile on Ask Marketplace`,
+    imageUrl: `${baseUrl}${tutor.profileImage}`,
+    jsonLd: [
+      personJsonLd(tutor),
+      ...reviewJsonLd(tutor),
+      faqJsonLd(tutor.faqs),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Tutors', path: '/tutors' },
+        { name: tutor.name, path },
+      ]),
+    ],
+  });
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+${head}
+  </head>
+  <body>
+    <main>
+      <nav class="crumbs"><a href="/">Home</a><span>/</span><a href="/tutors">Tutors</a><span>/</span><span>${esc(tutor.name)}</span></nav>
+      <p class="eyebrow">${esc(tutorSubjects.map((subject) => subject.name).join(' / '))}</p>
+      <img class="profile-image" src="${esc(tutor.profileImage)}" alt="${esc(`${tutor.name} tutor profile image`)}" />
+      <h1>${esc(tutor.name)}: ${esc(tutor.title)}</h1>
+      <p class="intro">${esc(tutor.bio)}</p>
+      <div class="actions">
+        <a href="/signup">Request tutoring</a>
+        <a href="/tutors">Browse tutors</a>
+      </div>
+      <section class="panel">
+        <h2>Profile summary</h2>
+        <p>${esc(tutor.rating)} / 5 average rating from ${esc(tutor.reviewCount)} reviews.</p>
+        <p><strong>Tutoring style:</strong> ${esc(tutor.tutoringStyle)}</p>
+        <p><strong>Courses:</strong> ${esc(tutor.courses.join(', '))}</p>
+      </section>
+      <section>
+        <h2>Subjects ${esc(tutor.name.split(' ')[0])} tutors</h2>
+        <div class="grid">
+          ${tutorSubjects.map((subject) => `<article>
+            <h3>${esc(subject.name)}</h3>
+            <p>${esc(subject.description)}</p>
+            <a href="${subjectUrl(subject.slug)}">View ${esc(subject.name.toLowerCase())} tutoring</a>
+          </article>`).join('\n          ')}
+        </div>
+      </section>
+      <section>
+        <h2>School tutoring pages</h2>
+        <div class="grid">
+          ${tutorSchools.flatMap((school) =>
+            tutorSubjects.map((subject) => `<article>
+              <h3>${esc(subject.name)} tutoring at ${esc(school.name)}</h3>
+              <p>See subject-specific tutoring options for ${esc(school.fullName)} students.</p>
+              <a href="${schoolSubjectUrl(school.slug, subject.slug)}">${esc(school.name)} ${esc(subject.name.toLowerCase())} tutors</a>
+            </article>`)
+          ).join('\n          ')}
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Availability</h2>
+        <ul>${tutor.availability.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      </section>
+      <section>
+        <h2>Testimonials</h2>
+        <div class="grid">
+          ${tutor.testimonials.map((testimonial) => `<article>
+            <h3>${esc(testimonial.name)}</h3>
+            <p>${esc(testimonial.rating)} / 5</p>
+            <p>${esc(testimonial.text)}</p>
+          </article>`).join('\n          ')}
+        </div>
+      </section>
+      ${relatedTutors.length ? `<section class="panel">
+        <h2>Related tutors</h2>
+        <div class="link-list">
+          ${relatedTutors.map((related) => `<a href="${tutorUrl(related.slug)}">${esc(related.name)}</a>`).join('\n          ')}
+        </div>
+      </section>` : ''}
+      <section class="panel">
+        <h2>Related subjects</h2>
+        <div class="link-list">
+          ${Array.from(new Map(tutorSubjects.flatMap((subject) =>
+            subject.relatedSubjects
+              .map((slug) => schoolSeoSubjects.find((item) => item.slug === slug))
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((related) => [related.slug, `<a href="${subjectUrl(related.slug)}">${esc(related.name)} tutors</a>`])
+          )).values()).join('\n          ')}
+        </div>
+      </section>
+      <section class="faq">
+        <h2>${esc(tutor.name)} tutoring FAQ</h2>
+        ${tutor.faqs.map(([question, answer]) => `<article><h3>${esc(question)}</h3><p>${esc(answer)}</p></article>`).join('\n        ')}
       </section>
     </main>
   </body>
@@ -458,6 +687,14 @@ function writeGeneralSubjectPages() {
   }
 }
 
+function writeTutorPages() {
+  for (const tutor of seoTutors) {
+    const dir = join(root, 'public', 'tutors', tutor.slug);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), renderTutorProfilePage(tutor));
+  }
+}
+
 function writeSitemap() {
   const paths = [
     '',
@@ -466,6 +703,7 @@ function writeSitemap() {
     ...schools.map((school) => schoolUrl(school.slug)),
     ...subjectUrls(),
     ...schoolSubjectUrls(),
+    ...tutorUrls(),
   ];
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -480,5 +718,6 @@ ${paths.map((path) => `  <url>
 
 writeGeneralSubjectPages();
 writeSchoolPages();
+writeTutorPages();
 writeSitemap();
-console.log(`Generated ${schools.length} school pages, ${subjectUrls().length} general subject pages, ${schoolSubjectUrls().length} school subject pages, and sitemap.xml`);
+console.log(`Generated ${schools.length} school pages, ${subjectUrls().length} general subject pages, ${schoolSubjectUrls().length} school subject pages, ${tutorUrls().length} tutor pages, and sitemap.xml`);
