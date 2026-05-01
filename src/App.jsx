@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -16,6 +16,8 @@ import People from './pages/People';
 import UserProfile from './pages/UserProfile';
 import DirectMessages from './pages/DirectMessages';
 import HelpWanted from './pages/HelpWanted';
+import FAQ from './pages/FAQ';
+import CookieBanner from './components/CookieBanner';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -32,11 +34,40 @@ function ProtectedRoute({ children, role }) {
   return children;
 }
 
+function Footer() {
+  return (
+    <footer style={{
+      borderTop: '1px solid var(--border)', padding: '28px 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: 24, flexWrap: 'wrap',
+    }}>
+      <span style={{ fontSize: 12, color: 'var(--muted)' }}>© {new Date().getFullYear()} ASK</span>
+      <Link to="/faq" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        FAQ
+      </Link>
+      <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+        style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Privacy & Terms
+      </a>
+      <Link to="/help-wanted" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Request a service
+      </Link>
+    </footer>
+  );
+}
+
 function Layout({ children }) {
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
-      <main>{children}</main>
+      <main style={{ flex: 1 }}>{children}</main>
+      <Footer />
     </div>
   );
 }
@@ -127,6 +158,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/faq" element={<Layout><FAQ /></Layout>} />
         {/* Pretty URLs: /sacha-feit-7 → ProviderProfile (ID parsed from slug) */}
         <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -139,6 +171,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <CookieBanner />
     </AuthProvider>
   );
 }
