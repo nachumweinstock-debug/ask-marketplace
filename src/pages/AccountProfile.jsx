@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { AtSign, Camera, Copy, ExternalLink, QrCode, Share2, UserRound } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
-import { supabase } from '../lib/supabase';
 import CategoryPill from '../components/CategoryPill';
+
+const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -34,7 +36,7 @@ const labelStyle = {
 
 function Section({ title, children }) {
   return (
-    <div className="card" style={{ padding: '24px 28px', marginBottom: 16 }}>
+    <div className="profile-card" style={{ padding: '24px 28px', marginBottom: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 20 }}>
         {title}
       </div>
@@ -45,17 +47,18 @@ function Section({ title, children }) {
 
 export default function AccountProfile() {
   const { user: authUser, refreshUser } = useAuth();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const avatarRef = useRef(null);
 
   const [form, setForm] = useState({
-    name: '', user_bio: '', major: '', classes_taking: '', gpa: '',
+    name: '', username: '', user_bio: '', major: '', classes_taking: '', gpa: '',
     zelle: '', venmo: '', phone: '', contact_pref: 'imessage',
   });
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -65,6 +68,7 @@ export default function AccountProfile() {
       setProfile(data);
       setForm({
         name:           data.name || '',
+        username:       data.username || '',
         user_bio:       data.user_bio || '',
         major:          data.major || '',
         classes_taking: data.classes_taking || '',
@@ -129,6 +133,7 @@ export default function AccountProfile() {
       setForm(f => ({
         ...f,
         name:           updated.name           ?? f.name,
+        username:       updated.username       ?? f.username,
         user_bio:       updated.user_bio        ?? f.user_bio,
         major:          updated.major           ?? f.major,
         classes_taking: updated.classes_taking  ?? f.classes_taking,
@@ -158,15 +163,43 @@ export default function AccountProfile() {
   );
 
   const displayCategory = profile?.custom_category || profile?.category || null;
+  const username = form.username || profile?.username || '';
+  const publicPath = username ? `/${username}` : `/people/${profile?.id}`;
+  const profileUrl = `${window.location.origin}${publicPath}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(profileUrl)}`;
+
+  function copyProfileLink() {
+    navigator.clipboard.writeText(profileUrl).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1800);
+    }).catch(() => setMsg('Could not copy link'));
+  }
+
+  async function shareProfileLink() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${form.name || 'My'} ASK profile`, url: profileUrl });
+        return;
+      } catch {
+        return;
+      }
+    }
+    copyProfileLink();
+  }
 
   return (
-    <div className="page" style={{ maxWidth: 680 }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>
-        My Profile
-      </h1>
-      <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 32 }}>
-        How the community sees you.
-      </p>
+    <div className="page profile-page">
+      <div className="profile-hero">
+        <div>
+          <div className="section-label" style={{ marginBottom: 10 }}>Profile command center</div>
+          <h1 className="profile-title">My Profile</h1>
+          <p className="profile-subtitle">Tune how people see you, then share your profile anywhere.</p>
+        </div>
+        <a className="profile-ig" href={IG_URL} target="_blank" rel="noopener noreferrer">
+          <Camera size={18} />
+          <span>@uasklive</span>
+        </a>
+      </div>
 
       <form onSubmit={handleSave}>
 
@@ -219,6 +252,21 @@ export default function AccountProfile() {
                   onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Profile handle</label>
+                <div style={{ position: 'relative' }}>
+                  <AtSign size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
+                  <input value={form.username} onChange={e => set('username')(e.target.value)}
+                    placeholder="your-name"
+                    style={{ ...fieldStyle, paddingLeft: 34, fontFamily: 'var(--font-mono)' }}
+                    onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                  />
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>
+                  Your clean link: <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>uask.live/{username || 'your-handle'}</span>
+                </div>
+              </div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{profile?.email}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                 {profile?.role === 'provider' && displayCategory && (
@@ -244,6 +292,45 @@ export default function AccountProfile() {
             />
           </div>
         </Section>
+
+        <div className="profile-share-card">
+          <div className="profile-share-main">
+            <div className="profile-share-icon"><UserRound size={20} /></div>
+            <div style={{ minWidth: 0 }}>
+              <div className="profile-share-title">Share your ASK profile</div>
+              <div className="profile-share-url">{profileUrl}</div>
+            </div>
+          </div>
+          <div className="profile-share-actions">
+            <button type="button" className="profile-icon-button" onClick={copyProfileLink} title="Copy profile link">
+              <Copy size={16} />
+              <span>{shareCopied ? 'Copied' : 'Copy'}</span>
+            </button>
+            <button type="button" className="profile-icon-button" onClick={shareProfileLink} title="Share profile">
+              <Share2 size={16} />
+              <span>Share</span>
+            </button>
+            <button type="button" className="profile-icon-button" onClick={() => setQrOpen(true)} title="Show QR code">
+              <QrCode size={16} />
+              <span>QR</span>
+            </button>
+            <a className="profile-icon-button" href={profileUrl} target="_blank" rel="noopener noreferrer" title="Open public profile">
+              <ExternalLink size={16} />
+              <span>Open</span>
+            </a>
+          </div>
+        </div>
+
+        <div className="profile-instagram-card">
+          <div>
+            <div className="profile-share-title">Help ASK grow on campus</div>
+            <p>Follow us on Instagram and tag us when you share your profile.</p>
+          </div>
+          <a href={IG_URL} target="_blank" rel="noopener noreferrer">
+            <Camera size={16} />
+            Follow @uasklive
+          </a>
+        </div>
 
         {/* Academics */}
         <Section title="Academics">
@@ -452,7 +539,7 @@ export default function AccountProfile() {
           </div>
         )}
 
-        <button type="submit" disabled={saving} style={{
+        <button type="submit" disabled={saving} className="profile-save-button" style={{
           background: saving ? '#93C5FD' : 'var(--primary)', color: '#fff',
           border: 'none', borderRadius: 999, padding: '12px 32px',
           fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
@@ -461,6 +548,21 @@ export default function AccountProfile() {
           {saving ? 'Saving...' : 'Save profile'}
         </button>
       </form>
+
+      {qrOpen && (
+        <div className="profile-modal-backdrop" onClick={() => setQrOpen(false)}>
+          <div className="profile-qr-modal" onClick={e => e.stopPropagation()}>
+            <div className="profile-share-icon" style={{ margin: '0 auto 14px' }}><QrCode size={22} /></div>
+            <h2>Your profile QR</h2>
+            <p>{profileUrl}</p>
+            <img src={qrSrc} alt="QR code for your ASK profile" />
+            <div className="profile-share-actions" style={{ justifyContent: 'center', marginTop: 18 }}>
+              <a className="profile-icon-button" href={qrSrc} download={`${username || 'ask'}-profile-qr.png`}>Download</a>
+              <button type="button" className="profile-icon-button" onClick={() => setQrOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Danger zone — providers only */}
       {profile?.role === 'provider' && (

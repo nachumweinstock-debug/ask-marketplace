@@ -18,7 +18,7 @@ function sharedClasses(mine, theirs) {
 }
 
 export default function UserProfile() {
-  const { id } = useParams();
+  const { id, username } = useParams();
   const { user: me } = useAuth();
   const navigate = useNavigate();
   const [person, setPerson] = useState(null);
@@ -26,16 +26,17 @@ export default function UserProfile() {
   const [connLoading, setConnLoading] = useState(false);
 
   useEffect(() => {
-    api.get(`/people/${id}`)
+    const path = username ? `/people/u/${username}` : `/people/${id}`;
+    api.get(path)
       .then(({ data }) => setPerson(data))
       .catch(() => navigate('/people'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, username]);
 
   // Redirect to own account page if logged in and viewing own profile
   useEffect(() => {
-    if (me && Number(id) === me.id) navigate('/account', { replace: true });
-  }, [me, id]);
+    if (me && person?.id === me.id) navigate('/account', { replace: true });
+  }, [me, person?.id]);
 
   // When not logged in, UserProfile works as read-only — no redirect needed
 

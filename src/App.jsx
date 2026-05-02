@@ -18,8 +18,20 @@ import DirectMessages from './pages/DirectMessages';
 import HelpWanted from './pages/HelpWanted';
 import FAQ from './pages/FAQ';
 import CookieBanner from './components/CookieBanner';
+import AnalyticsTracker from './components/AnalyticsTracker';
+import AdminAnalytics from './pages/AdminAnalytics';
+import Support from './pages/Support';
+import AdminSupport from './pages/AdminSupport';
+import AdminSupportConversation from './pages/AdminSupportConversation';
+import FloatingSupportButton from './components/FloatingSupportButton';
 
-function ProtectedRoute({ children, role }) {
+const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
+
+function isDeveloperAdmin(user) {
+  return user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
+}
+
+function ProtectedRoute({ children, role, developerOnly = false }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
@@ -29,6 +41,7 @@ function ProtectedRoute({ children, role }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (developerOnly && !isDeveloperAdmin(user)) return <Navigate to="/" replace />;
   if (role === 'admin' && !user.is_admin) return <Navigate to="/" replace />;
   if (role && role !== 'admin' && user.role !== role) return <Navigate to="/" replace />;
   return children;
@@ -106,9 +119,11 @@ function AppRoutes() {
   const { user } = useAuth();
   return (
     <BrowserRouter>
+      <AnalyticsTracker />
       <Routes>
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
+        <Route path="/support" element={<Layout><Support /></Layout>} />
         <Route path="/people" element={<Layout><People /></Layout>} />
         <Route path="/help-wanted" element={<Layout><HelpWanted /></Layout>} />
         <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />
@@ -126,6 +141,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute role="admin">
               <Layout><AdminDashboard /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute role="admin" developerOnly>
+              <Layout><AdminAnalytics /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/support"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><AdminSupport /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/support/:conversationId"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><AdminSupportConversation /></Layout>
             </ProtectedRoute>
           }
         />
@@ -189,6 +228,7 @@ function AppRoutes() {
           }
         />
         <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+        <Route path="/u/:username" element={<Layout><UserProfile /></Layout>} />
         {/* Pretty URLs: /sacha-feit-7 → ProviderProfile (ID parsed from slug) */}
         <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -202,6 +242,7 @@ export default function App() {
     <AuthProvider>
       <AppRoutes />
       <CookieBanner />
+      <FloatingSupportButton />
     </AuthProvider>
   );
 }

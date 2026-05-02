@@ -31,10 +31,21 @@ function issueCode(userId, type = 'verify') {
   return code;
 }
 
+function uniqueUsername(name, email) {
+  const seed = name || email?.split('@')[0] || 'user';
+  const base = seed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'user';
+  let slug = base;
+  let n = 2;
+  while (db.prepare('SELECT 1 FROM users WHERE username = ?').get(slug)) {
+    slug = `${base}-${n++}`;
+  }
+  return slug;
+}
+
 // POST /auth/signup — create account, log in immediately (no email verification)
 router.post('/signup', async (req, res) => {
-  const { email, name, password, phone } = req.body;
-  if (!email || !name || !password) {
+  const { email, name, password, phone, university } = req.body;
+  if (!email || !name || !password || !university) {
     return res.status(400).json({ error: 'All fields are required' });
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -46,12 +57,19 @@ router.post('/signup', async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
   const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(0, 15) : null;
+  const cleanUniversity = String(university || '').trim().slice(0, 120);
+  if (cleanUniversity.length < 2) {
+    return res.status(400).json({ error: 'Select your university' });
+  }
   let user;
   try {
+    const cleanEmail = email.toLowerCase();
+    const cleanName = name.trim();
+    const username = uniqueUsername(cleanName, cleanEmail);
     const result = db.prepare(
-      "INSERT INTO users (email, name, password, role, email_verified, phone) VALUES (?, ?, ?, 'student', 1, ?)"
-    ).run(email.toLowerCase(), name.trim(), hashed, cleanPhone || null);
-    user = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(result.lastInsertRowid);
+      "INSERT INTO users (email, name, password, role, email_verified, phone, username, university) VALUES (?, ?, ?, 'student', 1, ?, ?, ?)"
+    ).run(cleanEmail, cleanName, hashed, cleanPhone || null, username, cleanUniversity);
+    user = db.prepare('SELECT id, email, name, role, token_version, username, university FROM users WHERE id = ?').get(result.lastInsertRowid);
   } catch (err) {
     if (err.message.includes('UNIQUE')) {
       return res.status(409).json({ error: 'Email already registered' });
@@ -65,16 +83,16 @@ router.post('/signup', async (req, res) => {
   sendWelcomeEmail(user.email, user.name).catch(err =>
     console.error('[AUTH] Welcome email failed:', err.message)
   );
-  sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'email' }).catch(() => {});
+  sendAdminNewUserNotification({ name: user.name, email: user.email, method: `email · ${user.university}` }).catch(() => {});
 
   posthog.identify({
     distinctId: String(user.id),
-    properties: { $set: { name: user.name, email: user.email, role: user.role } },
+    properties: { $set: { name: user.name, email: user.email, role: user.role, university: user.university } },
   });
   posthog.capture({
     distinctId: String(user.id),
     event: 'user_signed_up',
-    properties: { method: 'email', name: user.name, email: user.email },
+    properties: { method: 'email', name: user.name, email: user.email, university: user.university },
   });
 
   res.json({ token, user });

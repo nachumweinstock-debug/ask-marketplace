@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
+import { trackEvent } from '../lib/analytics';
 
 const EDIT_CATEGORIES = [
   { id: 'tutor',     label: 'Tutoring'  },
@@ -71,7 +72,12 @@ export default function Browse() {
   function handleSearchInput(val) {
     setSearch(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchProviders(val), 200);
+    debounceRef.current = setTimeout(() => {
+      if (val.trim().length >= 2) {
+        trackEvent('search_started', { query_length: val.trim().length, category, subcategory, session_type: sessionType });
+      }
+      fetchProviders(val);
+    }, 200);
   }
 
   async function fetchProviders(searchVal) {
@@ -158,6 +164,9 @@ export default function Browse() {
 
   function handleSearch(e) {
     e.preventDefault();
+    if (search.trim()) {
+      trackEvent('search_started', { query_length: search.trim().length, category, subcategory, session_type: sessionType, submitted: true });
+    }
     fetchProviders(search);
   }
 

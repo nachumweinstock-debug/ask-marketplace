@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mediaUrl } from '../lib/media';
 import { providerUrl } from '../lib/providerUrl';
+import { trackEvent } from '../lib/analytics';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -67,12 +68,21 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
   const mode = formatMode(provider.session_type);
   const label = listingLabel(provider);
   const catLabel = categoryLabel(provider);
+  function openProvider(target = provider) {
+    trackEvent('tutor_card_clicked', {
+      provider_id: target.id,
+      category: target.category,
+      custom_category: target.custom_category,
+      subcategory: target.subcategory,
+    });
+    navigate(providerUrl(target.name || provider.name, target.id, target.username || provider.username));
+  }
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(providerUrl(provider.name, provider.id, provider.username))}
+      onClick={() => openProvider(provider)}
       style={{
         position: 'relative', cursor: 'pointer',
         background: '#fff',
@@ -174,7 +184,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
             {allListings.map(l => (
               <button key={l.id}
-                onClick={e => { e.stopPropagation(); navigate(providerUrl(l.name || provider.name, l.id)); }}
+                onClick={e => { e.stopPropagation(); openProvider(l); }}
                 style={{
                   padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
                   border: '1.5px solid var(--gray-200)', background: 'var(--gray-50)',

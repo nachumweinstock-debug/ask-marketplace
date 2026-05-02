@@ -1,8 +1,34 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Camera, Eye, EyeOff } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../lib/analytics';
+
+const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
+const UNIVERSITY_SUGGESTIONS = [
+  'Yeshiva University',
+  'New York University',
+  'Baruch College',
+  'Columbia University',
+  'Cornell University',
+  'University of Michigan',
+  'UCLA',
+  'USC',
+  'Indiana University',
+  'University of Texas at Austin',
+  'Rutgers University',
+  'Northeastern University',
+  'Boston University',
+  'University of Florida',
+  'Florida State University',
+  'Fordham University',
+  'Brooklyn College',
+  'Queens College',
+  'Hunter College',
+  'Stern College for Women',
+  'Sy Syms School of Business',
+];
 
 // Build the full API origin for OAuth redirects (needs absolute URL, not relative /api)
 const RAW_API = import.meta.env.VITE_API_URL || '/api';
@@ -133,6 +159,64 @@ function TextInput({ type = 'text', placeholder, value, onChange, autoFocus, aut
   );
 }
 
+function UniversityInput({ value, onChange }) {
+  const [focused, setFocused] = useState(false);
+  const query = value.trim().toLowerCase();
+  const matches = UNIVERSITY_SUGGESTIONS
+    .filter((school) => !query || school.toLowerCase().includes(query))
+    .slice(0, 7);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type="text"
+        placeholder="Start typing your university"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 120)}
+        required
+        autoComplete="organization"
+        style={inputStyle}
+      />
+      {focused && matches.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+          background: '#fff', border: '1.5px solid var(--border)', borderRadius: 12,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.12)', zIndex: 30,
+          overflow: 'hidden',
+        }}>
+          {matches.map((school) => (
+            <button
+              key={school}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(school);
+                setFocused(false);
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', border: 'none', background: school === value ? 'var(--accent)' : '#fff',
+                padding: '10px 12px', cursor: 'pointer', textAlign: 'left',
+                fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: school === 'Yeshiva University' ? 700 : 600,
+                color: 'var(--text)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--gray-50)'}
+              onMouseLeave={e => e.currentTarget.style.background = school === value ? 'var(--accent)' : '#fff'}
+            >
+              <span>{school}</span>
+              {school === 'Yeshiva University' && (
+                <span style={{ fontSize: 10.5, color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.04em' }}>POPULAR</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PwInput({ placeholder = 'Password', value, onChange, autoComplete = 'current-password' }) {
   const [show, setShow] = useState(false);
   return (
@@ -190,10 +274,11 @@ export function SignUp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', university: '' });
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [error, setError] = useState(searchParams.get('error') === 'google_failed' ? 'Google sign-in failed — please try again.' : searchParams.get('error') === 'apple_failed' ? 'Apple sign-in failed — please try again.' : '');
   const [loading, setLoading] = useState(false);
+  const [createdAccount, setCreatedAccount] = useState(null);
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
@@ -205,15 +290,23 @@ export function SignUp() {
       setLoading(false);
       return;
     }
+    if (!form.university.trim()) {
+      setError('Please choose your university.');
+      setLoading(false);
+      return;
+    }
     try {
+      trackEvent('signup_started', { method: 'email', redirect: redirect || '', university: form.university.trim() });
       const { data } = await api.post('/auth/signup', {
         email: form.email.toLowerCase(),
         name: form.name,
         password: form.password,
         phone: form.phone,
+        university: form.university.trim(),
       });
       await loginWithToken(data.token, data.user);
-      navigate(redirect || '/dashboard/student');
+      trackEvent('signup_completed', { method: 'email', redirect: redirect || '', university: form.university.trim() });
+      setCreatedAccount(data.user);
     } catch (err) {
       setError(err.response?.data?.error || 'Sign up failed');
     } finally {
@@ -238,6 +331,9 @@ export function SignUp() {
         </Field>
         <Field label="Password">
           <PwInput placeholder="At least 8 characters" value={form.password} onChange={set('password')} autoComplete="new-password" />
+        </Field>
+        <Field label="University">
+          <UniversityInput value={form.university} onChange={set('university')} />
         </Field>
         <Field label="Phone number (for booking texts)">
           <TextInput type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={set('phone')} autoComplete="tel" />
@@ -264,6 +360,51 @@ export function SignUp() {
           <Link to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Log in</Link>
         </p>
       </form>
+      {createdAccount && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(17,17,17,0.62)',
+          zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 18,
+        }}>
+          <div style={{
+            width: '100%', maxWidth: 390, background: '#fff', borderRadius: 18,
+            padding: '28px 24px', boxShadow: '0 18px 60px rgba(0,0,0,0.22)',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 54, height: 54, borderRadius: 16, margin: '0 auto 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(135deg,#f09433,#dc2743,#bc1888)', color: '#fff',
+            }}>
+              <Camera size={25} />
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 25, color: 'var(--text)', marginBottom: 8 }}>
+              Welcome to ASK
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55, marginBottom: 20 }}>
+              Follow @uasklive for new listings, campus drops, and reposts when you share your profile.
+            </p>
+            <a href={IG_URL} target="_blank" rel="noopener noreferrer" style={{
+              height: 46, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, textDecoration: 'none', color: '#fff', fontSize: 14, fontWeight: 700,
+              background: 'linear-gradient(90deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
+              marginBottom: 10,
+            }}>
+              <Camera size={17} />
+              Follow @uasklive
+            </a>
+            <button type="button" onClick={() => navigate(redirect || '/dashboard/student')} style={{
+              width: '100%', height: 46, borderRadius: 12, border: '1.5px solid var(--border)',
+              background: '#fff', color: 'var(--text)', fontSize: 14, fontWeight: 700,
+              fontFamily: 'var(--font-ui)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              Continue to ASK
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </Wrapper>
   );
 }

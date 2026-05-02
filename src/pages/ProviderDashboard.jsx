@@ -131,6 +131,8 @@ export default function ProviderDashboard() {
   const [slotLoading, setSlotLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageSaving, setImageSaving] = useState(false);
+  const [photoSuggestions, setPhotoSuggestions] = useState([]);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const imageInputRef = useRef(null);
   const [imgDragging, setImgDragging] = useState(false);
 
@@ -152,6 +154,22 @@ export default function ProviderDashboard() {
   useEffect(() => {
     if (profile?.id) api.get(`/availability/${profile.id}`).then(r => setAvailability(r.data));
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const query = profile.subcategory || profile.custom_category || profile.title || profile.category;
+    if (!query || query.trim().length < 2) {
+      setPhotoSuggestions([]);
+      return;
+    }
+    let ignore = false;
+    setPhotoLoading(true);
+    api.get('/providers/photo-suggestions', { params: { query } })
+      .then(r => { if (!ignore) setPhotoSuggestions(Array.isArray(r.data) ? r.data : []); })
+      .catch(() => { if (!ignore) setPhotoSuggestions([]); })
+      .finally(() => { if (!ignore) setPhotoLoading(false); });
+    return () => { ignore = true; };
+  }, [profile?.id, profile?.subcategory, profile?.custom_category, profile?.title, profile?.category]);
 
   async function addSlots(newSlots) {
     setSlotLoading(true);
@@ -656,6 +674,46 @@ export default function ProviderDashboard() {
                   style={{ background: 'none', border: '1.5px solid var(--border)', color: 'var(--muted)', borderRadius: 999, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
                   Cancel
                 </button>
+              </div>
+            )}
+            {(photoLoading || photoSuggestions.length > 0) && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 12, marginBottom: 10,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.7px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                    Suggested Photos
+                  </div>
+                  {photoLoading && <div style={{ fontSize: 11, color: 'var(--muted)' }}>Loading...</div>}
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(104px, 1fr))',
+                  gap: 8,
+                }}>
+                  {photoSuggestions.map(url => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => saveListingImage(url)}
+                      disabled={imageSaving}
+                      title="Use this photo"
+                      style={{
+                        border: profile?.listing_image === url ? '2px solid var(--primary)' : '1px solid var(--border)',
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        padding: 0,
+                        aspectRatio: '16 / 10',
+                        background: 'var(--bg)',
+                        cursor: imageSaving ? 'not-allowed' : 'pointer',
+                        opacity: imageSaving ? 0.65 : 1,
+                      }}
+                    >
+                      <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

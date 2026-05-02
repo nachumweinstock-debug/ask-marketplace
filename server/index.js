@@ -19,6 +19,8 @@ import peopleRoutes from './routes/people.js';
 import keysRoutes from './routes/keys.js';
 import helpWantedRoutes from './routes/helpwanted.js';
 import timeRequestRoutes from './routes/timerequests.js';
+import analyticsRoutes from './routes/analytics.js';
+import supportRoutes from './routes/support.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 import posthog from './posthog.js';
@@ -118,6 +120,8 @@ app.use('/api/people', peopleRoutes);
 app.use('/api/keys', keysRoutes);
 app.use('/api/help-wanted', helpWantedRoutes);
 app.use('/api/time-requests', timeRequestRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/support', supportRoutes);
 
 startReminderJobs();
 
@@ -142,4 +146,3 @@ app.listen(PORT, () => {
     console.warn(`⚠️  Email NOT configured — codes will only appear in logs`);
   }
 });
-

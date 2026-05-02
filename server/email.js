@@ -31,6 +31,18 @@ function getResend() {
 }
 
 const FROM = process.env.EMAIL_FROM || 'ASK Marketplace <onboarding@resend.dev>';
+const DEV_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
+const ADMIN_EMAILS = [DEV_ADMIN_EMAIL, 'jfeit3@mail.yu.edu'];
+
+function isCodexIdentity(...values) {
+  return values
+    .filter(Boolean)
+    .some(value => /codex|smoke|username-check/i.test(String(value)));
+}
+
+function adminRecipientsFor(...values) {
+  return isCodexIdentity(...values) ? [DEV_ADMIN_EMAIL] : ADMIN_EMAILS;
+}
 
 export function emailConfigStatus() {
   const smtp = !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
@@ -317,6 +329,27 @@ export async function sendBookingNotification({ providerEmail, providerName, stu
   });
 }
 
+export async function sendAdminBookingNotification({ bookingId, providerName, providerEmail, studentName, studentEmail, date, startTime, endTime, listingTitle, category }) {
+  await send({
+    to: adminRecipientsFor(providerName, providerEmail, studentName, studentEmail, listingTitle, category),
+    subject: `New booking on ASK: ${studentName} booked ${providerName}`,
+    html: shell(`New ASK booking #${bookingId}`, `
+      ${header('📣', `New booking #${bookingId}`, 'A student just booked a session on ASK Marketplace.')}
+      ${body(`
+        ${infoTable(
+          infoRow('Booking ID', bookingId),
+          infoRow('Student', studentName, studentEmail),
+          infoRow('Provider', providerName, providerEmail),
+          infoRow('Listing', listingTitle || category || 'Service', category || ''),
+          infoRow('Requested time', date, `${startTime} – ${endTime}`),
+          infoRow('Time logged', new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+        )}
+        ${btn('https://uask.live/admin', 'Open admin panel')}
+      `)}
+    `),
+  });
+}
+
 export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId, icsToken = '' }) {
   const calTitle = `Session with ${providerName}`;
   const calDesc  = `Booked via ASK Marketplace · uask.live`;
@@ -439,7 +472,7 @@ export async function sendConnectionAcceptedEmail({ toEmail, toName, fromName })
 
 export async function sendAdminNewUserNotification({ name, email, method = 'email' }) {
   await send({
-    to: ['nachumweinstock@gmail.com', 'jfeit3@mail.yu.edu'],
+    to: adminRecipientsFor(name, email),
     subject: `New signup: ${name}`,
     html: shell(`New user joined ASK`, `
       ${header('🎉', 'New signup!', 'Someone just created an account on ASK Marketplace.')}
@@ -451,6 +484,25 @@ export async function sendAdminNewUserNotification({ name, email, method = 'emai
           infoRow('Time', new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })),
         )}
         ${btn('https://uask.live/admin', 'View admin panel')}
+      `)}
+    `),
+  });
+}
+
+export async function sendAdminPrankNotification() {
+  await send({
+    to: [DEV_ADMIN_EMAIL],
+    subject: 'Admin test: Maya Mandelbaum definitely did not just sign up',
+    html: shell('Admin test notification', `
+      ${header('🧪', 'Admin test/prank', 'This is a labeled test email from ASK. No real user signed up.')}
+      ${body(`
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          Maya Mandelbaum did <strong>not</strong> just create an account. This is Nachum testing whether admin notifications still have a pulse.
+        </p>
+        <p style="margin:0 0 20px;font-size:14px;color:${MUTED};line-height:1.6">
+          If this made you open the admin panel, the system is working emotionally and technically.
+        </p>
+        ${btn('https://uask.live/admin', 'Open admin panel')}
       `)}
     `),
   });

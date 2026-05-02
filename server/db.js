@@ -81,6 +81,7 @@ if (!cols.includes('email_verified')) {
 if (!cols.includes('avatar_url'))     db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
 if (!cols.includes('is_admin'))       db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
 if (!cols.includes('major'))          db.exec('ALTER TABLE users ADD COLUMN major TEXT');
+if (!cols.includes('university'))     db.exec('ALTER TABLE users ADD COLUMN university TEXT');
 if (!cols.includes('classes_taking')) db.exec('ALTER TABLE users ADD COLUMN classes_taking TEXT');
 if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa TEXT');
 if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
@@ -97,7 +98,7 @@ if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone 
 if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
 if (!cols.includes('pubkey'))       db.exec('ALTER TABLE users ADD COLUMN pubkey TEXT');
 if (!cols.includes('username')) {
-  db.exec('ALTER TABLE users ADD COLUMN username TEXT UNIQUE');
+  db.exec('ALTER TABLE users ADD COLUMN username TEXT');
   // Backfill existing users: generate slug from name, append -2/-3 on conflict
   const existing = db.prepare('SELECT id, name FROM users').all();
   for (const u of existing) {
@@ -107,6 +108,7 @@ if (!cols.includes('username')) {
     db.prepare('UPDATE users SET username = ? WHERE id = ?').run(slug, u.id);
   }
 }
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(username) WHERE username IS NOT NULL');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {
@@ -322,6 +324,145 @@ if (!tablesLatest.includes('time_requests')) {
     )
   `);
 }
+
+// Customer support conversations and messages
+if (!tablesLatest.includes('support_conversations')) {
+  db.exec(`
+    CREATE TABLE support_conversations (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      user_email TEXT,
+      status TEXT DEFAULT 'open' CHECK(status IN ('open','bot_answered','needs_admin','closed')),
+      topic TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE support_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
+      sender_type TEXT NOT NULL CHECK(sender_type IN ('user','bot','admin')),
+      sender_id TEXT,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_support_conversations_updated ON support_conversations(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_support_conversations_status ON support_conversations(status);
+  CREATE INDEX IF NOT EXISTS idx_support_messages_conversation ON support_messages(conversation_id, created_at);
+`);
+
+// Privacy-conscious internal analytics
+if (!tablesLatest.includes('analytics_sessions')) {
+  db.exec(`
+    CREATE TABLE analytics_sessions (
+      session_id TEXT PRIMARY KEY,
+      visitor_id TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      landing_page TEXT,
+      referrer TEXT,
+      first_touch_source TEXT,
+      last_touch_source TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      utm_content TEXT,
+      utm_term TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      country TEXT,
+      region TEXT,
+      city TEXT,
+      pageview_count INTEGER DEFAULT 0,
+      event_count INTEGER DEFAULT 0,
+      duration_seconds INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE analytics_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      visitor_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      url TEXT,
+      path TEXT,
+      page_title TEXT,
+      page_type TEXT,
+      referrer TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      utm_content TEXT,
+      utm_term TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      country TEXT,
+      region TEXT,
+      city TEXT,
+      metadata TEXT
+    );
+
+    CREATE TABLE analytics_pageviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      visitor_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      url TEXT,
+      path TEXT,
+      page_title TEXT,
+      page_type TEXT,
+      referrer TEXT,
+      landing_page TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      utm_content TEXT,
+      utm_term TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      country TEXT,
+      region TEXT,
+      city TEXT,
+      time_on_page_seconds INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE analytics_conversions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      conversion_name TEXT NOT NULL,
+      visitor_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      url TEXT,
+      path TEXT,
+      page_title TEXT,
+      page_type TEXT,
+      referrer TEXT,
+      source TEXT,
+      metadata TEXT
+    );
+  `);
+}
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
+  CREATE INDEX IF NOT EXISTS idx_analytics_events_name ON analytics_events(event_name);
+  CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_pageviews_created ON analytics_pageviews(created_at);
+  CREATE INDEX IF NOT EXISTS idx_analytics_pageviews_path ON analytics_pageviews(path);
+  CREATE INDEX IF NOT EXISTS idx_analytics_sessions_started ON analytics_sessions(started_at);
+  CREATE INDEX IF NOT EXISTS idx_analytics_conversions_created ON analytics_conversions(created_at);
+`);
 
 // Auto-expire past unbooked slots — runs on every boot so stale slots never pile up
 db.prepare(`

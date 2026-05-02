@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
+import { trackEvent } from '../lib/analytics';
 
 const CATEGORIES = [
   { id: 'tutor',     label: 'Tutoring'   },
@@ -234,6 +235,10 @@ export default function CreateListing() {
   const photoDebounce = useRef(null);
 
   useEffect(() => {
+    trackEvent('tutor_application_started', { page: 'create-listing' });
+  }, []);
+
+  useEffect(() => {
     api.get('/account').then(({ data }) => {
       if (data.zelle) setZelle(data.zelle);
       if (data.venmo) setVenmo(data.venmo);
@@ -297,6 +302,12 @@ export default function CreateListing() {
       ));
 
       await refreshUser();
+      trackEvent('tutor_application_submitted', {
+        category,
+        custom_category: customCategory,
+        subcategory,
+        slot_count: slots.length,
+      });
       navigate('/dashboard/provider');
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong');

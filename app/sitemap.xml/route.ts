@@ -8,6 +8,7 @@ export async function GET() {
 
   const urls = [
     '',
+    '/support',
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => `/schools/${school.slug}`),

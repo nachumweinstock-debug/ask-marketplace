@@ -8,6 +8,7 @@ import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 import MiniCalendar from '../components/MiniCalendar';
 import { providerUrl, parseProviderSlug, isUsernameSlug } from '../lib/providerUrl';
 import GroupInvitePicker from '../components/GroupInvitePicker';
+import { trackEvent } from '../lib/analytics';
 
 function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
@@ -220,8 +221,21 @@ export default function ProviderProfile() {
             .then(({ data: all }) => setOtherListings(all.filter(l => l.id !== data.id)))
             .catch(() => {});
         });
-    fetch.catch(() => navigate('/browse')).finally(() => setLoading(false));
+    fetch.catch(() => {
+      if (usernameSlug) navigate(`/u/${usernameSlug}`, { replace: true });
+      else navigate('/browse');
+    }).finally(() => setLoading(false));
   }, [numericId, usernameSlug]);
+
+  useEffect(() => {
+    if (!provider?.id) return;
+    trackEvent('tutor_profile_viewed', {
+      provider_id: provider.id,
+      category: provider.category,
+      custom_category: provider.custom_category,
+      subcategory: provider.subcategory,
+    });
+  }, [provider?.id]);
 
   async function handleDeleteListing() {
     if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
@@ -236,9 +250,10 @@ export default function ProviderProfile() {
     }
   }
 
-  const redirectParam = `?redirect=/providers/${id}`;
+  const redirectParam = `?redirect=${encodeURIComponent(window.location.pathname)}`;
 
   function handleMessage() {
+    trackEvent('contact_tutor_clicked', { provider_id: provider.id, provider_user_id: provider.user_id, logged_in: !!user });
     if (!user) return navigate(`/signup${redirectParam}`);
     navigate(`/messages/${provider.user_id}`);
   }
@@ -248,10 +263,12 @@ export default function ProviderProfile() {
     if (!booking) return setBookingError('Please select a time slot.');
     setBookingLoading(true); setBookingError(''); setBookingSuccess('');
     try {
+      trackEvent('booking_started', { provider_id: provider.id, slot_id: booking, group_mode: groupMode, invite_count: invitedUsers.length });
       await api.post('/bookings', {
         availability_id: booking,
         ...(groupMode && invitedUsers.length > 0 ? { group_invite_ids: invitedUsers } : {}),
       });
+      trackEvent('booking_completed', { provider_id: provider.id, group_mode: groupMode, invite_count: invitedUsers.length });
       setBookingSuccess(groupMode && invitedUsers.length > 0
         ? `Booking requested! ${invitedUsers.length} invite${invitedUsers.length !== 1 ? 's' : ''} sent.`
         : 'Booking requested! Check your dashboard.');
@@ -271,8 +288,9 @@ export default function ProviderProfile() {
     if (!reqDate || !reqTime) { setBookingError('Pick a date and time'); return; }
     setReqLoading(true); setBookingError(''); setReqSuccess('');
     try {
+      trackEvent('booking_started', { provider_id: provider.id, requested_time: true });
       await api.post('/time-requests', {
-        provider_id: parseInt(id),
+        provider_id: provider.id,
         requested_date: reqDate,
         requested_time: reqTime,
         message: reqMessage || undefined,

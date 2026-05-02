@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import api from '../api';
 
+const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
+
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -121,15 +123,20 @@ export default function Navbar() {
     await signOut(); navigate('/');
   }
 
+  const isDeveloperAdmin = user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
+
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
     { to: '/people', label: 'People', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
+    { to: '/support', label: 'Support', show: true },
     { to: '/create-listing', label: 'Post', show: !!user },
     { to: '/messages', label: 'Messages', show: !!user, badge: unread },
     { to: '/dashboard/student', label: 'Bookings', show: !!user },
     { to: '/dashboard/provider', label: 'Services', show: !!user && user.role === 'provider', badge: pendingBookings, badgeColor: '#F59E0B' },
     { to: '/admin', label: 'Admin', show: !!user && user.is_admin, admin: true },
+    { to: '/admin/support', label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
+    { to: '/admin/analytics', label: 'Analytics', show: isDeveloperAdmin, admin: true },
   ].filter(i => i.show);
 
   function isActive(to) {

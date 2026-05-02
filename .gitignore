@@ -15,9 +15,11 @@ dist-ssr
 # Secrets & local data
 .env
 ask.db
+ask.db-*
 uploads/
 
 # Editor directories and files
+.claude/
 .vscode/*
 !.vscode/extensions.json
 .idea

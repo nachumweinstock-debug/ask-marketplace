@@ -25,6 +25,7 @@ const STATUS_COLORS = {
   student:  { bg: 'var(--accent)', color: 'var(--primary)' },
   provider: { bg: '#F0FDF4', color: '#166534' },
 };
+const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -33,22 +34,59 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [hiddenFilter, setHiddenFilter] = useState('include');
+  const [activity, setActivity] = useState(null);
+  const [emailStatus, setEmailStatus] = useState(null);
   const [duplicates, setDuplicates] = useState([]);
   const [editModal, setEditModal] = useState(null); // { profileId, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
   const [userModal, setUserModal] = useState(null); // user object
+  const [userDetail, setUserDetail] = useState(null);
+  const [notice, setNotice] = useState('');
+  const isDeveloperAdmin = user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
 
   useEffect(() => {
     if (!user?.is_admin) { navigate('/'); return; }
-    Promise.all([
-      api.get('/admin/users'),
+    loadAdminData().finally(() => setLoading(false));
+  }, [user, roleFilter, hiddenFilter]);
+
+  async function loadAdminData() {
+    const params = { role: roleFilter, hidden: hiddenFilter };
+    const [u, s, d, a, e] = await Promise.all([
+      api.get('/admin/users', { params }),
       api.get('/admin/stats'),
       api.get('/admin/duplicates'),
-    ]).then(([u, s, d]) => { setUsers(u.data); setStats(s.data); setDuplicates(d.data); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [user]);
+      api.get('/admin/activity'),
+      api.get('/admin/email-status'),
+    ]);
+    setUsers(u.data);
+    setStats(s.data);
+    setDuplicates(d.data);
+    setActivity(a.data);
+    setEmailStatus(e.data);
+  }
+
+  async function refreshAdmin() {
+    setNotice('');
+    await loadAdminData();
+    setNotice('Admin data refreshed.');
+    setTimeout(() => setNotice(''), 2000);
+  }
+
+  async function cleanupTestUsers() {
+    if (!confirm('Delete all Codex smoke/test users? This only removes disposable test accounts.')) return;
+    const { data } = await api.delete('/admin/test-users');
+    await loadAdminData();
+    setNotice(`Deleted ${data.deleted} test user${data.deleted === 1 ? '' : 's'}.`);
+  }
+
+  async function sendPrankEmail() {
+    if (!confirm('Send a clearly labeled admin prank/test email to both admins?')) return;
+    const { data } = await api.post('/admin/prank-email');
+    setNotice(data.message || 'Email sent.');
+  }
 
   async function toggleAdmin(id, current) {
     try {
@@ -114,6 +152,17 @@ export default function AdminDashboard() {
     } catch { alert('Failed to load listing'); }
   }
 
+  async function openUser(userRow) {
+    setUserModal(userRow);
+    setUserDetail(null);
+    try {
+      const { data } = await api.get(`/admin/users/${userRow.id}`);
+      setUserDetail(data);
+    } catch {
+      setUserDetail(null);
+    }
+  }
+
   async function saveEdit(e) {
     e.preventDefault();
     setEditError(''); setEditLoading(true);
@@ -141,7 +190,8 @@ export default function AdminDashboard() {
 
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    (u.username || '').toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return (
@@ -151,26 +201,44 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div style={{ maxWidth: 920, margin: '0 auto', padding: '48px 24px 80px' }}>
+    <div className="admin-page" style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 24px 80px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--text)', letterSpacing: '-0.5px', flex: 1 }}>
-          Admin
-        </h1>
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
-          Admin
-        </span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, marginBottom: 24, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <div>
+          <div className="section-label" style={{ marginBottom: 8 }}>Operations</div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 44, color: 'var(--text)', letterSpacing: '-0.5px', lineHeight: 1 }}>
+            Admin
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 8 }}>Users, listings, cleanup, imports, and system checks.</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {isDeveloperAdmin && <button onClick={() => navigate('/admin/analytics')} className="admin-action-btn">Analytics</button>}
+          <button onClick={() => navigate('/admin/support')} className="admin-action-btn">Support inbox</button>
+          <button onClick={refreshAdmin} className="admin-action-btn">Refresh</button>
+          <button onClick={cleanupTestUsers} className="admin-action-btn danger-soft">Clean Codex users</button>
+          <button onClick={sendPrankEmail} className="admin-action-btn">Send admin test email</button>
+        </div>
       </div>
+
+      {notice && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: 13, fontWeight: 600 }}>
+          {notice}
+        </div>
+      )}
 
       {/* Stats */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
+        <div className="admin-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 10, marginBottom: 18 }}>
           {[
             { label: 'Users', value: stats.users },
             { label: 'Providers', value: stats.providers },
+            { label: 'Listings', value: stats.listings },
             { label: 'Bookings', value: stats.bookings },
+            { label: 'Pending', value: stats.pending_bookings },
+            { label: 'Messages', value: stats.messages },
             { label: 'Reviews', value: stats.reviews },
+            { label: 'Hidden', value: stats.hidden_test_users },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding: '18px 20px' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text)', lineHeight: 1 }}>{s.value}</div>
@@ -180,8 +248,48 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      <div className="admin-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12, marginBottom: 18 }}>
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div className="section-label" style={{ marginBottom: 12 }}>Recent activity</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {[
+              ['New users', activity?.users?.map(x => `${x.name} · ${x.email}`) || []],
+              ['Bookings', activity?.bookings?.map(x => `${x.student_name} → ${x.provider_name} · ${x.status}`) || []],
+              ['Listings', activity?.listings?.map(x => `${x.name} · ${x.custom_category || x.category}`) || []],
+            ].map(([title, items]) => (
+              <div key={title}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {items.slice(0, 4).map((item, i) => (
+                    <div key={i} style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div className="section-label" style={{ marginBottom: 12 }}>System</div>
+          <div style={{ display: 'grid', gap: 8, fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ color: 'var(--muted)' }}>Email mode</span>
+              <strong>{emailStatus?.mode || 'unknown'}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ color: 'var(--muted)' }}>From</span>
+              <span style={{ textAlign: 'right', wordBreak: 'break-all' }}>{emailStatus?.from || '—'}</span>
+            </div>
+            <button onClick={() => api.post('/admin/test-email').then(r => setNotice(r.data.message)).catch(err => setNotice(err.response?.data?.error || 'Email test failed'))} className="admin-action-btn" style={{ marginTop: 6, width: '100%' }}>
+              Send verification test
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Tools row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+      <div className="admin-tools-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
         <div className="card" style={{ padding: '18px 20px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>
             Grant Admin
@@ -249,12 +357,22 @@ export default function AdminDashboard() {
 
       {/* Users list */}
       <div className="card" style={{ padding: '20px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', flex: 1 }}>
             Users ({filtered.length})
           </div>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="admin-select">
+            <option value="all">All roles</option>
+            <option value="student">Students</option>
+            <option value="provider">Providers</option>
+          </select>
+          <select value={hiddenFilter} onChange={e => setHiddenFilter(e.target.value)} className="admin-select">
+            <option value="include">Include hidden</option>
+            <option value="hide">Hide Codex users</option>
+            <option value="only">Only Codex users</option>
+          </select>
           <input
-            type="text" placeholder="Search..." value={search}
+            type="text" placeholder="Search name, email, handle..." value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
               border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px',
@@ -266,7 +384,7 @@ export default function AdminDashboard() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {filtered.map(u => (
-            <button key={u.id} onClick={() => setUserModal(u)}
+            <button key={u.id} onClick={() => openUser(u)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
                 border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)',
@@ -291,7 +409,7 @@ export default function AdminDashboard() {
                   {u.name}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {u.email}
+                  {u.email}{u.username ? ` · /${u.username}` : ''}
                 </div>
               </div>
               {/* Badges */}
@@ -301,6 +419,11 @@ export default function AdminDashboard() {
                     Admin
                   </span>
                 )}
+                {u.is_hidden_test ? (
+                  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: '#F3F4F6', color: '#4B5563' }}>
+                    Hidden
+                  </span>
+                ) : null}
                 <span style={{
                   fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 999,
                   background: STATUS_COLORS[u.role]?.bg || 'var(--accent)',
@@ -311,6 +434,7 @@ export default function AdminDashboard() {
                 {u.rating > 0 && (
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>★ {u.rating.toFixed(1)}</span>
                 )}
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{u.bookings_as_student || 0}b · {u.messages_sent || 0}m</span>
                 <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>›</span>
               </div>
             </button>
@@ -364,8 +488,66 @@ export default function AdminDashboard() {
               {userModal.category && <span>Category: {userModal.custom_category || userModal.category}</span>}
             </div>
 
+            {userDetail ? (
+              <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <div className="admin-mini-stat"><strong>{userDetail.listings.length}</strong><span>Listings</span></div>
+                  <div className="admin-mini-stat"><strong>{userDetail.bookingsAsStudent.length}</strong><span>Student bookings</span></div>
+                  <div className="admin-mini-stat"><strong>{userDetail.bookingsAsProvider.length}</strong><span>Provider bookings</span></div>
+                </div>
+                {userDetail.listings.length > 0 && (
+                  <div>
+                    <div className="section-label" style={{ marginBottom: 6 }}>Listings</div>
+                    {userDetail.listings.map(l => (
+                      <div key={l.id} style={{ fontSize: 12.5, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}>
+                        <strong>{l.title || l.subcategory || l.custom_category || l.category}</strong>
+                        <span style={{ color: 'var(--muted)' }}> · ${l.price_per_session || 0} · {l.session_type}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {userDetail.messages.length > 0 && (
+                  <div>
+                    <div className="section-label" style={{ marginBottom: 6 }}>Latest messages</div>
+                    {userDetail.messages.slice(0, 4).map(m => (
+                      <div key={m.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                        <strong style={{ color: 'var(--text)' }}>{m.sender_name}</strong> → {m.receiver_name}: {m.body.slice(0, 90)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 18 }}>Loading account detail…</div>
+            )}
+
             {/* Actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button onClick={() => window.open(`/people/${userModal.id}`, '_blank')} style={{
+                  padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                  border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                }}>
+                  Open profile
+                </button>
+                <button onClick={() => window.open(`/messages/${userModal.id}`, '_blank')} style={{
+                  padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                  border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                }}>
+                  Open DM
+                </button>
+              </div>
+              <select value={userModal.role} onChange={async e => {
+                const role = e.target.value;
+                const { data } = await api.patch(`/admin/users/${userModal.id}`, { role });
+                setUsers(us => us.map(u => u.id === userModal.id ? { ...u, role: data.role } : u));
+                setUserModal(u => ({ ...u, role: data.role }));
+              }} style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1.5px solid var(--border)', background: '#fff', fontFamily: 'var(--font-ui)' }}>
+                <option value="student">Student</option>
+                <option value="provider">Provider</option>
+              </select>
               <button onClick={() => {
                 toggleAdmin(userModal.id, userModal.is_admin);
                 setUserModal(u => ({ ...u, is_admin: !u.is_admin }));

@@ -19,6 +19,37 @@ function canSeePayment(requesterId, targetUserId) {
 
 const router = Router();
 
+const HIDDEN_PUBLIC_USER_SQL = `
+  AND LOWER(u.email) NOT LIKE 'codex-%@example.com'
+  AND LOWER(u.email) NOT LIKE 'codex-smoke-%'
+  AND LOWER(u.email) NOT LIKE 'codex-username-check-%'
+  AND LOWER(u.name) NOT LIKE 'codex smoke%'
+  AND LOWER(u.name) NOT LIKE 'codex username%'
+`;
+
+function publicProfileBy(whereClause, params, me) {
+  const ppSub = `(SELECT * FROM provider_profiles WHERE id IN (SELECT MAX(id) FROM provider_profiles GROUP BY user_id))`;
+  const select = `
+    SELECT u.id, u.name, u.username, u.avatar_url, u.major, u.classes_taking, u.user_bio, u.role, u.created_at,
+           pp.id    as provider_profile_id,
+           pp.category, pp.custom_category, pp.bio as listing_bio,
+           pp.price_per_session, pp.rating, pp.review_count,
+           pp.zelle, pp.venmo,
+           ${me ? 'c.id' : 'NULL'}     as connection_id,
+           ${me ? 'c.status' : 'NULL'} as connection_status,
+           ${me ? 'c.requester_id' : 'NULL'} as requester_id
+    FROM users u
+    LEFT JOIN ${ppSub} pp ON pp.user_id = u.id
+    ${me ? `LEFT JOIN connections c ON (
+      (c.requester_id = ? AND c.receiver_id  = u.id) OR
+      (c.receiver_id  = ? AND c.requester_id = u.id)
+    )` : ''}
+    WHERE ${whereClause}
+      ${HIDDEN_PUBLIC_USER_SQL}
+  `;
+  return db.prepare(select).get(...(me ? [me, me] : []), ...params);
+}
+
 // GET /people — browse all users; includes connection status when authenticated
 router.get('/', optionalAuth, (req, res) => {
   const { search } = req.query;
@@ -46,7 +77,9 @@ router.get('/', optionalAuth, (req, res) => {
         (c.requester_id = ? AND c.receiver_id = u.id) OR
         (c.receiver_id  = ? AND c.requester_id = u.id)
       )
-      WHERE u.id != ?     `;
+      WHERE u.id != ?
+        ${HIDDEN_PUBLIC_USER_SQL}
+    `;
     params = [me, me, me];
   } else {
     query = `
@@ -59,6 +92,7 @@ router.get('/', optionalAuth, (req, res) => {
       FROM users u
       LEFT JOIN ${ppSubquery} pp ON pp.user_id = u.id
       WHERE 1=1
+        ${HIDDEN_PUBLIC_USER_SQL}
     `;
     params = [];
   }
@@ -73,6 +107,18 @@ router.get('/', optionalAuth, (req, res) => {
 
   const users = db.prepare(query).all(...params);
   res.json(users);
+});
+
+// GET /people/u/:username — public profile by share handle
+router.get('/u/:username', optionalAuth, (req, res) => {
+  const me = req.user?.id;
+  let u = publicProfileBy('u.username = ?', [req.params.username], me);
+  if (!u) return res.status(404).json({ error: 'User not found' });
+
+  const paymentUnlocked = canSeePayment(me, u.id);
+  if (!paymentUnlocked) u = { ...u, zelle: null, venmo: null };
+
+  res.json({ ...u, mutual_connections: [], payment_unlocked: paymentUnlocked });
 });
 
 // GET /people/:id — single user's public profile

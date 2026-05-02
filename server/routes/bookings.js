@@ -9,7 +9,7 @@ function icsToken(bookingId) {
   const secret = process.env.JWT_SECRET || 'dev-only-insecure-fallback-do-not-use-in-prod';
   return createHmac('sha256', secret).update(`ics-${bookingId}`).digest('hex').slice(0, 24);
 }
-import { sendBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification } from '../email.js';
+import { sendBookingNotification, sendAdminBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification } from '../email.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 import posthog from '../posthog.js';
@@ -18,22 +18,43 @@ const router = Router();
 
 async function sendBookingEmails(booking, slot, student) {
   const providerInfo = db.prepare(`
-    SELECT u.email, u.phone, u.name as provider_name
+    SELECT u.email, u.phone, u.name as provider_name,
+           pp.title, pp.category, pp.custom_category, pp.subcategory
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE pp.id = ?
   `).get(booking.provider_id);
   if (!providerInfo) return;
 
-  await sendBookingNotification({
-    providerEmail: providerInfo.email,
-    providerName: providerInfo.provider_name,
-    studentName: student.name,
-    studentEmail: student.email,
-    date: slot.date,
-    startTime: slot.start_time,
-    endTime: slot.end_time,
-  });
+  const listingTitle = providerInfo.title || providerInfo.subcategory || providerInfo.custom_category || providerInfo.category || 'Service';
+  const emailResults = await Promise.allSettled([
+    sendBookingNotification({
+      providerEmail: providerInfo.email,
+      providerName: providerInfo.provider_name,
+      studentName: student.name,
+      studentEmail: student.email,
+      date: slot.date,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+    }),
+    sendAdminBookingNotification({
+      bookingId: booking.id,
+      providerName: providerInfo.provider_name,
+      providerEmail: providerInfo.email,
+      studentName: student.name,
+      studentEmail: student.email,
+      date: slot.date,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      listingTitle,
+      category: providerInfo.custom_category || providerInfo.category,
+    }),
+  ]);
+  for (const result of emailResults) {
+    if (result.status === 'rejected') {
+      console.error('[BOOKING] email error:', result.reason?.message || result.reason);
+    }
+  }
 
   // SMS to provider
   smsBookingRequest({

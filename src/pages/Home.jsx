@@ -96,6 +96,8 @@ export default function Home() {
                   Browse listings →
                 </button>
                 <button
+                  data-analytics-event="become_tutor_clicked"
+                  data-analytics-label="hero_post_service"
                   onClick={() => navigate(user ? '/create-listing' : '/signup')}
                   style={{
                     background: 'transparent', color: 'var(--ink-900)',
@@ -271,6 +273,8 @@ export default function Home() {
           </p>
           <Link
             to={user ? '/create-listing' : '/signup'}
+            data-analytics-event="become_tutor_clicked"
+            data-analytics-label="home_bottom_post_listing"
             style={{
               display: 'inline-block',
               background: 'var(--ink-900)', color: 'var(--cream-50)',

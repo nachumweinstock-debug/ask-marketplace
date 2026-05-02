@@ -698,6 +698,7 @@ function writeTutorPages() {
 function writeSitemap() {
   const paths = [
     '',
+    '/support',
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => schoolUrl(school.slug)),

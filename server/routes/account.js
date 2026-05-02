@@ -5,12 +5,35 @@ import { storeImage } from '../storage.js';
 
 const router = Router();
 
+function normalizeUsername(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32);
+}
+
+function ensureUsername(user) {
+  if (user.username) return user.username;
+  const base = normalizeUsername(user.name || user.email?.split('@')[0]) || 'user';
+  let slug = base;
+  let n = 2;
+  while (db.prepare('SELECT 1 FROM users WHERE username = ? AND id != ?').get(slug, user.id)) {
+    slug = `${base}-${n++}`;
+  }
+  db.prepare('UPDATE users SET username = ? WHERE id = ?').run(slug, user.id);
+  return slug;
+}
+
 // GET /api/account — full profile with stats
 router.get('/', requireAuth, (req, res) => {
   const user = db.prepare(
-    'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, created_at FROM users WHERE id = ?'
+    'SELECT id, email, name, username, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, created_at FROM users WHERE id = ?'
   ).get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
+  user.username = ensureUsername(user);
 
   const bookingStats = db.prepare(`
     SELECT
@@ -61,7 +84,7 @@ router.get('/', requireAuth, (req, res) => {
 // Avatar is sent as a base64 data URL; server uploads it to Supabase Storage (or keeps base64 as fallback)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { name, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref } = req.body;
+    const { name, username, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref } = req.body;
     const userUpdates = {};
 
     if (name?.trim())                 userUpdates.name           = name.trim().slice(0, 100);
@@ -72,6 +95,16 @@ router.put('/', requireAuth, async (req, res) => {
     if (zelle !== undefined)          userUpdates.zelle          = String(zelle || '').slice(0, 100);
     if (venmo !== undefined)          userUpdates.venmo          = String(venmo || '').slice(0, 100);
     if (phone !== undefined)          userUpdates.phone          = String(phone || '').slice(0, 20);
+    if (username !== undefined) {
+      const cleanUsername = normalizeUsername(username);
+      if (cleanUsername.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters' });
+      if (!/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(cleanUsername)) {
+        return res.status(400).json({ error: 'Username can use letters, numbers, and dashes' });
+      }
+      const taken = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(cleanUsername, req.user.id);
+      if (taken) return res.status(409).json({ error: 'Username is already taken' });
+      userUpdates.username = cleanUsername;
+    }
     if (contact_pref !== undefined) {
       const allowed = ['imessage', 'whatsapp', ''];
       userUpdates.contact_pref = allowed.includes(contact_pref) ? contact_pref : '';
@@ -86,7 +119,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     // Whitelist of allowed column names (defense-in-depth against injection)
-    const ALLOWED_COLS = new Set(['name','major','classes_taking','gpa','user_bio','zelle','venmo','phone','contact_pref','avatar_url']);
+    const ALLOWED_COLS = new Set(['name','username','major','classes_taking','gpa','user_bio','zelle','venmo','phone','contact_pref','avatar_url']);
     const safeUpdates = Object.fromEntries(Object.entries(userUpdates).filter(([k]) => ALLOWED_COLS.has(k)));
     if (Object.keys(safeUpdates).length > 0) {
       const setClauses = Object.keys(safeUpdates).map(k => `${k} = ?`).join(', ');
@@ -112,7 +145,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     const updated = db.prepare(
-      'SELECT id, email, name, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref FROM users WHERE id = ?'
+      'SELECT id, email, name, username, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref FROM users WHERE id = ?'
     ).get(req.user.id);
     res.json(updated);
   } catch (err) {

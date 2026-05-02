@@ -100,7 +100,7 @@ router.get('/photo-suggestions', async (req, res) => {
   if (pexelsKey) {
     try {
       const r = await fetch(
-        `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=6&orientation=landscape`,
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=15&orientation=landscape`,
         { headers: { Authorization: pexelsKey }, signal: AbortSignal.timeout(5000) }
       );
       if (r.ok) {
@@ -148,10 +148,68 @@ router.get('/photo-suggestions', async (req, res) => {
     halacha:       ['https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=260&fit=crop','https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&h=260&fit=crop'],
   };
 
+  Object.assign(CURATED, {
+    accounting: CURATED.excel,
+    finance: CURATED.excel,
+    business: CURATED.excel,
+    economics: CURATED.excel,
+    statistics: CURATED.math,
+    calculus: CURATED.math,
+    english: CURATED.tutor,
+    history: CURATED.tutor,
+    writing: CURATED.tutor,
+    sat: CURATED.tutor,
+    act: CURATED.tutor,
+    baseball: CURATED.fitness,
+    swimming: CURATED.fitness,
+    squash: CURATED.fitness,
+    volleyball: CURATED.fitness,
+    trainer: CURATED.fitness,
+    gym: CURATED.fitness,
+    hair: CURATED.barber,
+    beard: CURATED.barber,
+    makeup: CURATED.barber,
+    nails: CURATED.barber,
+    voice: CURATED.vocal,
+    vocals: CURATED.vocal,
+    drums: CURATED.drum,
+    bass: CURATED.music,
+    flute: CURATED.music,
+    saxophone: CURATED.music,
+    theory: CURATED.music,
+    chumash: CURATED.torah,
+    mishna: CURATED.torah,
+    tanach: CURATED.torah,
+    tefilla: CURATED.torah,
+    parsha: CURATED.torah,
+    yiddish: CURATED.language,
+    arabic: CURATED.language,
+    russian: CURATED.language,
+    mandarin: CURATED.language,
+    italian: CURATED.language,
+    german: CURATED.language,
+  });
+
+  const matches = [];
   for (const [key, urls] of Object.entries(CURATED)) {
-    if (lower.includes(key) || key.includes(lower)) return res.json(urls);
+    if (lower.includes(key) || key.includes(lower)) matches.push(...urls);
   }
-  res.json([]);
+  if (!matches.length) {
+    const words = lower.split(/[^a-z0-9]+/).filter(Boolean);
+    for (const word of words) {
+      for (const [key, urls] of Object.entries(CURATED)) {
+        if (word.length > 2 && (key.includes(word) || word.includes(key))) matches.push(...urls);
+      }
+    }
+  }
+  const fallback = [
+    ...CURATED.tutor,
+    ...CURATED.fitness,
+    ...CURATED.music,
+    ...CURATED.barber,
+  ];
+  if (matches.length && matches.length < 12) matches.push(...fallback);
+  res.json([...new Set(matches.length ? matches : fallback)].slice(0, 18));
 });
 
 // GET /providers/mine — all listings owned by logged-in user
