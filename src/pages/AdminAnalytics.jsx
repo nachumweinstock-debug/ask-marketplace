@@ -46,6 +46,9 @@ function CountChart({ rows, valueKey, empty, color = 'linear-gradient(180deg, #1
     <div style={{ display: 'flex', alignItems: 'end', gap: 8, height: 176, paddingTop: 8 }}>
       {rows.map((row) => (
         <div key={row.day} title={`${row.day}: ${row[valueKey]}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8, minWidth: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', textAlign: 'center', lineHeight: 1 }}>
+            {fmt(row[valueKey])}
+          </div>
           <div style={{
             height: `${Math.max(8, (Number(row[valueKey] || 0) / max) * 148)}px`,
             background: color,

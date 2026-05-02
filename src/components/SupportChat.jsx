@@ -29,6 +29,7 @@ export default function SupportChat({ compact = false, initialPrompt = '' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef(null);
+  const delayRef = useRef(null);
 
   useEffect(() => { setEmail(user?.email || email); }, [user?.email]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, loading]);
@@ -39,6 +40,7 @@ export default function SupportChat({ compact = false, initialPrompt = '' }) {
     window.addEventListener('ask-support-prefill', handlePrefill);
     return () => window.removeEventListener('ask-support-prefill', handlePrefill);
   }, []);
+  useEffect(() => () => { if (delayRef.current) clearTimeout(delayRef.current); }, []);
 
   async function sendMessage(message = text) {
     const body = message.trim();
@@ -57,10 +59,12 @@ export default function SupportChat({ compact = false, initialPrompt = '' }) {
         setConversationId(data.conversationId);
         localStorage.setItem('ask_support_conversation_id', data.conversationId);
       }
-      setMessages((items) => [...items, { sender_type: 'bot', message: data.botMessage }]);
+      delayRef.current = setTimeout(() => {
+        setMessages((items) => [...items, { sender_type: 'bot', message: data.botMessage }]);
+        setLoading(false);
+      }, 4000);
     } catch (err) {
       setError(err.response?.data?.error || 'Support is unavailable. Try again in a moment.');
-    } finally {
       setLoading(false);
     }
   }

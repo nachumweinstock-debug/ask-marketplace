@@ -23,55 +23,55 @@ function classifySupport(message) {
     return {
       topic: 'Booking help',
       needsAdmin: wantsHuman,
-      reply: 'To book a session, browse listings, open a tutor profile, choose an available time, and request the booking. The tutor can confirm it from their dashboard. You can use messages to coordinate details after booking.',
+      reply: 'Here is how booking works on Ask Marketplace:\n\n1. Go to Browse and open the tutor or service listing you want.\n2. Pick an available time on their profile.\n3. Send the booking request.\n4. The tutor confirms it from their dashboard.\n5. You can coordinate details in Messages after the request is sent.\n\nIf you are already stuck on a booking, send me the tutor name, the date/time, and what status you see.',
     };
   }
   if (/\b(tutor|become tutor|apply|listing|provider)\b/.test(text)) {
     return {
       topic: 'Tutor account help',
       needsAdmin: wantsHuman,
-      reply: 'To become a tutor, create an account, choose Post, fill out your listing, add your subject, price, session type, and availability. Once your listing is live, students can find and book you.',
+      reply: 'To become a tutor or service provider:\n\n1. Log in or create an account.\n2. Choose Post in the navigation.\n3. Add what you offer, your subject/category, price, location or Zoom option, and availability.\n4. Save the listing so students can find and book you.\n\nIf your listing is not showing up, tell me the category, your account email, and what happens after you press save.',
     };
   }
   if (/\b(payment|charge|refund|paid|venmo|zelle)\b/.test(text)) {
     return {
       topic: 'Payment issue',
       needsAdmin: true,
-      reply: 'For payment, charge, or refund issues, please include what happened, the tutor name, and the booking date. An admin may review the conversation and follow up.',
+      reply: 'For payment issues, the fastest way to sort it out is to include:\n\n- tutor/provider name\n- booking date and time\n- amount involved\n- whether it was Zelle, Venmo, cash, or another method\n- what went wrong\n\nI marked this for admin review because payment/refund issues usually need a real person to verify details.',
     };
   }
   if (/\b(cancel|reschedule|move|change time)\b/.test(text)) {
     return {
       topic: 'Cancel or reschedule',
       needsAdmin: wantsHuman,
-      reply: 'For cancellations or rescheduling, message the tutor from your booking or messages page and agree on the new time. If a booking is stuck or the tutor does not respond, our team can review it.',
+      reply: 'To cancel or reschedule, message the tutor from Messages or the booking thread and agree on the new time. If the booking is pending, the tutor can confirm a different slot. If it is already confirmed, coordinate directly first so both sides know what changed.\n\nIf the tutor is not responding, send me the tutor name and booking time.',
     };
   }
   if (/\b(login|account|password|sign in|signup|email)\b/.test(text)) {
     return {
       topic: 'Account help',
       needsAdmin: wantsHuman,
-      reply: 'For account issues, try logging in with the same email you used to create the account. If the password is the issue, use Forgot password from the login page. If your account looks missing or duplicated, an admin can help.',
+      reply: 'For account or login issues:\n\n1. Make sure you are using the same email you signed up with.\n2. If the password is the issue, use Forgot password on the login page.\n3. If Google login created a second account, tell me both emails so the team can check for duplicates.\n\nWhat exact error are you seeing when you try to log in?',
     };
   }
   if (/\b(bug|broken|error|not working|crash|glitch|stuck)\b/.test(text)) {
     return {
       topic: 'Technical issue',
       needsAdmin: true,
-      reply: 'Sorry about that. This sounds like a technical issue, so it has been logged for admin review. If you can, send what page you were on, what you clicked, and what went wrong.',
+      reply: 'Sorry about that. To debug it, send me:\n\n- what page you were on\n- what button or action broke\n- what device/browser you are using\n- any error message you saw\n\nI marked this for admin review because broken-site reports should be checked by the team.',
     };
   }
   if (wantsHuman) {
     return {
       topic: 'Needs admin',
       needsAdmin: true,
-      reply: 'Got it. I marked this for the Ask Marketplace team so a human can review it.',
+      reply: 'Got it. I marked this for the Ask Marketplace team. Please send the key details so they can review it faster: account email, related tutor or booking, and what outcome you need.',
     };
   }
   return {
     topic: 'General support',
     needsAdmin: false,
-    reply: 'Thanks for reaching out. The support team received your question. If this needs a human review, an admin can follow up.',
+    reply: 'I can help with bookings, tutors, payments, account access, and site bugs. Tell me what you were trying to do, what happened, and the page or tutor involved if there is one.',
   };
 }
 
@@ -108,7 +108,7 @@ router.post('/chat', optionalAuth, (req, res) => {
     `).run(conversationId, userId, userEmail, bot.needsAdmin ? 'needs_admin' : 'open', bot.topic, now, now);
   }
 
-  const botMessage = `${bot.reply}\n\nNeed a human? Our team can review this.`;
+  const botMessage = bot.reply;
   const nextStatus = bot.needsAdmin ? 'needs_admin' : 'bot_answered';
 
   db.transaction(() => {
