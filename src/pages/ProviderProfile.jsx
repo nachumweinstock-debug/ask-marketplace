@@ -9,6 +9,10 @@ import MiniCalendar from '../components/MiniCalendar';
 import { providerUrl, parseProviderSlug, isUsernameSlug } from '../lib/providerUrl';
 import GroupInvitePicker from '../components/GroupInvitePicker';
 import { trackEvent } from '../lib/analytics';
+import SavedTutorButton from '../components/SavedTutorButton';
+import FAQAccordion from '../components/FAQAccordion';
+import { ProfileSkeleton } from '../components/Skeletons';
+import PoweredByAsk from '../components/PoweredByAsk';
 
 function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
@@ -205,6 +209,7 @@ export default function ProviderProfile() {
   const [reqDayOffset, setReqDayOffset] = useState(0);
   const [groupMode, setGroupMode] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState([]);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setOtherListings([]);
@@ -236,6 +241,13 @@ export default function ProviderProfile() {
       subcategory: provider.subcategory,
     });
   }, [provider?.id]);
+
+  useEffect(() => {
+    if (!user || !provider?.id) { setSaved(false); return; }
+    api.get('/saved-tutors/ids')
+      .then(({ data }) => setSaved(Array.isArray(data) && data.includes(provider.id)))
+      .catch(() => {});
+  }, [user?.id, provider?.id]);
 
   async function handleDeleteListing() {
     if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
@@ -304,11 +316,7 @@ export default function ProviderProfile() {
     }
   }
 
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-      <div style={{ width: 28, height: 28, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto' }} />
-    </div>
-  );
+  if (loading) return <ProfileSkeleton />;
   if (!provider) return null;
 
   const isOwner = user && user.id === provider.user_id;
@@ -440,7 +448,10 @@ export default function ProviderProfile() {
                   )}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                {!isOwner && (
+                  <SavedTutorButton tutorId={provider.id} initialSaved={saved} onChange={setSaved} />
+                )}
                 <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 32, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
                   {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
                 </div>
@@ -647,6 +658,7 @@ export default function ProviderProfile() {
           {bookingSuccess && (
             <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '9px 14px', fontSize: 12, color: '#166534', marginTop: 16 }}>
               {bookingSuccess}
+              <PoweredByAsk compact url={`${window.location.origin}${providerUrl(provider.name, provider.id, provider.username)}`} />
             </div>
           )}
 
@@ -797,6 +809,18 @@ export default function ProviderProfile() {
           </div>
         )}
       </div>
+
+      <FAQAccordion
+        title={`Questions about ${provider.name}`}
+        schemaId={`provider-faq-${provider.id}`}
+        faqs={[
+          ['How do I book this tutor?', 'Choose an available time on this profile and send a booking request. The tutor can confirm it from their dashboard.'],
+          ['Can I message before booking?', 'Yes. Use the message button to ask about fit, class material, location, or online session details.'],
+          ['Can I book online sessions?', 'Check the session type badge on the profile. Online and both-mode tutors can coordinate remote sessions.'],
+          ['What happens after I book?', 'Ask Marketplace sends the booking request, opens a message thread, and gives calendar options after confirmation.'],
+          ['What if I need a different time?', 'Use the request time section if no listed availability works for you.'],
+        ]}
+      />
     </div>
   );
 }

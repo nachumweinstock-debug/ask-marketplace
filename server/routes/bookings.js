@@ -419,7 +419,12 @@ router.patch('/:id', requireAuth, (req, res) => {
 router.get('/:id/ics', (req, res) => {
   const booking = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
-           u.name as provider_name
+           u.name as provider_name,
+           pp.session_type,
+           pp.title as listing_title,
+           pp.subcategory,
+           pp.custom_category,
+           pp.category
     FROM bookings b
     JOIN availability a ON b.availability_id = a.id
     JOIN provider_profiles pp ON b.provider_id = pp.id
@@ -440,10 +445,14 @@ router.get('/:id/ics', (req, res) => {
   const title = isProviderDownload
     ? `Session with ${student?.name || 'Student'}`
     : `Session with ${booking.provider_name}`;
+  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Tutoring';
+  const sessionLine = ['zoom', 'both'].includes(booking.session_type)
+    ? 'Session link: coordinate the online meeting link in Ask Messages.'
+    : 'Session location: coordinate the meeting place in Ask Messages.';
 
   const icsContent = buildICS({
     title,
-    description: `Booked via uask.live`,
+    description: `Booked through Ask Marketplace.\n\nListing: ${listing}\n${sessionLine}\nNotes: Bring class materials, questions, and any assignment details you want to review.`,
     slotDate: booking.date,
     startTime: booking.start_time,
     endTime: booking.end_time,
@@ -462,7 +471,12 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
   const booking = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
            pu.name as provider_name,
-           su.name as student_name
+           su.name as student_name,
+           pp.session_type,
+           pp.title as listing_title,
+           pp.subcategory,
+           pp.custom_category,
+           pp.category
     FROM bookings b
     JOIN availability a ON b.availability_id = a.id
     JOIN provider_profiles pp ON b.provider_id = pp.id
@@ -480,7 +494,11 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
   const title = isProvider && !isStudent
     ? `Session with ${booking.student_name}`
     : `Session with ${booking.provider_name}`;
-  const description = `Booked via uask.live`;
+  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Tutoring';
+  const sessionLine = ['zoom', 'both'].includes(booking.session_type)
+    ? 'Session link: coordinate the online meeting link in Ask Messages.'
+    : 'Session location: coordinate the meeting place in Ask Messages.';
+  const description = `Booked through Ask Marketplace.\n\nListing: ${listing}\n${sessionLine}\nNotes: Bring class materials, questions, and any assignment details you want to review.`;
 
   res.json({
     google: googleCalendarUrl({ title, description, slotDate: booking.date, startTime: booking.start_time, endTime: booking.end_time }),

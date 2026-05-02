@@ -25,6 +25,7 @@ import AdminSupport from './pages/AdminSupport';
 import AdminSupportConversation from './pages/AdminSupportConversation';
 import FloatingSupportButton from './components/FloatingSupportButton';
 import { LegalDocument, LegalHub } from './pages/LegalPages';
+import SavedTutors from './pages/SavedTutors';
 
 const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
 
@@ -155,6 +156,7 @@ function AppRoutes() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
         <Route path="/support" element={<Layout><Support /></Layout>} />
+        <Route path="/saved-tutors" element={<Layout><SavedTutors /></Layout>} />
         <Route path="/legal" element={<Layout><LegalHub /></Layout>} />
         <Route path="/terms" element={<Layout><LegalDocument type="terms" /></Layout>} />
         <Route path="/privacy" element={<Layout><LegalDocument type="privacy" /></Layout>} />

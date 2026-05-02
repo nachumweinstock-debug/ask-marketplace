@@ -80,6 +80,14 @@ db.exec(`
     ip_address TEXT,
     user_agent TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS saved_tutors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tutor_id INTEGER NOT NULL REFERENCES provider_profiles(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, tutor_id)
+  );
 `);
 
 // Safe migrations for existing databases
@@ -119,6 +127,8 @@ if (!cols.includes('username')) {
   }
 }
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(username) WHERE username IS NOT NULL');
+db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_user_id ON saved_tutors(user_id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_tutor_id ON saved_tutors(tutor_id)');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

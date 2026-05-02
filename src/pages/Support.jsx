@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import SupportChat, { PROMPTS, SHORTCUTS } from '../components/SupportChat';
+import FAQAccordion from '../components/FAQAccordion';
 
 export default function Support() {
   useEffect(() => {
@@ -55,6 +56,17 @@ export default function Support() {
         </div>
         <SupportChat />
       </div>
+      <FAQAccordion
+        title="Support FAQ"
+        schemaId="support-faq-schema"
+        faqs={[
+          ['How fast does support respond?', 'The support bot answers immediately after a short typing delay. Admins can review conversations that need human help.'],
+          ['Can support help with bookings?', 'Yes. Include the tutor name, date, time, and booking status so support can understand the issue.'],
+          ['Can support help with refunds?', 'Yes. Payment or refund issues are marked for admin review because they usually need details from both sides.'],
+          ['Can I report a technical problem?', 'Yes. Tell us the page, action, device, and any error message so we can reproduce it.'],
+          ['Do I need an account to ask support?', 'No. You can start a support conversation without logging in, but adding your email helps admins follow up.'],
+        ]}
+      />
     </div>
   );
 }

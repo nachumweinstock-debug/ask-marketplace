@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { mediaUrl } from '../lib/media';
 import { providerUrl } from '../lib/providerUrl';
 import { trackEvent } from '../lib/analytics';
+import SavedTutorButton from './SavedTutorButton';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -47,7 +48,7 @@ function formatMode(sessionType) {
   return 'Both';
 }
 
-export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmin }) {
+export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmin, saved = false, onSavedChange }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -125,6 +126,18 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           position: 'absolute', bottom: 0, left: 0, right: 0, height: 72,
           background: 'linear-gradient(to top, rgba(0,0,0,0.35), transparent)',
         }} />
+
+        {/* Mode pill — bottom left */}
+        {!isOwn && (
+          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 3 }}>
+            <SavedTutorButton
+              tutorId={provider.id}
+              initialSaved={saved || !!provider.saved}
+              compact
+              onChange={(next) => onSavedChange?.(provider.id, next)}
+            />
+          </div>
+        )}
 
         {/* Mode pill — bottom left */}
         <div className="card-mode-pill" style={{

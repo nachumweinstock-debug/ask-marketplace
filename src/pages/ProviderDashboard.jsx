@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 import { providerUrl } from '../lib/providerUrl';
+import { RowSkeleton } from '../components/Skeletons';
+import PoweredByAsk from '../components/PoweredByAsk';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -278,7 +280,9 @@ export default function ProviderDashboard() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>
+    <div className="page" style={{ maxWidth: 960 }}>
+      <RowSkeleton rows={5} />
+    </div>
   );
 
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
@@ -578,6 +582,7 @@ export default function ProviderDashboard() {
                             )}
                           </div>
                         </div>
+                        {b.status === 'confirmed' && <PoweredByAsk compact url={`${window.location.origin}${profile ? providerUrl(user?.name, profile.id, user?.username) : '/browse'}`} />}
                       </div>
                     ))}
                   </div>
@@ -606,6 +611,7 @@ export default function ProviderDashboard() {
                             </span>
                           </div>
                         </div>
+                        {b.status === 'completed' && <PoweredByAsk compact url={`${window.location.origin}${profile ? providerUrl(user?.name, profile.id, user?.username) : '/browse'}`} />}
                       </div>
                     ))}
                   </div>

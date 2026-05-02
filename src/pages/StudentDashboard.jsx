@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
+import { RowSkeleton } from '../components/Skeletons';
+import PoweredByAsk from '../components/PoweredByAsk';
 
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
@@ -191,7 +193,7 @@ export default function StudentDashboard() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--muted)', fontSize: 13 }}>Loading...</div>
+        <RowSkeleton rows={5} />
       ) : bookings.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 10 }}>
@@ -380,6 +382,9 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, do
           )}
         </div>
       </div>
+      {['confirmed', 'completed'].includes(booking.status) && (
+        <PoweredByAsk compact url={`${window.location.origin}/browse`} />
+      )}
     </div>
   );
 }

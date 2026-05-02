@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import FAQAccordion from '../components/FAQAccordion';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -251,6 +252,13 @@ export default function Home() {
               </section>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* ── Bottom CTA ── */}
+      <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '64px 48px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <FAQAccordion title="Ask Marketplace FAQ" schemaId="home-faq-schema" />
         </div>
       </div>
 

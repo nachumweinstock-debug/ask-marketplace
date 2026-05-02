@@ -4,6 +4,8 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
 import { trackEvent } from '../lib/analytics';
+import FAQAccordion from '../components/FAQAccordion';
+import { TutorCardSkeleton } from '../components/Skeletons';
 
 const EDIT_CATEGORIES = [
   { id: 'tutor',     label: 'Tutoring'  },
@@ -45,6 +47,13 @@ export default function Browse() {
   const [subcategory, setSubcategory] = useState(searchParams.get('subcategory') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
   const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
+  const [school, setSchool] = useState(searchParams.get('school') || 'all');
+  const [minPrice, setMinPrice] = useState(searchParams.get('min_price') || '');
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') || '');
+  const [minRating, setMinRating] = useState(searchParams.get('min_rating') || '');
+  const [availability, setAvailability] = useState(searchParams.get('availability') || 'all');
+  const [verifiedOnly, setVerifiedOnly] = useState(searchParams.get('verified') === '1');
+  const [savedIds, setSavedIds] = useState(new Set());
   const [customCats, setCustomCats] = useState([]);
   const [subcats, setSubcats] = useState([]);
   const debounceRef = useRef(null);
@@ -59,6 +68,13 @@ export default function Browse() {
   }, []);
 
   useEffect(() => {
+    if (!user) { setSavedIds(new Set()); return; }
+    api.get('/saved-tutors/ids')
+      .then(({ data }) => setSavedIds(new Set(data)))
+      .catch(() => setSavedIds(new Set()));
+  }, [user?.id]);
+
+  useEffect(() => {
     setSubcategory('all');
     if (!SUBCATEGORY_PARENT.has(category)) { setSubcats([]); return; }
     api.get('/providers/subcategories', { params: { category } })
@@ -66,7 +82,31 @@ export default function Browse() {
       .catch(() => setSubcats([]));
   }, [category]);
 
-  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType]);
+  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType, school, minPrice, maxPrice, minRating, availability, verifiedOnly]);
+
+  function syncParams(next = {}) {
+    const state = {
+      search,
+      category,
+      subcategory,
+      sort,
+      session_type: sessionType,
+      school,
+      min_price: minPrice,
+      max_price: maxPrice,
+      min_rating: minRating,
+      availability,
+      verified: verifiedOnly ? '1' : '',
+      ...next,
+    };
+    const p = {};
+    for (const [key, value] of Object.entries(state)) {
+      if (!value || value === 'all') continue;
+      if (key === 'sort' && value === 'rating') continue;
+      p[key] = value;
+    }
+    setSearchParams(p);
+  }
 
   // Search-on-type with debounce
   function handleSearchInput(val) {
@@ -87,6 +127,12 @@ export default function Browse() {
       if (category !== 'all') params.category = category;
       if (subcategory !== 'all') params.subcategory = subcategory;
       if (sessionType !== 'all') params.session_type = sessionType;
+      if (school !== 'all') params.school = school;
+      if (minPrice) params.min_price = minPrice;
+      if (maxPrice) params.max_price = maxPrice;
+      if (minRating) params.min_rating = minRating;
+      if (availability !== 'all') params.availability = availability;
+      if (verifiedOnly) params.verified = '1';
       const q = searchVal !== undefined ? searchVal : search;
       if (q) params.search = q;
       params.sort = sort;
@@ -167,43 +213,44 @@ export default function Browse() {
     if (search.trim()) {
       trackEvent('search_started', { query_length: search.trim().length, category, subcategory, session_type: sessionType, submitted: true });
     }
+    syncParams({ search });
     fetchProviders(search);
   }
 
   function handleCategory(cat) {
     setCategory(cat);
     setSubcategory('all');
-    const p = { ...(search ? { search } : {}), sort };
-    if (cat !== 'all') p.category = cat;
-    if (sessionType !== 'all') p.session_type = sessionType;
-    setSearchParams(p);
+    syncParams({ category: cat, subcategory: 'all' });
   }
 
   function handleSubcategory(sub) {
     setSubcategory(sub);
-    const p = { ...(search ? { search } : {}), sort };
-    if (category !== 'all') p.category = category;
-    if (sub !== 'all') p.subcategory = sub;
-    if (sessionType !== 'all') p.session_type = sessionType;
-    setSearchParams(p);
+    syncParams({ subcategory: sub });
   }
 
   function handleSessionType(st) {
     setSessionType(st);
-    const p = { ...(search ? { search } : {}), sort };
-    if (category !== 'all') p.category = category;
-    if (st !== 'all') p.session_type = st;
-    setSearchParams(p);
+    syncParams({ session_type: st });
   }
 
   function handleSort(s) {
     setSort(s);
-    const p = { ...(search ? { search } : {}) };
-    if (category !== 'all') p.category = category;
-    if (sessionType !== 'all') p.session_type = sessionType;
-    if (s !== 'rating') p.sort = s;
-    setSearchParams(p);
+    syncParams({ sort: s });
   }
+
+  function handleSavedChange(id, next) {
+    setSavedIds(prev => {
+      const copy = new Set(prev);
+      if (next) copy.add(id);
+      else copy.delete(id);
+      return copy;
+    });
+  }
+
+  const schoolOptions = [
+    'Yeshiva University', 'New York University', 'Baruch College', 'Columbia University',
+    'University of Michigan', 'UCLA', 'USC', 'Rutgers University', 'Boston University',
+  ];
 
   // Group listings by user
   const grouped = [];
@@ -314,6 +361,47 @@ export default function Browse() {
         })}
       </div>
 
+      {/* ── Advanced filters ── */}
+      <div className="card" style={{ padding: 14, marginBottom: 18, borderRadius: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, alignItems: 'end' }}>
+          <label style={filterLabel}>
+            School
+            <select value={school} onChange={e => { setSchool(e.target.value); syncParams({ school: e.target.value }); }} style={filterInput}>
+              <option value="all">All schools</option>
+              {schoolOptions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label style={filterLabel}>
+            Min price
+            <input type="number" min="0" placeholder="$0" value={minPrice} onChange={e => { setMinPrice(e.target.value); syncParams({ min_price: e.target.value }); }} style={filterInput} />
+          </label>
+          <label style={filterLabel}>
+            Max price
+            <input type="number" min="0" placeholder="Any" value={maxPrice} onChange={e => { setMaxPrice(e.target.value); syncParams({ max_price: e.target.value }); }} style={filterInput} />
+          </label>
+          <label style={filterLabel}>
+            Rating
+            <select value={minRating} onChange={e => { setMinRating(e.target.value); syncParams({ min_rating: e.target.value }); }} style={filterInput}>
+              <option value="">Any rating</option>
+              <option value="4.5">4.5+</option>
+              <option value="4">4.0+</option>
+              <option value="3">3.0+</option>
+            </select>
+          </label>
+          <label style={filterLabel}>
+            Availability
+            <select value={availability} onChange={e => { setAvailability(e.target.value); syncParams({ availability: e.target.value }); }} style={filterInput}>
+              <option value="all">Any</option>
+              <option value="open">Open slots only</option>
+            </select>
+          </label>
+          <label style={{ ...filterLabel, flexDirection: 'row', alignItems: 'center', gap: 9, paddingBottom: 9 }}>
+            <input type="checkbox" checked={verifiedOnly} onChange={e => { setVerifiedOnly(e.target.checked); syncParams({ verified: e.target.checked ? '1' : '' }); }} style={{ accentColor: 'var(--text)' }} />
+            Verified tutors only
+          </label>
+        </div>
+      </div>
+
       {/* ── Category filters ── */}
       <div style={{ marginBottom: subcats.length > 0 ? 12 : 28, overflowX: 'auto', paddingBottom: 4 }}>
         <div style={{ display: 'flex', gap: 8, width: 'max-content' }}>
@@ -366,32 +454,16 @@ export default function Browse() {
       {loading ? (
         <div className="provider-grid">
           {[...Array(6)].map((_, i) => (
-            <div key={i} style={{
-              background: '#fff', borderRadius: 16, overflow: 'hidden',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-              border: '1px solid var(--gray-100)',
-            }}>
-              <div style={{ height: 200, background: 'linear-gradient(90deg, #f5f5f5 25%, #eee 50%, #f5f5f5 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
-              <div style={{ padding: 16 }}>
-                <div style={{ width: '35%', height: 10, background: '#f0f0f0', borderRadius: 6, marginBottom: 10 }} />
-                <div style={{ width: '75%', height: 18, background: '#f0f0f0', borderRadius: 8, marginBottom: 8 }} />
-                <div style={{ width: '100%', height: 12, background: '#f0f0f0', borderRadius: 6, marginBottom: 6 }} />
-                <div style={{ width: '60%', height: 12, background: '#f0f0f0', borderRadius: 6, marginBottom: 14 }} />
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#f0f0f0' }} />
-                  <div style={{ width: 80, height: 12, background: '#f0f0f0', borderRadius: 6 }} />
-                </div>
-              </div>
-            </div>
+            <TutorCardSkeleton key={i} />
           ))}
         </div>
       ) : grouped.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-            Nothing here yet
+            No tutors found for this filter combination.
           </div>
           <div style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>
-            Try a different search or category
+            Clear a filter, widen the price range, or try another subject.
           </div>
         </div>
       ) : (
@@ -402,6 +474,8 @@ export default function Browse() {
               provider={p}
               isOwn={!!user && user.id === p.user_id}
               isAdmin={!!user?.is_admin}
+              saved={savedIds.has(p.id)}
+              onSavedChange={handleSavedChange}
               onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
               onEdit={
                 user?.is_admin
@@ -414,6 +488,18 @@ export default function Browse() {
           ))}
         </div>
       )}
+
+      <FAQAccordion
+        title="Tutor search FAQ"
+        schemaId="browse-faq-schema"
+        faqs={[
+          ['How do I find the right tutor?', 'Use the subject, school, price, rating, and online/in-person filters to narrow the marketplace, then open profiles to compare availability and reviews.'],
+          ['Are tutors verified?', 'Verified filtering prioritizes tutors with admin status, completed sessions, or reviews. You should still message the tutor and confirm fit before booking.'],
+          ['Can I book online sessions?', 'Yes. Use the Online filter to find tutors who offer Zoom or remote sessions.'],
+          ['Why do no tutors match my filters?', 'Some filters can be restrictive together. Try removing verified-only, widening price, or switching availability to any.'],
+          ['Can I save tutors for later?', 'Yes. Tap the heart on a card or profile to save tutors, then open Saved Tutors from your account.'],
+        ]}
+      />
 
       {/* Edit listing modal */}
       {editModal && (
@@ -563,3 +649,29 @@ export default function Browse() {
     </div>
   );
 }
+
+const filterLabel = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  fontSize: 11,
+  fontWeight: 800,
+  color: 'var(--muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+};
+
+const filterInput = {
+  height: 38,
+  border: '1.5px solid var(--border)',
+  borderRadius: 10,
+  background: '#fff',
+  color: 'var(--text)',
+  padding: '0 10px',
+  fontSize: 13,
+  fontFamily: 'var(--font-ui)',
+  outline: 'none',
+  textTransform: 'none',
+  letterSpacing: 0,
+  fontWeight: 600,
+};

@@ -21,6 +21,7 @@ import helpWantedRoutes from './routes/helpwanted.js';
 import timeRequestRoutes from './routes/timerequests.js';
 import analyticsRoutes from './routes/analytics.js';
 import supportRoutes from './routes/support.js';
+import savedTutorsRoutes from './routes/savedTutors.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 import posthog from './posthog.js';
@@ -122,6 +123,7 @@ app.use('/api/help-wanted', helpWantedRoutes);
 app.use('/api/time-requests', timeRequestRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/saved-tutors', savedTutorsRoutes);
 
 startReminderJobs();
 

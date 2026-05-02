@@ -127,6 +127,7 @@ export default function Navbar() {
 
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
+    { to: '/saved-tutors', label: 'Saved', show: !!user },
     { to: '/people', label: 'People', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
     { to: '/support', label: 'Support', show: true },
@@ -231,6 +232,7 @@ export default function Navbar() {
                       zIndex: 100, animation: 'slideDown 0.15s ease both',
                     }}>
                       <DropItem to="/account" onClick={() => setDropOpen(false)}>My Profile</DropItem>
+                      <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Tutors</DropItem>
                       <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
                       <button onClick={handleSignOut} style={{
                         display: 'block', width: '100%', textAlign: 'left',
@@ -308,6 +310,7 @@ export default function Navbar() {
           {user ? (
             <>
               <DrawerLink to="/account" active={path === '/account'} onClick={() => setMobileOpen(false)}>My Profile</DrawerLink>
+              <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved Tutors</DrawerLink>
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--cream-200)', marginTop: 4 }}>
                 <button onClick={handleSignOut} style={{
                   width: '100%', background: '#FEF2F2', border: '1px solid #FECACA',
