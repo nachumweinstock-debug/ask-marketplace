@@ -16,7 +16,7 @@ import { seoTutors, tutorUrl, tutorUrls } from '../src/seo/tutors.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const baseUrl = 'https://www.uask.live';
-const lastmod = '2026-05-01T00:00:00.000Z';
+const lastmod = '2026-05-02T00:00:00.000Z';
 
 function esc(value) {
   return String(value)
@@ -699,6 +699,12 @@ function writeSitemap() {
   const paths = [
     '',
     '/support',
+    '/legal',
+    '/terms',
+    '/privacy',
+    '/cookies',
+    '/refund-policy',
+    '/community-guidelines',
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => schoolUrl(school.slug)),
@@ -706,11 +712,13 @@ function writeSitemap() {
     ...schoolSubjectUrls(),
     ...tutorUrls(),
   ];
+  const legalPaths = new Set(['/legal', '/terms', '/privacy', '/cookies', '/refund-policy', '/community-guidelines']);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${paths.map((path) => `  <url>
     <loc>${baseUrl}${path}</loc>
     <lastmod>${lastmod}</lastmod>
+    ${legalPaths.has(path) ? '<changefreq>monthly</changefreq>\n    <priority>0.5</priority>' : ''}
   </url>`).join('\n')}
 </urlset>
 `;

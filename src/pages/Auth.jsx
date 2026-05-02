@@ -4,6 +4,7 @@ import { ArrowRight, Camera, Eye, EyeOff } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { trackEvent } from '../lib/analytics';
+import { PRIVACY_VERSION, TERMS_VERSION } from './LegalPages';
 
 const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
 const UNIVERSITY_SUGGESTIONS = [
@@ -286,7 +287,7 @@ export function SignUp() {
     e.preventDefault();
     setError(''); setLoading(true);
     if (!agreedToPrivacy) {
-      setError('Please agree to the Terms of Service & Privacy Policy to continue.');
+      setError('Please agree to the Terms of Service and Privacy Policy to continue.');
       setLoading(false);
       return;
     }
@@ -303,6 +304,9 @@ export function SignUp() {
         password: form.password,
         phone: form.phone,
         university: form.university.trim(),
+        termsAccepted: true,
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
       });
       await loginWithToken(data.token, data.user);
       trackEvent('signup_completed', { method: 'email', redirect: redirect || '', university: form.university.trim() });
@@ -348,9 +352,13 @@ export function SignUp() {
           />
           <label htmlFor="privacy-agree" style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, cursor: 'pointer' }}>
             I agree to the{' '}
-            <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-              Terms of Service & Privacy Policy
-            </a>
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+              Terms of Service
+            </Link>
+            {' '}and{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+              Privacy Policy
+            </Link>
           </label>
         </div>
         <Err msg={error} />

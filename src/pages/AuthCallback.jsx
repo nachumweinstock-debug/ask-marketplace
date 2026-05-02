@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
@@ -101,10 +101,15 @@ export default function AuthCallback() {
               />
               <span style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.55 }}>
                 I agree to the{' '}
-                <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+                <Link to="/terms" target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-                  Terms of Service & Privacy Policy
-                </a>
+                  Terms of Service
+                </Link>
+                {' '}and{' '}
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                  Privacy Policy
+                </Link>
               </span>
             </label>
             {tosError && (

@@ -44,9 +44,12 @@ function uniqueUsername(name, email) {
 
 // POST /auth/signup — create account, log in immediately (no email verification)
 router.post('/signup', async (req, res) => {
-  const { email, name, password, phone, university } = req.body;
+  const { email, name, password, phone, university, termsAccepted, termsVersion, privacyVersion } = req.body;
   if (!email || !name || !password || !university) {
     return res.status(400).json({ error: 'All fields are required' });
+  }
+  if (!termsAccepted) {
+    return res.status(400).json({ error: 'You must agree to the Terms of Service and Privacy Policy.' });
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
@@ -70,6 +73,16 @@ router.post('/signup', async (req, res) => {
       "INSERT INTO users (email, name, password, role, email_verified, phone, username, university) VALUES (?, ?, ?, 'student', 1, ?, ?, ?)"
     ).run(cleanEmail, cleanName, hashed, cleanPhone || null, username, cleanUniversity);
     user = db.prepare('SELECT id, email, name, role, token_version, username, university FROM users WHERE id = ?').get(result.lastInsertRowid);
+    db.prepare(`
+      INSERT INTO policy_acceptances (user_id, terms_version, privacy_version, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      user.id,
+      String(termsVersion || '2026-05-02').slice(0, 40),
+      String(privacyVersion || '2026-05-02').slice(0, 40),
+      String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim().slice(0, 80) || null,
+      String(req.headers['user-agent'] || '').slice(0, 300) || null
+    );
   } catch (err) {
     if (err.message.includes('UNIQUE')) {
       return res.status(409).json({ error: 'Email already registered' });

@@ -9,6 +9,12 @@ export async function GET() {
   const urls = [
     '',
     '/support',
+    '/legal',
+    '/terms',
+    '/privacy',
+    '/cookies',
+    '/refund-policy',
+    '/community-guidelines',
     '/tutors',
     '/become-a-tutor',
     ...schools.map((school) => `/schools/${school.slug}`),
@@ -21,9 +27,11 @@ export async function GET() {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls
   .map((path) => {
+    const isLegal = ['/legal', '/terms', '/privacy', '/cookies', '/refund-policy', '/community-guidelines'].includes(path)
     return `  <url>
     <loc>${baseUrl}${path}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
+    ${isLegal ? '<changefreq>monthly</changefreq>\n    <priority>0.5</priority>' : ''}
   </url>`
   })
   .join('\n')}

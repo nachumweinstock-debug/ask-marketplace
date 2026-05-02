@@ -24,6 +24,7 @@ import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
 import AdminSupportConversation from './pages/AdminSupportConversation';
 import FloatingSupportButton from './components/FloatingSupportButton';
+import { LegalDocument, LegalHub } from './pages/LegalPages';
 
 const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
 
@@ -51,6 +52,12 @@ const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
 
 
 function Footer() {
+  const footerLink = {
+    fontSize: 12,
+    color: 'var(--muted)',
+    textDecoration: 'none',
+  };
+
   return (
     <footer style={{
       borderTop: '1px solid var(--border)',
@@ -59,18 +66,42 @@ function Footer() {
       gap: 24, flexWrap: 'wrap',
     }}>
       <span style={{ fontSize: 12, color: 'var(--muted)' }}>© {new Date().getFullYear()} ASK</span>
-      <Link to="/faq" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+      <Link to="/faq" style={footerLink}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
         FAQ
       </Link>
-      <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
-        style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+      <Link to="/legal" style={footerLink}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Privacy & Terms
-      </a>
-      <Link to="/help-wanted" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}
+        Legal
+      </Link>
+      <Link to="/terms" style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Terms
+      </Link>
+      <Link to="/privacy" style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Privacy
+      </Link>
+      <Link to="/cookies" style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Cookies
+      </Link>
+      <Link to="/refund-policy" style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Refunds
+      </Link>
+      <Link to="/community-guidelines" style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Guidelines
+      </Link>
+      <Link to="/help-wanted" style={footerLink}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
         Request a service
@@ -124,6 +155,12 @@ function AppRoutes() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
         <Route path="/support" element={<Layout><Support /></Layout>} />
+        <Route path="/legal" element={<Layout><LegalHub /></Layout>} />
+        <Route path="/terms" element={<Layout><LegalDocument type="terms" /></Layout>} />
+        <Route path="/privacy" element={<Layout><LegalDocument type="privacy" /></Layout>} />
+        <Route path="/cookies" element={<Layout><LegalDocument type="cookies" /></Layout>} />
+        <Route path="/refund-policy" element={<Layout><LegalDocument type="refunds" /></Layout>} />
+        <Route path="/community-guidelines" element={<Layout><LegalDocument type="guidelines" /></Layout>} />
         <Route path="/people" element={<Layout><People /></Layout>} />
         <Route path="/help-wanted" element={<Layout><HelpWanted /></Layout>} />
         <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />

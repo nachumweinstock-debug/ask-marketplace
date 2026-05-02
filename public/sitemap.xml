@@ -2,1126 +2,1443 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.uask.live</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/support</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
+  </url>
+  <url>
+    <loc>https://www.uask.live/legal</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/terms</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/privacy</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/cookies</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/refund-policy</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/community-guidelines</loc>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://www.uask.live/tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/become-a-tutor</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/subjects/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/nyu/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/baruch/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/columbia/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/cornell/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/michigan/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ucla/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/usc/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/indiana/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/ut-austin/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/rutgers/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/northeastern/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/bu/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/uf/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/fsu/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/biology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/organic-chemistry-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/physics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/calculus-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/statistics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/computer-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/engineering-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/data-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/finance-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/accounting-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/economics-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/psychology-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/writing-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/history-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/schools/yeshiva-university/political-science-tutors</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/maya-cohen-finance-nyu</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/daniel-park-computer-science-columbia</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/sarah-levin-biology-chemistry-ucla</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/eli-rubin-calculus-physics-michigan</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/rachel-stein-writing-political-science-bu</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
   <url>
     <loc>https://www.uask.live/tutors/jonah-weiss-statistics-economics-rutgers</loc>
-    <lastmod>2026-05-01T00:00:00.000Z</lastmod>
+    <lastmod>2026-05-02T00:00:00.000Z</lastmod>
+    
   </url>
 </urlset>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
@@ -30,10 +31,10 @@ export default function CookieBanner() {
       }}>
         We use cookies to keep you logged in and improve your experience.
         By continuing you agree to our{' '}
-        <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+        <Link to="/cookies"
           style={{ color: '#93C5FD', textDecoration: 'none', fontWeight: 600 }}>
-          Privacy Policy
-        </a>.
+          Cookie Policy
+        </Link>.
       </p>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
         <button onClick={accept} style={{
