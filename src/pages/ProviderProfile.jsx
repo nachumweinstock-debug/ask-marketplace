@@ -53,6 +53,15 @@ function Stars({ rating }) {
   );
 }
 
+function normalizeProviderProfile(data) {
+  if (!data) return null;
+  return {
+    ...data,
+    availability: Array.isArray(data.availability) ? data.availability : [],
+    reviews: Array.isArray(data.reviews) ? data.reviews : [],
+  };
+}
+
 const TIME_SLOTS = [
   '7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM',
   '10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM',
@@ -189,7 +198,8 @@ function TimeRequestPicker({ reqDate, setReqDate, reqTime, setReqTime, reqMessag
 export default function ProviderProfile() {
   const { id: rawId, providerSlug } = useParams();
   const slug = providerSlug ?? '';
-  const numericId = rawId ?? (isUsernameSlug(slug) ? null : String(parseProviderSlug(slug)));
+  const parsedId = !rawId && !isUsernameSlug(slug) ? parseProviderSlug(slug) : null;
+  const numericId = rawId ?? (Number.isFinite(parsedId) ? String(parsedId) : null);
   const usernameSlug = (!rawId && isUsernameSlug(slug) && slug) ? slug : null;
 
   const { user, refreshUser } = useAuth();
@@ -219,14 +229,19 @@ export default function ProviderProfile() {
   useEffect(() => {
     setOtherListings([]);
     const fetch = usernameSlug
-      ? api.get(`/providers/u/${usernameSlug}`).then(({ data }) => {
+      ? api.get(`/providers/u/${usernameSlug}`).then(async ({ data }) => {
           if (!data.listings?.length) throw new Error('no listings');
-          // Show the most recent listing; stash the rest as otherListings
-          setProvider(data.listings[0]);
+          // Resolve the username page to the full listing detail so availability,
+          // reviews, and payment gating are always available for the profile UI.
+          const primary = data.listings[0];
+          const detail = await api.get(`/providers/${primary.id}`)
+            .then(({ data: full }) => full)
+            .catch(() => primary);
+          setProvider(normalizeProviderProfile(detail));
           setOtherListings(data.listings.slice(1));
         })
       : api.get(`/providers/${numericId}`).then(({ data }) => {
-          setProvider(data);
+          setProvider(normalizeProviderProfile(data));
           api.get(`/providers/by-user/${data.user_id}`)
             .then(({ data: all }) => setOtherListings(all.filter(l => l.id !== data.id)))
             .catch(() => {});
@@ -346,10 +361,12 @@ export default function ProviderProfile() {
   if (!provider) return null;
 
   const isOwner = user && user.id === provider.user_id;
+  const availability = Array.isArray(provider.availability) ? provider.availability : [];
+  const reviews = Array.isArray(provider.reviews) ? provider.reviews : [];
 
   // Separate real calendar dates from legacy day-name slots
-  const realSlots    = provider.availability.filter(s => /^\d{4}/.test(s.date));
-  const legacySlots  = provider.availability.filter(s => DAYS.includes(s.date));
+  const realSlots    = availability.filter(s => /^\d{4}/.test(s.date));
+  const legacySlots  = availability.filter(s => DAYS.includes(s.date));
   const availDates   = new Set(realSlots.map(s => s.date));
   const slotsForDate = selectedDate ? realSlots.filter(s => s.date === selectedDate) : [];
 
@@ -604,7 +621,7 @@ export default function ProviderProfile() {
             Book a session
           </div>
 
-          {provider.availability.length === 0 ? (
+          {availability.length === 0 ? (
             !isOwner ? (
               <div>
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.5 }}>
@@ -761,7 +778,7 @@ export default function ProviderProfile() {
             </div>
           )}
 
-          {provider.availability.length > 0 && (
+          {availability.length > 0 && (
             <button onClick={handleBook} disabled={!booking || bookingLoading}
               style={{
                 marginTop: 16, width: '100%',
@@ -812,14 +829,14 @@ export default function ProviderProfile() {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16, letterSpacing: '-0.01em' }}>
             Reviews
           </div>
-          {provider.reviews.length === 0 ? (
+          {reviews.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '28px 0' }}>
               No reviews yet.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {provider.reviews.map((r, i) => (
-                <div key={r.id} style={{ borderBottom: i < provider.reviews.length - 1 ? '1px solid var(--border)' : 'none', paddingBottom: i < provider.reviews.length - 1 ? 18 : 0 }}>
+              {reviews.map((r, i) => (
+                <div key={r.id} style={{ borderBottom: i < reviews.length - 1 ? '1px solid var(--border)' : 'none', paddingBottom: i < reviews.length - 1 ? 18 : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{r.student_name}</span>
                     <Stars rating={r.rating} />
