@@ -162,10 +162,12 @@ export default function Navbar() {
       {toast && <DmToast toast={toast} onClose={() => setToast(null)} navigate={navigate} />}
 
       <nav style={{
-        background: '#fff',
-        borderBottom: `1px solid ${scrolled ? 'var(--gray-200)' : 'var(--gray-100)'}`,
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        borderBottom: `1px solid ${scrolled ? 'rgba(23,19,15,0.16)' : 'rgba(23,19,15,0.09)'}`,
         position: 'sticky', top: 0, zIndex: 50,
-        boxShadow: scrolled ? '0 1px 0 var(--gray-200), 0 4px 16px -8px rgba(0,0,0,0.08)' : 'none',
+        boxShadow: scrolled ? '0 12px 34px -28px rgba(23,19,15,0.28)' : 'none',
         transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
       }}>
         <div className="nav-inner" style={{
@@ -175,9 +177,9 @@ export default function Navbar() {
           {/* Wordmark */}
           <Link to="/" className="ask-cursor" style={{
             textDecoration: 'none', fontFamily: 'var(--font-display)',
-            fontSize: 20, fontWeight: 700, color: 'var(--text)',
-            marginRight: 36, flexShrink: 0,
-            fontOpticalSizing: 'auto', letterSpacing: '-0.02em',
+            fontSize: 25, fontWeight: 850, color: 'var(--text)',
+            marginRight: 30, flexShrink: 0,
+            fontOpticalSizing: 'auto', letterSpacing: 0,
           }}>
             ASK
           </Link>
@@ -418,14 +420,14 @@ function Badge({ n, color = 'var(--accent)' }) {
 function NavLink({ to, active, admin, children }) {
   return (
     <Link to={to} style={{
-      display: 'flex', alignItems: 'center', height: '100%', padding: '0 12px',
-      fontSize: 13, fontWeight: active ? 600 : 500, textDecoration: 'none',
+      display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px',
+      fontSize: 13, fontWeight: active ? 850 : 720, textDecoration: 'none',
       whiteSpace: 'nowrap', gap: 4,
       color: active ? 'var(--text)' : 'var(--muted)',
       fontFamily: 'var(--font-ui)',
       position: 'relative',
       transition: 'color .12s',
-      ...(admin ? { color: '#92400E', fontWeight: 600 } : {}),
+      ...(admin ? { color: '#7C2D12', fontWeight: 850 } : {}),
     }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text)'; }}
       onMouseLeave={e => { if (!active && !admin) e.currentTarget.style.color = 'var(--muted)'; }}
@@ -434,7 +436,7 @@ function NavLink({ to, active, admin, children }) {
       {active && (
         <span style={{
           position: 'absolute', bottom: 0, left: 12, right: 12,
-          height: 2, background: 'var(--orange)', borderRadius: 1,
+          height: 3, background: 'var(--orange)', borderRadius: 2,
         }} />
       )}
     </Link>

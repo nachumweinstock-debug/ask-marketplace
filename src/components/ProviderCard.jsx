@@ -24,12 +24,12 @@ function categoryLabel(l) {
 
 // Warm gradients for cards without photos
 const CAT_GRADIENT = {
-  tutor:        'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
-  'hebrew tutor': 'linear-gradient(135deg, #A5B4FC 0%, #4F46E5 100%)',
-  fitness:      'linear-gradient(135deg, #6EE7B7 0%, #059669 100%)',
-  tennis:       'linear-gradient(135deg, #6EE7B7 0%, #059669 100%)',
-  barber:       'linear-gradient(135deg, #FCA5A5 0%, #DC2626 100%)',
-  other:        'linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%)',
+  tutor:        'linear-gradient(135deg, #2558D8 0%, #0E1B4D 100%)',
+  'hebrew tutor': 'linear-gradient(135deg, #17130F 0%, #705E3E 100%)',
+  fitness:      'linear-gradient(135deg, #0F7B55 0%, #083C2A 100%)',
+  tennis:       'linear-gradient(135deg, #0F7B55 0%, #083C2A 100%)',
+  barber:       'linear-gradient(135deg, #F15A24 0%, #7C2410 100%)',
+  other:        'linear-gradient(135deg, #F3C74F 0%, #17130F 100%)',
 };
 
 function cardGradient(category, customCategory) {
@@ -38,7 +38,7 @@ function cardGradient(category, customCategory) {
     let hash = 0;
     for (const c of customCategory) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
     const hue = Math.abs(hash) % 360;
-    return `linear-gradient(135deg, hsl(${hue},70%,75%) 0%, hsl(${(hue+30)%360},65%,55%) 100%)`;
+    return `linear-gradient(135deg, hsl(${hue},55%,42%) 0%, hsl(${(hue+34)%360},50%,24%) 100%)`;
   }
   return CAT_GRADIENT[category] || CAT_GRADIENT.other;
 }
@@ -88,11 +88,11 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
       style={{
         position: 'relative', cursor: 'pointer',
         background: '#fff',
-        borderRadius: 16, overflow: 'hidden',
-        boxShadow: hovered ? '0 2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10)' : '0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.05)',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-        border: isOwn ? '2px solid #86EFAC' : '1px solid #f0f0f0',
+        borderRadius: 8, overflow: 'hidden',
+        boxShadow: hovered ? '0 18px 42px rgba(23,19,15,0.12)' : '0 1px 0 rgba(23,19,15,0.04), 0 10px 28px rgba(23,19,15,0.06)',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        transition: 'box-shadow 0.16s ease, transform 0.16s ease, border-color 0.16s ease',
+        border: isOwn ? '2px solid #0F7B55' : '1px solid rgba(23,19,15,0.10)',
       }}
     >
       {/* ── Visual header ──────────────────────────────────────── */}
@@ -125,7 +125,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
         {/* Gradient overlay for readability */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, height: 72,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.35), transparent)',
+          background: 'linear-gradient(to top, rgba(23,19,15,0.58), transparent)',
         }} />
 
         {/* Mode pill — bottom left */}
@@ -145,9 +145,9 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           position: 'absolute', bottom: 10, left: 10,
           fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
           color: '#fff', letterSpacing: '0.04em',
-          background: 'rgba(0,0,0,0.45)',
+          background: 'rgba(23,19,15,0.68)',
           backdropFilter: 'blur(6px)',
-          borderRadius: 99, padding: '3px 9px',
+          borderRadius: 6, padding: '4px 9px',
           maxWidth: 'calc(100% - 70px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {mode}
@@ -186,8 +186,8 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
       <div className="card-body-pad">
         {/* Category tag */}
         <div style={{
-          fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
-          color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase',
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 800,
+          color: 'var(--orange)', letterSpacing: '0.08em', textTransform: 'uppercase',
           marginBottom: 4,
         }}>
           {catLabel}
@@ -200,8 +200,8 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
               <button key={l.id}
                 onClick={e => { e.stopPropagation(); openProvider(l); }}
                 style={{
-                  padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
-                  border: '1.5px solid var(--gray-200)', background: 'var(--gray-50)',
+                  padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: 760,
+                  border: '1px solid var(--gray-200)', background: 'var(--gray-50)',
                   color: 'var(--text)', cursor: 'pointer', fontFamily: 'var(--font-ui)',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--gray-900)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--gray-900)'; }}
@@ -215,7 +215,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           hasPhoto && (
             <div style={{
               fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-              fontSize: 18, fontWeight: 700, color: 'var(--text)',
+              fontSize: 19, fontWeight: 760, color: 'var(--text)',
               lineHeight: 1.2, marginBottom: 4,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>

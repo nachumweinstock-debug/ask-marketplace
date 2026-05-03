@@ -277,40 +277,45 @@ export default function Browse() {
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
 
   return (
-    <div className="page" style={{ paddingTop: 24 }}>
+    <div className="page" style={{ paddingTop: 26 }}>
 
       {/* ── Header row ── */}
-      <div className="browse-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+      <div className="browse-header" style={{
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        marginBottom: 18, flexWrap: 'wrap', gap: 14,
+        borderBottom: '1px solid var(--border)', paddingBottom: 18,
+      }}>
         <div>
+          <div className="section-label" style={{ marginBottom: 7 }}>Marketplace</div>
           <h1 style={{
             fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-            fontSize: 'clamp(22px, 4vw, 38px)', fontWeight: 700,
+            fontSize: 'clamp(36px, 7vw, 70px)', fontWeight: 760,
             color: 'var(--text)', lineHeight: 1.05,
-            letterSpacing: '-0.02em',
+            letterSpacing: 0,
           }}>
-            Campus marketplace
+            Find the right person.
           </h1>
           {!loading && (
-            <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, fontFamily: 'var(--font-ui)' }}>
+            <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 7, fontFamily: 'var(--font-ui)', fontWeight: 650 }}>
               {providers.length} listing{providers.length !== 1 ? 's' : ''} · {grouped.length} instructor{grouped.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
 
         {/* Sort */}
-        <div style={{ display: 'flex', background: 'var(--gray-100)', borderRadius: 10, padding: 3, gap: 2 }}>
+        <div style={{ display: 'flex', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
           {[
             { id: 'rating', label: 'Top rated' },
             { id: 'newest', label: 'Newest' },
             { id: 'price_asc', label: 'Price ↑' },
           ].map(s => (
             <button key={s.id} onClick={() => handleSort(s.id)} style={{
-              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              padding: '7px 12px', borderRadius: 6, fontSize: 12, fontWeight: 800,
               border: 'none',
-              background: sort === s.id ? '#fff' : 'transparent',
-              color: sort === s.id ? 'var(--text)' : 'var(--muted)',
+              background: sort === s.id ? 'var(--text)' : 'transparent',
+              color: sort === s.id ? '#fff' : 'var(--muted)',
               cursor: 'pointer', fontFamily: 'var(--font-ui)',
-              boxShadow: sort === s.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              boxShadow: 'none',
               transition: 'all .12s',
             }}>
               {s.label}
@@ -324,10 +329,10 @@ export default function Browse() {
         <form onSubmit={handleSearch} style={{
           display: 'flex', alignItems: 'center',
           background: '#fff',
-          border: '1.5px solid var(--gray-200)',
-          borderRadius: 14, height: 52, overflow: 'hidden',
-          maxWidth: 600,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          border: '1px solid rgba(23,19,15,0.14)',
+          borderRadius: 8, height: 56, overflow: 'hidden',
+          maxWidth: 720,
+          boxShadow: '0 14px 38px rgba(23,19,15,0.07)',
         }}>
           <div style={{ padding: '0 0 0 16px', display: 'flex', alignItems: 'center', color: 'var(--muted)', flexShrink: 0 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -341,8 +346,9 @@ export default function Browse() {
             onChange={e => handleSearchInput(e.target.value)}
             style={{
               flex: 1, border: 'none', padding: '0 14px', height: '100%',
-              fontSize: 14, outline: 'none', background: 'transparent',
+              fontSize: 15, outline: 'none', background: 'transparent',
               color: 'var(--text)', fontFamily: 'var(--font-ui)',
+              fontWeight: 650,
             }}
           />
         </form>
@@ -359,8 +365,8 @@ export default function Browse() {
           const active = sessionType === id;
           return (
             <button key={id} onClick={() => handleSessionType(id)} style={{
-              padding: '7px 14px', borderRadius: 99, fontSize: 13, fontWeight: active ? 700 : 500,
-              border: `1.5px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
+              padding: '8px 13px', borderRadius: 8, fontSize: 13, fontWeight: active ? 800 : 700,
+              border: `1px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
               background: active ? 'var(--text)' : '#fff',
               color: active ? '#fff' : 'var(--text-secondary)',
               cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
@@ -373,7 +379,7 @@ export default function Browse() {
       </div>
 
       {/* ── Advanced filters ── */}
-      <div className="card" style={{ padding: 14, marginBottom: 18, borderRadius: 14 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 18, borderRadius: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, alignItems: 'end' }}>
           <label style={filterLabel}>
             Min price
@@ -409,8 +415,8 @@ export default function Browse() {
             const active = category === id;
             return (
               <button key={id} onClick={() => handleCategory(id)} style={{
-                padding: '8px 20px', borderRadius: 99, fontSize: 13, fontWeight: 600,
-                border: `1.5px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
+                padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 800,
+                border: `1px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
                 background: active ? 'var(--text)' : '#fff',
                 color: active ? '#fff' : 'var(--text-secondary)',
                 cursor: 'pointer', transition: 'all .12s',
@@ -430,8 +436,8 @@ export default function Browse() {
             const active = subcategory === id;
             return (
               <button key={id} onClick={() => handleSubcategory(id)} style={{
-                padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: active ? 700 : 500,
-                border: `1.5px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
+                padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: active ? 800 : 700,
+                border: `1px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
                 background: active ? 'var(--text)' : 'transparent',
                 color: active ? '#fff' : 'var(--muted)',
                 cursor: 'pointer', transition: 'all .1s', fontFamily: 'var(--font-ui)',

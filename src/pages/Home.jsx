@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FAQAccordion from '../components/FAQAccordion';
@@ -11,10 +12,17 @@ const FILTERS = [
   { id: 'other', label: 'Other' },
 ];
 
+const FEATURED_LISTINGS = [
+  { mark: 'C', title: 'Calc I exam rescue', meta: 'Tonight or tomorrow, online', price: '$35', color: '#2558D8' },
+  { mark: 'F', title: 'Finance model walkthrough', meta: 'Excel, valuation, homework', price: '$45', color: '#0F7B55' },
+  { mark: 'B', title: 'Fresh cut before Shabbos', meta: 'Clean fade, 30 minute slot', price: '$20', color: '#F15A24' },
+  { mark: 'H', title: 'Hebrew conversation practice', meta: 'Patient, casual, repeat weekly', price: '$18', color: '#17130F' },
+];
+
 const ACADEMIC_CATEGORIES = [
   {
     title: 'STEM instruction',
-    copy: 'Support for pre-health, engineering, CS, data, math, and lab-heavy classes.',
+    copy: 'Pre-health, engineering, CS, data, math, and lab-heavy classes without the endless group chat scramble.',
     subjects: [
       ['Biology', '/subjects/biology-tutors'],
       ['Chemistry', '/subjects/chemistry-tutors'],
@@ -29,7 +37,7 @@ const ACADEMIC_CATEGORIES = [
   },
   {
     title: 'Business instruction',
-    copy: 'Course help for core business classes, quantitative work, and exam prep.',
+    copy: 'Accounting, finance, economics, spreadsheets, test prep, and the classes where one missed concept wrecks the set.',
     subjects: [
       ['Accounting', '/subjects/accounting-tutors'],
       ['Finance', '/subjects/finance-tutors'],
@@ -38,7 +46,7 @@ const ACADEMIC_CATEGORIES = [
   },
   {
     title: 'Humanities instruction',
-    copy: 'Writing, research, reading-heavy courses, and social science support.',
+    copy: 'Writing, research, reading-heavy courses, and social science help with people who can actually explain the assignment.',
     subjects: [
       ['Psychology', '/subjects/psychology-tutors'],
       ['Writing', '/subjects/writing-tutors'],
@@ -51,265 +59,168 @@ const ACADEMIC_CATEGORIES = [
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [query, setQuery] = useState('');
+
+  function submitSearch(e) {
+    e.preventDefault();
+    const trimmed = query.trim();
+    navigate(trimmed ? `/browse?search=${encodeURIComponent(trimmed)}` : '/browse');
+  }
 
   return (
-    <div>
-      {/* ── Hero ── */}
-      <div style={{
-        background: 'var(--cream-100)',
-        minHeight: 'calc(100vh - 64px)',
-        display: 'flex', alignItems: 'center',
-        padding: '0 48px',
-      }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%', padding: '80px 0' }}>
-          <div className="hero-grid">
-            {/* Left */}
-            <div className="fade-up">
-              <h1 style={{
-                fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-                fontSize: 'clamp(56px, 7vw, 88px)',
-                color: 'var(--ink-900)', lineHeight: 1.02,
-                marginBottom: 24, letterSpacing: '-0.03em',
-                fontWeight: 600,
-              }}>
-                Find your<br/>guy.
-              </h1>
-              <p style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: 18, color: 'var(--ink-500)', lineHeight: 1.6,
-                maxWidth: 400, marginBottom: 44,
-              }}>
-                Instructors, barbers, fitness coaches, and more. Book in seconds.
-              </p>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => navigate('/browse')}
-                  style={{
-                    background: 'var(--blue-600)', color: '#fff',
-                    border: 'none', borderRadius: 12,
-                    padding: '15px 32px', fontSize: 16, fontWeight: 500,
-                    cursor: 'pointer', transition: 'background .2s, color .2s',
-                    fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = '#fff'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; }}
-                >
-                  Browse listings →
-                </button>
-                <button
-                  data-analytics-event="become_tutor_clicked"
-                  data-analytics-label="hero_post_service"
-                  onClick={() => navigate(user ? '/create-listing' : '/signup')}
-                  style={{
-                    background: 'transparent', color: 'var(--ink-900)',
-                    border: '1px solid var(--cream-300)', borderRadius: 12,
-                    padding: '15px 32px', fontSize: 16, fontWeight: 500,
-                    cursor: 'pointer', transition: 'border-color .2s',
-                    fontFamily: 'var(--font-ui)',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--ink-900)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--cream-300)'}
-                >
-                  Post a service
-                </button>
-              </div>
-            </div>
+    <div className="home-shell">
+      <section className="home-hero">
+        <div className="fade-up">
+          <div className="home-eyebrow">Live campus marketplace</div>
+          <h1 className="home-title">
+            Book the person who knows <span>the thing.</span>
+          </h1>
+          <p className="home-copy">
+            Ask is the fast way to find instructors, barbers, coaches, and student services without asking five different chats.
+          </p>
 
-            {/* Right — editorial card stack */}
-            <div className="hero-cards fade-up-delay" style={{ position: 'relative', height: 340 }}>
-              {[
-                { title: 'Calc I & II Instruction', eyebrow: 'INSTRUCTION', price: '$35', name: 'Ari K.', offset: { top: 80, left: 50 }, rotate: -4 },
-                { title: 'Clean Fades', eyebrow: 'BARBER', price: '$20', name: 'Yosef M.', offset: { top: 40, left: 25 }, rotate: 2.5 },
-                { title: 'Gemara & Hebrew', eyebrow: 'HEBREW', price: '$15', name: 'Moshe L.', offset: { top: 0, left: 0 }, rotate: -1 },
-              ].map((card, i) => (
-                <div key={i} style={{
-                  position: 'absolute', ...card.offset,
-                  transform: `rotate(${card.rotate}deg)`,
-                  width: 280,
-                  background: 'var(--cream-50)', border: '1px solid var(--cream-200)',
-                  borderRadius: 16, padding: '22px 24px',
-                  boxShadow: '0 8px 32px -12px rgba(10,10,10,0.10)',
-                }}>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500,
-                    letterSpacing: '0.08em', color: 'var(--ink-500)', marginBottom: 6,
-                  }}>
-                    {card.eyebrow}
-                  </div>
-                  <div style={{
-                    fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-                    fontSize: 22, fontWeight: 600, color: 'var(--ink-900)',
-                    lineHeight: 1.15, marginBottom: 14,
-                  }}>
-                    {card.title}
-                  </div>
-                  <div style={{ height: 1, background: 'var(--cream-200)', marginBottom: 14 }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500, color: 'var(--ink-700)' }}>
-                      {card.name}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 500, color: 'var(--ink-900)' }}>
-                      {card.price}
-                    </span>
-                  </div>
-                </div>
-              ))}
+          <div className="home-actions">
+            <button className="ask-button-primary" onClick={() => navigate('/browse')}>
+              Browse listings
+            </button>
+            <button
+              className="ask-button-secondary"
+              data-analytics-event="become_tutor_clicked"
+              data-analytics-label="hero_post_service"
+              onClick={() => navigate(user ? '/create-listing' : '/signup')}
+            >
+              Post a service
+            </button>
+          </div>
+
+          <div className="home-search-panel">
+            <form onSubmit={submitSearch}>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Try finance, calculus, barber, Hebrew..."
+                aria-label="Search Ask Marketplace"
+              />
+              <button className="ask-button-primary" type="submit">Search</button>
+            </form>
+            <div className="home-proof-row" aria-label="Marketplace stats">
+              <div><strong>24</strong><span>active listings</span></div>
+              <div><strong>7</strong><span>service categories</span></div>
+              <div><strong>0%</strong><span>platform commission</span></div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Categories ── */}
-      <div style={{ background: 'var(--cream-100)', borderTop: '1px solid var(--cream-200)', padding: '40px 48px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div className="section-label" style={{ marginBottom: 16 }}>
-            BROWSE BY CATEGORY
+        <aside className="home-board fade-up-delay" aria-label="Featured marketplace listings">
+          <div className="home-board-head">
+            <div>
+              <strong>Open right now</strong>
+              <p>Real marketplace rhythm, not a directory page.</p>
+            </div>
+            <span style={{ color: '#F3C74F', fontWeight: 900 }}>ASK</span>
+          </div>
+          <div className="home-board-list">
+            {FEATURED_LISTINGS.map((item) => (
+              <button
+                key={item.title}
+                onClick={() => navigate(`/browse?search=${encodeURIComponent(item.title.split(' ')[0])}`)}
+                className="home-listing-row"
+                style={{ borderLeft: `4px solid ${item.color}`, background: '#fff', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <span className="home-listing-mark" style={{ background: item.color }}>{item.mark}</span>
+                <span>
+                  <h3>{item.title}</h3>
+                  <p>{item.meta}</p>
+                </span>
+                <span className="home-price">{item.price}</span>
+              </button>
+            ))}
+          </div>
+        </aside>
+      </section>
+
+      <section className="home-section">
+        <div className="home-section-inner">
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'end', flexWrap: 'wrap', marginBottom: 18 }}>
+            <div>
+              <div className="section-label">Browse by category</div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 58px)', lineHeight: 0.95, marginTop: 8 }}>
+                Start with what you need.
+              </h2>
+            </div>
+            <Link className="ask-button-secondary" to="/browse">View everything</Link>
           </div>
           <div className="pill-row">
             {FILTERS.map(({ id, label }) => (
               <button
                 key={id}
+                className="home-category-pill"
                 onClick={() => navigate(id === 'all' ? '/browse' : `/browse?category=${id}`)}
-                style={{
-                  padding: '9px 22px', borderRadius: 10, fontSize: 14, fontWeight: 500,
-                  border: '1px solid var(--cream-200)',
-                  background: 'var(--cream-50)', color: 'var(--ink-500)',
-                  cursor: 'pointer', transition: 'all .15s',
-                  fontFamily: 'var(--font-ui)',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--blue-600)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--blue-600)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream-50)'; e.currentTarget.style.color = 'var(--ink-500)'; e.currentTarget.style.borderColor = 'var(--cream-200)'; }}
               >
                 {label}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Academic instruction */}
-      <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '56px 48px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div className="section-label" style={{ marginBottom: 16 }}>
-            COLLEGE INSTRUCTION
-          </div>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 18,
-          }}>
+      <section className="home-section" style={{ background: '#fff' }}>
+        <div className="home-section-inner">
+          <div className="section-label" style={{ marginBottom: 12 }}>College instruction</div>
+          <div className="home-category-grid">
             {ACADEMIC_CATEGORIES.map((category) => (
-              <section
-                key={category.title}
-                style={{
-                  border: '1px solid var(--cream-200)',
-                  borderRadius: 12,
-                  padding: 24,
-                  background: 'var(--cream-100)',
-                }}
-              >
-                <h2 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontOpticalSizing: 'auto',
-                  fontSize: 26,
-                  lineHeight: 1.1,
-                  color: 'var(--ink-900)',
-                  marginBottom: 10,
-                  letterSpacing: 0,
-                }}>
-                  {category.title}
-                </h2>
-                <p style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: 14,
-                  color: 'var(--ink-500)',
-                  lineHeight: 1.55,
-                  marginBottom: 18,
-                }}>
-                  {category.copy}
-                </p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <section className="home-category-card" key={category.title}>
+                <div>
+                  <h2>{category.title}</h2>
+                  <p>{category.copy}</p>
+                </div>
+                <div className="home-subject-links">
                   {category.subjects.map(([label, href]) => (
-                    <a
-                      key={href}
-                      href={href}
-                      style={{
-                        border: '1px solid var(--cream-300)',
-                        borderRadius: 999,
-                        padding: '8px 11px',
-                        color: 'var(--ink-700)',
-                        textDecoration: 'none',
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        background: 'var(--cream-50)',
-                      }}
-                    >
-                      {label}
-                    </a>
+                    <a key={href} href={href}>{label}</a>
                   ))}
                 </div>
               </section>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── Bottom CTA ── */}
-      <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '64px 48px' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <section className="home-section">
+        <div className="home-section-inner" style={{ maxWidth: 920 }}>
           <FAQAccordion title="Ask Marketplace FAQ" schemaId="home-faq-schema" />
         </div>
-      </div>
+      </section>
 
-      {/* ── Bottom CTA ── */}
-      <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '80px 48px' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{
-            fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-            fontSize: 'clamp(36px, 4vw, 56px)',
-            color: 'var(--ink-900)', lineHeight: 1.05,
-            marginBottom: 16, letterSpacing: '-0.02em', fontWeight: 600,
-          }}>
-            Offer something?
-          </h2>
-          <p style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: 16, color: 'var(--ink-500)', marginBottom: 36, lineHeight: 1.6,
-          }}>
-            Post a listing in under a minute and start getting booked by classmates.
-          </p>
+      <section className="home-section" style={{ background: '#17130F', color: '#fff' }}>
+        <div className="home-section-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+          <div>
+            <div className="section-label" style={{ color: '#F3C74F' }}>For providers</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 60px)', lineHeight: 0.95, marginTop: 8 }}>
+              Good at something?
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.68)', maxWidth: 560, marginTop: 12, fontSize: 17 }}>
+              Post the service, set your price, add availability, and let people book you without the back-and-forth.
+            </p>
+          </div>
           <Link
             to={user ? '/create-listing' : '/signup'}
+            className="ask-button-primary"
             data-analytics-event="become_tutor_clicked"
             data-analytics-label="home_bottom_post_listing"
-            style={{
-              display: 'inline-block',
-              background: 'var(--ink-900)', color: 'var(--cream-50)',
-              borderRadius: 12, padding: '15px 40px',
-              fontSize: 16, fontWeight: 500, textDecoration: 'none',
-              fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-              transition: 'background .2s, color .2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--ink-900)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink-900)'; e.currentTarget.style.color = 'var(--cream-50)'; }}
+            style={{ background: '#fff', color: '#17130F', borderColor: '#fff' }}
           >
-            Post a service →
+            Post a service
           </Link>
         </div>
-      </div>
+      </section>
 
-      {/* ── Footer ── */}
       <footer style={{
-        borderTop: '1px solid var(--cream-200)', background: 'var(--cream-100)',
-        padding: '24px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+        borderTop: '1px solid var(--border)', background: '#F8F7F3',
+        padding: '22px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
       }}>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-          fontSize: 18, fontWeight: 600, color: 'var(--ink-900)',
-        }}>ASK</span>
-        <span style={{ fontSize: 13, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)' }}>
-          Yeshiva University Student Marketplace
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>ASK</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 700 }}>
+          Student marketplace for instruction and services.
         </span>
       </footer>
     </div>
