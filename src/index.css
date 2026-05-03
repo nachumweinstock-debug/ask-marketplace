@@ -138,6 +138,7 @@ body {
 @media (max-width: 860px) {
   .page { padding: 24px 20px 100px; }
   .support-page-grid { grid-template-columns: 1fr !important; }
+  .slot-quick-grid { grid-template-columns: 1fr !important; }
 }
 
 /* ── Navbar ───────────────────────────────────────────────── */

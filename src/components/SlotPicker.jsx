@@ -35,7 +35,12 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
   const [selectedDates, setSelectedDates] = useState(new Set());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [quickDays, setQuickDays] = useState(new Set());
+  const [quickStart, setQuickStart] = useState('20:00');
+  const [quickEnd, setQuickEnd] = useState('21:00');
+  const [quickWeeks, setQuickWeeks] = useState(4);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   // Dates that already have real-date slots (show as marked in calendar)
   const existingDateSlots = existingSlots.filter(s => /^\d{4}/.test(s.date));
@@ -48,37 +53,174 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
       return next;
     });
     setError('');
+    setNotice('');
   }
 
   function handleStart(t) {
     setStartTime(t);
     setEndTime(autoEndTime(t));
     setError('');
+    setNotice('');
   }
 
   function handleAdd() {
-    if (selectedDates.size === 0) { setError('Pick at least one date on the calendar.'); return; }
-    if (!startTime)               { setError('Choose a start time.'); return; }
-    if (!endTime)                 { setError('Choose an end time.'); return; }
-    if (endTime <= startTime)     { setError('"To" must be after "From".'); return; }
+    if (selectedDates.size === 0) { setNotice(''); setError('Pick at least one date on the calendar.'); return; }
+    if (!startTime)               { setNotice(''); setError('Choose a start time.'); return; }
+    if (!endTime)                 { setNotice(''); setError('Choose an end time.'); return; }
+    if (endTime <= startTime)     { setNotice(''); setError('"To" must be after "From".'); return; }
 
-    const existingKeys = new Set(existingSlots.map(s => `${s.date}|${s.start_time}|${s.end_time}`));
-    const newSlots = [...selectedDates]
-      .filter(date => !existingKeys.has(`${date}|${startTime}|${endTime}`))
-      .sort()
-      .map(date => ({ date, start_time: startTime, end_time: endTime }));
-
-    if (newSlots.length === 0) { setError('Those slots already exist.'); return; }
+    const newSlots = uniqueSlots([...selectedDates].sort().map(date => ({ date, start_time: startTime, end_time: endTime })));
+    if (newSlots.length === 0) { setNotice(''); setError('Those slots already exist.'); return; }
 
     onAdd(newSlots);
     setSelectedDates(new Set());
     setError('');
+    setNotice(`Added ${newSlots.length} slot${newSlots.length === 1 ? '' : 's'}.`);
+  }
+
+  function uniqueSlots(candidates) {
+    const existingKeys = new Set(existingSlots.map(s => `${s.date}|${s.start_time}|${s.end_time}`));
+    const seen = new Set();
+    return candidates
+      .filter(slot => {
+        const key = `${slot.date}|${slot.start_time}|${slot.end_time}`;
+        if (existingKeys.has(key) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+  }
+
+  function toISODate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function datesForWeekdays(dayIndexes, weeks) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysAhead = Math.max(7, Number(weeks) * 7);
+    const dates = [];
+    for (let offset = 0; offset < daysAhead; offset += 1) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + offset);
+      if (dayIndexes.includes(d.getDay())) dates.push(toISODate(d));
+    }
+    return dates;
+  }
+
+  function addCandidates(candidates, successMessage) {
+    const newSlots = uniqueSlots(candidates);
+    if (newSlots.length === 0) { setNotice(''); setError('Those slots already exist.'); return; }
+
+    onAdd(newSlots);
+    setError('');
+    setNotice(successMessage || `Added ${newSlots.length} slot${newSlots.length === 1 ? '' : 's'}.`);
+  }
+
+  function addPreset(days, from, to, label, weeks = 4) {
+    addCandidates(
+      datesForWeekdays(days, weeks).map(date => ({ date, start_time: from, end_time: to })),
+      `${label}: added slots for the next ${weeks} weeks.`
+    );
+  }
+
+  function addRecurring() {
+    if (quickDays.size === 0) { setNotice(''); setError('Choose at least one weekday.'); return; }
+    if (!quickStart || !quickEnd || quickEnd <= quickStart) { setNotice(''); setError('Choose a valid time range.'); return; }
+    addCandidates(
+      datesForWeekdays([...quickDays], quickWeeks).map(date => ({ date, start_time: quickStart, end_time: quickEnd })),
+      `Added your regular availability for the next ${quickWeeks} weeks.`
+    );
+  }
+
+  function toggleQuickDay(day) {
+    setQuickDays(prev => {
+      const next = new Set(prev);
+      next.has(day) ? next.delete(day) : next.add(day);
+      return next;
+    });
+    setError('');
+    setNotice('');
   }
 
   const ready = selectedDates.size > 0 && startTime && endTime && endTime > startTime;
 
   return (
     <div>
+      <div style={{
+        border: '1px solid var(--border)', borderRadius: 14, padding: 16,
+        background: 'linear-gradient(180deg,#fff,var(--cream-50))', marginBottom: 18,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>Quick add regular times</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45 }}>Pick the days you usually teach. We will create bookable slots for the next few weeks.</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+          {[
+            { label: 'Weeknights 8-9 PM', days: [1, 2, 3, 4], from: '20:00', to: '21:00' },
+            { label: 'Sunday 10-11 AM', days: [0], from: '10:00', to: '11:00' },
+            { label: 'Weekdays 12-1 PM', days: [1, 2, 3, 4, 5], from: '12:00', to: '13:00' },
+          ].map(preset => (
+            <button key={preset.label} type="button"
+              onClick={() => addPreset(preset.days, preset.from, preset.to, preset.label)}
+              style={{
+                border: '1px solid var(--border)', background: '#fff', color: 'var(--text)',
+                borderRadius: 999, padding: '7px 11px', fontSize: 12, fontWeight: 800,
+                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+              }}>
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="slot-quick-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) 120px 120px 96px', gap: 10, alignItems: 'end' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Days</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 5 }}>
+              {[
+                ['S', 0], ['M', 1], ['T', 2], ['W', 3], ['T', 4], ['F', 5], ['S', 6],
+              ].map(([label, day]) => {
+                const active = quickDays.has(day);
+                return (
+                  <button key={`${label}-${day}`} type="button" onClick={() => toggleQuickDay(day)}
+                    style={{
+                      height: 34, borderRadius: 9,
+                      border: `1.5px solid ${active ? 'var(--ink-900)' : 'var(--border)'}`,
+                      background: active ? 'var(--ink-900)' : '#fff',
+                      color: active ? '#fff' : 'var(--text)',
+                      cursor: 'pointer', fontWeight: 900, fontFamily: 'var(--font-ui)',
+                    }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <TimeSelect value={quickStart} onChange={t => { setQuickStart(t); setQuickEnd(autoEndTime(t)); setError(''); setNotice(''); }} label="From" />
+          <TimeSelect value={quickEnd} onChange={t => { setQuickEnd(t); setError(''); setNotice(''); }} minTime={quickStart} label="To" />
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Weeks</div>
+            <select value={quickWeeks} onChange={e => setQuickWeeks(Number(e.target.value))} style={inputStyle}>
+              <option value={2}>2</option>
+              <option value={4}>4</option>
+              <option value={8}>8</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" onClick={addRecurring}
+          style={{
+            marginTop: 12, width: '100%', border: 'none', borderRadius: 999,
+            background: 'var(--ink-900)', color: '#fff', padding: '11px 14px',
+            fontSize: 13.5, fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+          }}>
+          Add regular availability
+        </button>
+      </div>
+
       {/* Calendar date picker */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 10 }}>
@@ -111,6 +253,7 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
       )}
 
       {error && <div style={{ fontSize: 12, color: '#DC2626', marginBottom: 10 }}>{error}</div>}
+      {notice && <div style={{ fontSize: 12, color: '#166534', marginBottom: 10, fontWeight: 700 }}>{notice}</div>}
 
       <button type="button" onClick={handleAdd}
         style={{
