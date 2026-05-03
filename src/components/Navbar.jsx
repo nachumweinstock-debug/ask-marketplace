@@ -65,7 +65,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
+  const [bookingNotifCount, setBookingNotifCount] = useState(0);
   const [pendingBookings, setPendingBookings] = useState(0);
+  const [reminderCount, setReminderCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const dropRef = useRef(null);
@@ -92,7 +94,7 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setUnread(0); setNotifCount(0); return; }
+    if (!user) { setUnread(0); setNotifCount(0); setBookingNotifCount(0); setReminderCount(0); return; }
     function poll() {
       api.get('/dm/unread').then(({ data }) => {
         const newCount = data.count;
@@ -109,14 +111,23 @@ export default function Navbar() {
         setUnread(newCount);
       }).catch(() => {});
       api.get('/bookings/notifications').then(({ data }) => {
-        setNotifCount(data.total);
+        const bookingTotal = data.total || 0;
+        setBookingNotifCount(bookingTotal);
         setPendingBookings(data.pending_bookings || 0);
+      }).catch(() => {});
+      api.get('/reminders').then(({ data }) => {
+        const count = Array.isArray(data) ? data.length : 0;
+        setReminderCount(count);
       }).catch(() => {});
     }
     poll();
     const t = setInterval(poll, 10000);
     return () => clearInterval(t);
   }, [user?.id]);
+
+  useEffect(() => {
+    setNotifCount((bookingNotifCount || 0) + (reminderCount || 0));
+  }, [bookingNotifCount, reminderCount]);
 
   async function handleSignOut() {
     setDropOpen(false); setMobileOpen(false);
@@ -127,6 +138,7 @@ export default function Navbar() {
 
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
+    { to: '/find-a-tutor', label: 'Find Tutor', show: true },
     { to: '/saved-tutors', label: 'Saved', show: !!user },
     { to: '/people', label: 'People', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
@@ -135,8 +147,10 @@ export default function Navbar() {
     { to: '/messages', label: 'Messages', show: !!user, badge: unread },
     { to: '/dashboard/student', label: 'Bookings', show: !!user },
     { to: '/dashboard/provider', label: 'Services', show: !!user && user.role === 'provider', badge: pendingBookings, badgeColor: '#F59E0B' },
+    { to: '/dashboard/analytics', label: 'Provider Analytics', show: !!user && user.role === 'provider' },
     { to: '/admin', label: 'Admin', show: !!user && user.is_admin, admin: true },
     { to: '/admin/support', label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
+    { to: '/admin/reviews', label: 'Reviews', show: !!user && user.is_admin, admin: true },
     { to: '/admin/analytics', label: 'Analytics', show: isDeveloperAdmin, admin: true },
   ].filter(i => i.show);
 
@@ -233,6 +247,7 @@ export default function Navbar() {
                     }}>
                       <DropItem to="/account" onClick={() => setDropOpen(false)}>My Profile</DropItem>
                       <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Tutors</DropItem>
+                      <DropItem to="/referrals" onClick={() => setDropOpen(false)}>Referrals</DropItem>
                       <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
                       <button onClick={handleSignOut} style={{
                         display: 'block', width: '100%', textAlign: 'left',

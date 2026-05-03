@@ -103,6 +103,10 @@ if (!cols.includes('university'))     db.exec('ALTER TABLE users ADD COLUMN univ
 if (!cols.includes('classes_taking')) db.exec('ALTER TABLE users ADD COLUMN classes_taking TEXT');
 if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa TEXT');
 if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
+if (!cols.includes('timezone'))       db.exec('ALTER TABLE users ADD COLUMN timezone TEXT');
+if (!cols.includes('referral_code'))  db.exec('ALTER TABLE users ADD COLUMN referral_code TEXT');
+if (!cols.includes('referred_by'))    db.exec('ALTER TABLE users ADD COLUMN referred_by INTEGER REFERENCES users(id)');
+if (!cols.includes('last_active_at')) db.exec('ALTER TABLE users ADD COLUMN last_active_at DATETIME');
 
 if (!cols.includes('zelle')) db.exec('ALTER TABLE users ADD COLUMN zelle TEXT');
 if (!cols.includes('venmo')) db.exec('ALTER TABLE users ADD COLUMN venmo TEXT');
@@ -127,6 +131,7 @@ if (!cols.includes('username')) {
   }
 }
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(username) WHERE username IS NOT NULL');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code_unique ON users(referral_code) WHERE referral_code IS NOT NULL');
 db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_user_id ON saved_tutors(user_id)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_tutor_id ON saved_tutors(tutor_id)');
 
@@ -245,6 +250,49 @@ if (!ppColsFinal.includes('subcategory'))      db.exec('ALTER TABLE provider_pro
 if (!ppColsFinal.includes('college'))          db.exec('ALTER TABLE provider_profiles ADD COLUMN college TEXT');
 if (!ppColsFinal.includes('allow_group'))      db.exec('ALTER TABLE provider_profiles ADD COLUMN allow_group INTEGER DEFAULT 0');
 if (!ppColsFinal.includes('max_group_size'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN max_group_size INTEGER DEFAULT 6');
+if (!ppColsFinal.includes('intro_video_url'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN intro_video_url TEXT');
+if (!ppColsFinal.includes('portfolio_notes'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN portfolio_notes TEXT');
+if (!ppColsFinal.includes('school_verified'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN school_verified INTEGER DEFAULT 0');
+
+const reviewCols = db.pragma('table_info(reviews)').map(c => c.name);
+if (!reviewCols.includes('hidden')) db.exec('ALTER TABLE reviews ADD COLUMN hidden INTEGER DEFAULT 0');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS review_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+    reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL CHECK(reason IN ('spam','harassment','fake review','offensive content','other')),
+    details TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','reviewed','dismissed','hidden')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(review_id, reporter_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS provider_media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_id INTEGER NOT NULL REFERENCES provider_profiles(id) ON DELETE CASCADE,
+    media_type TEXT NOT NULL CHECK(media_type IN ('image','video','note')),
+    url TEXT,
+    title TEXT,
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS session_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    reminder_type TEXT NOT NULL,
+    dismissed_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, booking_id, reminder_type)
+  );
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_review_reports_status ON review_reports(status, created_at)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_provider_media_provider ON provider_media(provider_id, sort_order)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_session_reminders_user ON session_reminders(user_id, dismissed_at)');
 
 // ── Group booking invites ──────────────────────────────────────────────────────
 const tablesAll = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);

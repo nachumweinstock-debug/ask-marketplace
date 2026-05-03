@@ -4,6 +4,7 @@ import { mediaUrl } from '../lib/media';
 import { providerUrl } from '../lib/providerUrl';
 import { trackEvent } from '../lib/analytics';
 import SavedTutorButton from './SavedTutorButton';
+import TrustBadges from './TrustBadges';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -232,6 +233,19 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           }}>
             {provider.bio}
           </p>
+        )}
+
+        <TrustBadges trust={provider.trust} compact />
+
+        {(provider.trust?.response_rate || provider.trust?.completed_sessions || provider.trust?.saved_count) && (
+          <div style={{
+            display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8,
+            fontSize: 10.5, color: 'var(--muted)', fontWeight: 700,
+          }}>
+            {provider.trust?.response_rate > 0 && <span>{provider.trust.response_rate}% response</span>}
+            {provider.trust?.completed_sessions > 0 && <span>{provider.trust.completed_sessions} sessions</span>}
+            {provider.trust?.saved_count > 0 && <span>{provider.trust.saved_count} saves</span>}
+          </div>
         )}
 
         {/* ── Seller row ─────────────────────────────────────── */}

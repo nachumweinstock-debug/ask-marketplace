@@ -275,6 +275,7 @@ export function SignUp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
+  const referralCode = searchParams.get('ref') || '';
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', university: '' });
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [error, setError] = useState(searchParams.get('error') === 'google_failed' ? 'Google sign-in failed — please try again.' : searchParams.get('error') === 'apple_failed' ? 'Apple sign-in failed — please try again.' : '');
@@ -304,6 +305,8 @@ export function SignUp() {
         password: form.password,
         phone: form.phone,
         university: form.university.trim(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        referralCode,
         termsAccepted: true,
         termsVersion: TERMS_VERSION,
         privacyVersion: PRIVACY_VERSION,

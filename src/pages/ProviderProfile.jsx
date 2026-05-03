@@ -13,6 +13,8 @@ import SavedTutorButton from '../components/SavedTutorButton';
 import FAQAccordion from '../components/FAQAccordion';
 import { ProfileSkeleton } from '../components/Skeletons';
 import PoweredByAsk from '../components/PoweredByAsk';
+import TrustBadges from '../components/TrustBadges';
+import ProfileTrustPanel from '../components/ProfileTrustPanel';
 
 function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
@@ -210,6 +212,9 @@ export default function ProviderProfile() {
   const [groupMode, setGroupMode] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [mediaItems, setMediaItems] = useState([]);
+  const [reportingReview, setReportingReview] = useState(null);
+  const [reportForm, setReportForm] = useState({ reason: 'spam', details: '' });
 
   useEffect(() => {
     setOtherListings([]);
@@ -248,6 +253,13 @@ export default function ProviderProfile() {
       .then(({ data }) => setSaved(Array.isArray(data) && data.includes(provider.id)))
       .catch(() => {});
   }, [user?.id, provider?.id]);
+
+  useEffect(() => {
+    if (!provider?.id) return;
+    api.get(`/provider-media/${provider.id}`)
+      .then(({ data }) => setMediaItems(Array.isArray(data) ? data : []))
+      .catch(() => setMediaItems([]));
+  }, [provider?.id]);
 
   async function handleDeleteListing() {
     if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. Cannot be undone.')) return;
@@ -313,6 +325,20 @@ export default function ProviderProfile() {
       setBookingError(err.response?.data?.error || 'Failed to send request');
     } finally {
       setReqLoading(false);
+    }
+  }
+
+  async function reportReview(e) {
+    e.preventDefault();
+    if (!user) return navigate(`/login${redirectParam}`);
+    if (!reportingReview) return;
+    try {
+      await api.post(`/reviews/${reportingReview.id}/report`, reportForm);
+      setReportingReview(null);
+      setReportForm({ reason: 'spam', details: '' });
+      alert('Thanks. Admins will review that report.');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to report review');
     }
   }
 
@@ -447,6 +473,9 @@ export default function ProviderProfile() {
                     </span>
                   )}
                 </div>
+                <div style={{ marginTop: 10 }}>
+                  <TrustBadges trust={provider.trust} />
+                </div>
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                 {!isOwner && (
@@ -531,6 +560,49 @@ export default function ProviderProfile() {
         </div>
       </div>
       </div>
+
+      <ProfileTrustPanel provider={provider} />
+
+      {(mediaItems.length > 0 || provider.intro_video_url || provider.portfolio_notes) && (
+        <section className="card" style={{ padding: 24, borderRadius: 16, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>
+            Portfolio
+          </div>
+          {provider.intro_video_url && (
+            <a href={provider.intro_video_url} target="_blank" rel="noopener noreferrer" style={{
+              display: 'inline-flex', color: 'var(--primary)', fontWeight: 800, fontSize: 13,
+              textDecoration: 'none', marginBottom: 12,
+            }}>
+              Watch intro video
+            </a>
+          )}
+          {provider.portfolio_notes && (
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 14 }}>
+              {provider.portfolio_notes}
+            </p>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+            {mediaItems.map(item => (
+              <div key={item.id} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                {item.media_type === 'image' ? (
+                  <img src={mediaUrl(item.url)} alt={item.title || 'Portfolio'} style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ padding: 14, minHeight: 90 }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text)' }}>{item.title || (item.media_type === 'video' ? 'Video' : 'Note')}</div>
+                    {item.url && <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 800 }}>Open link</a>}
+                  </div>
+                )}
+                {(item.title || item.notes) && (
+                  <div style={{ padding: 10 }}>
+                    {item.title && <div style={{ fontSize: 12.5, fontWeight: 800 }}>{item.title}</div>}
+                    {item.notes && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>{item.notes}</div>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Slots + Reviews */}
       <div className="grid-3-2">
@@ -762,7 +834,17 @@ export default function ProviderProfile() {
                     <Stars rating={r.rating} />
                   </div>
                   {r.comment && <p style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>{r.comment}</p>}
-                  <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, opacity: 0.7 }}>{new Date(r.created_at).toLocaleDateString()}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', opacity: 0.7 }}>{new Date(r.created_at).toLocaleDateString()}</p>
+                    {user && user.id !== r.student_id && (
+                      <button onClick={() => { setReportingReview(r); setReportForm({ reason: 'spam', details: '' }); }} style={{
+                        border: 'none', background: 'none', color: 'var(--muted)', fontSize: 11,
+                        cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-ui)',
+                      }}>
+                        Report
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -821,6 +903,35 @@ export default function ProviderProfile() {
           ['What if I need a different time?', 'Use the request time section if no listed availability works for you.'],
         ]}
       />
+
+      {reportingReview && (
+        <div onClick={() => setReportingReview(null)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <form onSubmit={reportReview} onClick={e => e.stopPropagation()} className="card" style={{ width: '100%', maxWidth: 420, padding: 24 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, marginBottom: 10 }}>Report review</h2>
+            <select value={reportForm.reason} onChange={e => setReportForm(f => ({ ...f, reason: e.target.value }))} style={{
+              width: '100%', border: '1px solid var(--border)', borderRadius: 10, padding: 11, marginBottom: 10,
+              fontFamily: 'var(--font-ui)', background: '#fff',
+            }}>
+              <option value="spam">Spam</option>
+              <option value="harassment">Harassment</option>
+              <option value="fake review">Fake review</option>
+              <option value="offensive content">Offensive content</option>
+              <option value="other">Other</option>
+            </select>
+            <textarea value={reportForm.details} onChange={e => setReportForm(f => ({ ...f, details: e.target.value }))} rows={3} placeholder="Optional details" style={{
+              width: '100%', border: '1px solid var(--border)', borderRadius: 10, padding: 11,
+              fontFamily: 'var(--font-ui)', resize: 'vertical', boxSizing: 'border-box',
+            }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+              <button type="button" onClick={() => setReportingReview(null)} style={{ border: '1px solid var(--border)', background: '#fff', borderRadius: 999, padding: '9px 16px', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" style={{ border: 'none', background: 'var(--text)', color: '#fff', borderRadius: 999, padding: '9px 18px', cursor: 'pointer', fontWeight: 800 }}>Submit</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

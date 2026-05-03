@@ -9,6 +9,7 @@ export async function GET() {
   const urls = [
     '',
     '/support',
+    '/find-a-tutor',
     '/legal',
     '/terms',
     '/privacy',

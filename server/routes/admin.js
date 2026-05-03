@@ -217,6 +217,36 @@ router.delete('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/reviews/reports', requireAuth, requireAdmin, (req, res) => {
+  const rows = db.prepare(`
+    SELECT rr.*, r.rating, r.comment, r.hidden, r.provider_id,
+           reporter.name as reporter_name,
+           student.name as student_name,
+           provider.name as provider_name
+    FROM review_reports rr
+    JOIN reviews r ON r.id = rr.review_id
+    JOIN users reporter ON reporter.id = rr.reporter_id
+    JOIN users student ON student.id = r.student_id
+    JOIN provider_profiles pp ON pp.id = r.provider_id
+    JOIN users provider ON provider.id = pp.user_id
+    ORDER BY rr.created_at DESC
+  `).all();
+  res.json(rows);
+});
+
+router.patch('/reviews/:reviewId', requireAuth, requireAdmin, (req, res) => {
+  const { hidden, report_status } = req.body;
+  const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(req.params.reviewId);
+  if (!review) return res.status(404).json({ error: 'Review not found' });
+  if (hidden !== undefined) {
+    db.prepare('UPDATE reviews SET hidden = ? WHERE id = ?').run(hidden ? 1 : 0, review.id);
+  }
+  if (report_status) {
+    db.prepare('UPDATE review_reports SET status = ? WHERE review_id = ?').run(report_status, review.id);
+  }
+  res.json(db.prepare('SELECT * FROM reviews WHERE id = ?').get(review.id));
+});
+
 // PATCH /api/admin/users/:id — toggle admin, change role etc.
 router.patch('/users/:id', requireAuth, requireAdmin, (req, res) => {
   const { is_admin, role } = req.body;

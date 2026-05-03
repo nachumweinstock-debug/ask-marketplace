@@ -46,4 +46,22 @@ router.post('/', requireAuth, (req, res) => {
   res.json(review);
 });
 
+router.post('/:id/report', requireAuth, (req, res) => {
+  const { reason, details } = req.body;
+  const allowed = ['spam', 'harassment', 'fake review', 'offensive content', 'other'];
+  if (!allowed.includes(reason)) return res.status(400).json({ error: 'Invalid report reason' });
+  const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(req.params.id);
+  if (!review) return res.status(404).json({ error: 'Review not found' });
+  db.prepare(`
+    INSERT OR IGNORE INTO review_reports (review_id, reporter_id, reason, details)
+    VALUES (?, ?, ?, ?)
+  `).run(review.id, req.user.id, reason, String(details || '').slice(0, 1000));
+  posthog.capture({
+    distinctId: String(req.user.id),
+    event: 'review_reported',
+    properties: { review_id: review.id, provider_id: review.provider_id, reason },
+  });
+  res.json({ ok: true });
+});
+
 export default router;

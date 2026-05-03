@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { mkdirSync } from 'fs';
+import { accessSync, constants, mkdirSync } from 'fs';
 import authRoutes from './routes/auth.js';
 import providerRoutes from './routes/providers.js';
 import availabilityRoutes from './routes/availability.js';
@@ -22,6 +22,10 @@ import timeRequestRoutes from './routes/timerequests.js';
 import analyticsRoutes from './routes/analytics.js';
 import supportRoutes from './routes/support.js';
 import savedTutorsRoutes from './routes/savedTutors.js';
+import trustRoutes from './routes/trust.js';
+import providerMediaRoutes from './routes/providerMedia.js';
+import reminderRoutes from './routes/reminders.js';
+import referralRoutes from './routes/referrals.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 import posthog from './posthog.js';
@@ -105,7 +109,33 @@ app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true })); // needed for Apple Sign In POST callback
 app.use('/uploads', express.static(join(DATA_DIR, 'uploads')));
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_, res) => {
+  const startedAt = process.uptime();
+  let database = 'ok';
+  let storage = 'ok';
+  try {
+    db.prepare('SELECT 1 as ok').get();
+  } catch (err) {
+    database = err.message || 'error';
+  }
+  try {
+    accessSync(join(DATA_DIR, 'uploads'), constants.R_OK | constants.W_OK);
+  } catch (err) {
+    storage = err.message || 'error';
+  }
+  const requiredEnv = ['JWT_SECRET'];
+  const optionalEnv = ['FRONTEND_URL', 'EMAIL_HOST', 'RESEND_API_KEY', 'POSTHOG_API_KEY'];
+  res.json({
+    status: database === 'ok' && storage === 'ok' ? 'ok' : 'degraded',
+    database,
+    storage,
+    env: {
+      required: Object.fromEntries(requiredEnv.map(key => [key, Boolean(process.env[key])])),
+      optional: Object.fromEntries(optionalEnv.map(key => [key, Boolean(process.env[key])])),
+    },
+    uptime_seconds: Math.round(startedAt),
+  });
+});
 
 
 app.use('/api/auth', authRoutes);
@@ -124,6 +154,10 @@ app.use('/api/time-requests', timeRequestRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/saved-tutors', savedTutorsRoutes);
+app.use('/api/trust', trustRoutes);
+app.use('/api/provider-media', providerMediaRoutes);
+app.use('/api/reminders', reminderRoutes);
+app.use('/api/referrals', referralRoutes);
 
 startReminderJobs();
 

@@ -3,6 +3,7 @@ import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
 import { storeImage } from '../storage.js';
 import posthog from '../posthog.js';
+import { attachTrust } from '../trust.js';
 
 /**
  * Returns true if requesterId is allowed to see zelle/venmo for providerUserId.
@@ -33,6 +34,10 @@ function canSeePayment(requesterId, providerUserId) {
 
 function redactPayment(provider, requesterId) {
   if (canSeePayment(requesterId, provider.user_id)) return provider;
+  return { ...provider, zelle: null, venmo: null };
+}
+
+function redactPublicListing(provider) {
   return { ...provider, zelle: null, venmo: null };
 }
 
@@ -222,7 +227,7 @@ router.get('/mine', requireAuth, (req, res) => {
     WHERE pp.user_id = ?
     ORDER BY pp.id DESC
   `).all(req.user.id);
-  res.json(listings);
+  res.json(listings.map(attachTrust));
 });
 
 // GET /providers/u/:username — look up all listings for a user by their username slug
@@ -237,7 +242,7 @@ router.get('/u/:username', optionalAuth, (req, res) => {
     WHERE pp.user_id = ?
     ORDER BY pp.id DESC
   `).all(user.id);
-  res.json({ user, listings });
+  res.json({ user, listings: listings.map(row => attachTrust(redactPublicListing(row))) });
 });
 
 // GET /providers/by-user/:userId — all public listings for a given user
@@ -254,14 +259,14 @@ router.get('/by-user/:userId', (req, res) => {
     WHERE pp.user_id = ?
     ORDER BY pp.id DESC
   `).all(req.params.userId);
-  res.json(listings);
+  res.json(listings.map(attachTrust));
 });
 
 // GET /providers/me/profile — first/most recent profile (backwards compat)
 router.get('/me/profile', requireAuth, (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
   if (!profile) return res.status(404).json({ error: 'No provider profile found' });
-  res.json(profile);
+  res.json(attachTrust(profile));
 });
 
 // GET /providers — browse all
@@ -329,7 +334,7 @@ router.get('/', (req, res) => {
   } else {
     query += ' ORDER BY pp.rating DESC, pp.review_count DESC';
   }
-  res.json(db.prepare(query).all(...params));
+  res.json(db.prepare(query).all(...params).map(row => attachTrust(redactPublicListing(row))));
 });
 
 // POST /providers/become — create a new listing (always creates new, no longer a toggle)
@@ -405,21 +410,21 @@ router.get('/:id', optionalAuth, (req, res) => {
   const reviews = db.prepare(`
     SELECT r.*, u.name as student_name FROM reviews r
     JOIN users u ON r.student_id = u.id
-    WHERE r.provider_id = ? ORDER BY r.created_at DESC
+    WHERE r.provider_id = ? AND COALESCE(r.hidden,0) = 0 ORDER BY r.created_at DESC
   `).all(req.params.id);
 
   // Expose whether payment is unlocked so frontend can show the right prompt
   const paymentUnlocked = canSeePayment(req.user?.id, provider.user_id);
   const safe = redactPayment(provider, req.user?.id);
 
-  res.json({ ...safe, availability, reviews, payment_unlocked: paymentUnlocked });
+  res.json({ ...attachTrust(safe), availability, reviews, payment_unlocked: paymentUnlocked });
 });
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
 async function updateProfile(req, res, profile) {
   try {
-    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, title, college, allow_group, max_group_size } = req.body;
+    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, title, college, allow_group, max_group_size, intro_video_url, portfolio_notes } = req.body;
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
@@ -453,7 +458,7 @@ async function updateProfile(req, res, profile) {
       UPDATE provider_profiles
       SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
           custom_category = ?, subcategory = ?, listing_image = ?, session_type = ?, title = ?,
-          college = ?, allow_group = ?, max_group_size = ?
+          college = ?, allow_group = ?, max_group_size = ?, intro_video_url = ?, portfolio_notes = ?
       WHERE id = ?
     `).run(
       bio ?? profile.bio,
@@ -469,6 +474,8 @@ async function updateProfile(req, res, profile) {
       college !== undefined ? (college?.trim() || null) : profile.college,
       allow_group !== undefined ? (allow_group ? 1 : 0) : profile.allow_group,
       max_group_size !== undefined ? (parseInt(max_group_size) || 6) : profile.max_group_size,
+      intro_video_url !== undefined ? String(intro_video_url || '').slice(0, 400) : profile.intro_video_url,
+      portfolio_notes !== undefined ? String(portfolio_notes || '').slice(0, 2000) : profile.portfolio_notes,
       profile.id
     );
 

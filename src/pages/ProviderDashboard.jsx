@@ -7,6 +7,9 @@ import SlotPicker, { SlotList } from '../components/SlotPicker';
 import { providerUrl } from '../lib/providerUrl';
 import { RowSkeleton } from '../components/Skeletons';
 import PoweredByAsk from '../components/PoweredByAsk';
+import ProviderOnboardingChecklist from '../components/ProviderOnboardingChecklist';
+import TrustBadges from '../components/TrustBadges';
+import { mediaUrl } from '../lib/media';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -144,6 +147,9 @@ export default function ProviderDashboard() {
   const [editModal, setEditModal] = useState(null); // { form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [mediaItems, setMediaItems] = useState([]);
+  const [mediaForm, setMediaForm] = useState({ media_type: 'image', url: '', title: '', notes: '' });
+  const [mediaSaving, setMediaSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -155,6 +161,13 @@ export default function ProviderDashboard() {
 
   useEffect(() => {
     if (profile?.id) api.get(`/availability/${profile.id}`).then(r => setAvailability(r.data));
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    api.get(`/provider-media/${profile.id}`)
+      .then(r => setMediaItems(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setMediaItems([]));
   }, [profile?.id]);
 
   useEffect(() => {
@@ -279,6 +292,30 @@ export default function ProviderDashboard() {
     }
   }
 
+  async function addMedia(e) {
+    e.preventDefault();
+    if (!profile?.id) return;
+    setMediaSaving(true);
+    try {
+      const { data } = await api.post(`/provider-media/${profile.id}`, mediaForm);
+      setMediaItems(items => [...items, data]);
+      setMediaForm({ media_type: 'image', url: '', title: '', notes: '' });
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to add portfolio item');
+    } finally {
+      setMediaSaving(false);
+    }
+  }
+
+  async function removeMedia(id) {
+    try {
+      await api.delete(`/provider-media/${profile.id}/${id}`);
+      setMediaItems(items => items.filter(item => item.id !== id));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete portfolio item');
+    }
+  }
+
   if (loading) return (
     <div className="page" style={{ maxWidth: 960 }}>
       <RowSkeleton rows={5} />
@@ -314,6 +351,13 @@ export default function ProviderDashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/dashboard/analytics" style={{
+            background: '#ECFDF5', border: '1.5px solid #A7F3D0', color: '#047857',
+            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'var(--font-ui)', textDecoration: 'none',
+          }}>
+            Analytics
+          </Link>
           <button onClick={openEdit} style={{
             background: 'none', border: '1.5px solid #BFDBFE', color: '#1D4ED8',
             borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600,
@@ -342,6 +386,24 @@ export default function ProviderDashboard() {
           </button>
         </div>
       </div>
+
+      <ProviderOnboardingChecklist profile={profile} availability={availability} reviews={[]} />
+
+      {profile?.trust && (
+        <div className="card" style={{ padding: 18, borderRadius: 14, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 6 }}>Reputation</div>
+              <TrustBadges trust={profile.trust} />
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)', fontWeight: 800 }}>
+              <span>{profile.trust.response_rate || 0}% response</span>
+              <span>{profile.trust.completed_sessions || 0} completed</span>
+              <span>{profile.trust.saved_count || 0} saves</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share your listing */}
       {profile?.id && (() => {
@@ -774,6 +836,44 @@ export default function ProviderDashboard() {
             onRemove={removeSlot}
             emptyText="No slots yet — add some above."
           />
+        </div>
+
+        <div className="card" style={{ padding: '24px', marginTop: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 14 }}>
+            Portfolio
+          </div>
+          <form onSubmit={addMedia} style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 10, marginBottom: 16 }}>
+            <select value={mediaForm.media_type} onChange={e => setMediaForm(f => ({ ...f, media_type: e.target.value }))} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, background: '#fff' }}>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+              <option value="note">Note</option>
+            </select>
+            <input value={mediaForm.url} onChange={e => setMediaForm(f => ({ ...f, url: e.target.value }))} placeholder="https:// image, video, or material link" style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, minWidth: 0 }} />
+            <input value={mediaForm.title} onChange={e => setMediaForm(f => ({ ...f, title: e.target.value }))} placeholder="Title" style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10 }} />
+            <input value={mediaForm.notes} onChange={e => setMediaForm(f => ({ ...f, notes: e.target.value }))} placeholder="Short note" style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, minWidth: 0 }} />
+            <button disabled={mediaSaving} style={{ gridColumn: '1 / -1', border: 'none', borderRadius: 999, padding: '10px 16px', background: 'var(--text)', color: '#fff', fontWeight: 800, cursor: mediaSaving ? 'not-allowed' : 'pointer' }}>
+              {mediaSaving ? 'Adding...' : 'Add portfolio item'}
+            </button>
+          </form>
+          {mediaItems.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--muted)' }}>Add a few photos, video links, or sample materials to make your profile feel more credible.</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+              {mediaItems.map(item => (
+                <div key={item.id} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                  {item.media_type === 'image' && item.url ? (
+                    <img src={mediaUrl(item.url)} alt="" style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ padding: 12, minHeight: 72, fontSize: 12, color: 'var(--muted)' }}>{item.media_type}</div>
+                  )}
+                  <div style={{ padding: 10 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800 }}>{item.title || item.url || 'Portfolio item'}</div>
+                    <button onClick={() => removeMedia(item.id)} style={{ marginTop: 6, border: 'none', background: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 11, fontWeight: 800, padding: 0 }}>Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         </div>
       )}

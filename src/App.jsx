@@ -26,6 +26,11 @@ import AdminSupportConversation from './pages/AdminSupportConversation';
 import FloatingSupportButton from './components/FloatingSupportButton';
 import { LegalDocument, LegalHub } from './pages/LegalPages';
 import SavedTutors from './pages/SavedTutors';
+import ProviderAnalytics from './pages/ProviderAnalytics';
+import AdminReviewModeration from './pages/AdminReviewModeration';
+import FindTutor from './pages/FindTutor';
+import Referrals from './pages/Referrals';
+import SessionReminders from './components/SessionReminders';
 
 const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
 
@@ -141,6 +146,7 @@ function Layout({ children }) {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <IgBar />
       <Navbar />
+      <SessionReminders />
       <main style={{ flex: 1 }}>{children}</main>
       <Footer />
     </div>
@@ -156,6 +162,7 @@ function AppRoutes() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
         <Route path="/support" element={<Layout><Support /></Layout>} />
+        <Route path="/find-a-tutor" element={<Layout><FindTutor /></Layout>} />
         <Route path="/saved-tutors" element={<Layout><SavedTutors /></Layout>} />
         <Route path="/legal" element={<Layout><LegalHub /></Layout>} />
         <Route path="/terms" element={<Layout><LegalDocument type="terms" /></Layout>} />
@@ -208,6 +215,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/admin/reviews"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><AdminReviewModeration /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/dashboard/student"
           element={
             <ProtectedRoute>
@@ -220,6 +235,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute role="provider">
               <Layout><ProviderDashboard /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/analytics"
+          element={
+            <ProtectedRoute role="provider">
+              <Layout><ProviderAnalytics /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/referrals"
+          element={
+            <ProtectedRoute>
+              <Layout><Referrals /></Layout>
             </ProtectedRoute>
           }
         />

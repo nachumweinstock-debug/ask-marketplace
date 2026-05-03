@@ -42,9 +42,14 @@ function uniqueUsername(name, email) {
   return slug;
 }
 
+function referralCodeFor(name, id) {
+  const seed = (name || 'ask').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 8) || 'ask';
+  return `${seed}${id}`.slice(0, 20);
+}
+
 // POST /auth/signup — create account, log in immediately (no email verification)
 router.post('/signup', async (req, res) => {
-  const { email, name, password, phone, university, termsAccepted, termsVersion, privacyVersion } = req.body;
+  const { email, name, password, phone, university, termsAccepted, termsVersion, privacyVersion, timezone, referralCode } = req.body;
   if (!email || !name || !password || !university) {
     return res.status(400).json({ error: 'All fields are required' });
   }
@@ -69,9 +74,14 @@ router.post('/signup', async (req, res) => {
     const cleanEmail = email.toLowerCase();
     const cleanName = name.trim();
     const username = uniqueUsername(cleanName, cleanEmail);
+    const referrer = referralCode
+      ? db.prepare('SELECT id FROM users WHERE LOWER(referral_code) = LOWER(?)').get(String(referralCode).trim())
+      : null;
     const result = db.prepare(
-      "INSERT INTO users (email, name, password, role, email_verified, phone, username, university) VALUES (?, ?, ?, 'student', 1, ?, ?, ?)"
-    ).run(cleanEmail, cleanName, hashed, cleanPhone || null, username, cleanUniversity);
+      "INSERT INTO users (email, name, password, role, email_verified, phone, username, university, timezone, referred_by) VALUES (?, ?, ?, 'student', 1, ?, ?, ?, ?, ?)"
+    ).run(cleanEmail, cleanName, hashed, cleanPhone || null, username, cleanUniversity, String(timezone || '').slice(0, 80) || null, referrer?.id || null);
+    const code = referralCodeFor(cleanName, result.lastInsertRowid);
+    db.prepare('UPDATE users SET referral_code = ? WHERE id = ?').run(code, result.lastInsertRowid);
     user = db.prepare('SELECT id, email, name, role, token_version, username, university FROM users WHERE id = ?').get(result.lastInsertRowid);
     db.prepare(`
       INSERT INTO policy_acceptances (user_id, terms_version, privacy_version, ip_address, user_agent)

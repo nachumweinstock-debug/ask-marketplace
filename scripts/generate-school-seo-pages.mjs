@@ -699,6 +699,7 @@ function writeSitemap() {
   const paths = [
     '',
     '/support',
+    '/find-a-tutor',
     '/legal',
     '/terms',
     '/privacy',
@@ -715,11 +716,13 @@ function writeSitemap() {
   const legalPaths = new Set(['/legal', '/terms', '/privacy', '/cookies', '/refund-policy', '/community-guidelines']);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${paths.map((path) => `  <url>
+${paths.map((path) => {
+  const policy = legalPaths.has(path) ? '\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>' : '';
+  return `  <url>
     <loc>${baseUrl}${path}</loc>
-    <lastmod>${lastmod}</lastmod>
-    ${legalPaths.has(path) ? '<changefreq>monthly</changefreq>\n    <priority>0.5</priority>' : ''}
-  </url>`).join('\n')}
+    <lastmod>${lastmod}</lastmod>${policy}
+  </url>`;
+}).join('\n')}
 </urlset>
 `;
   writeFileSync(join(root, 'public', 'sitemap.xml'), sitemap);

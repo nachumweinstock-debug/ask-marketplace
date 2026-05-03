@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     '',
     '/support',
+    '/find-a-tutor',
     ...legalPages,
     '/tutors',
     '/become-a-tutor',
