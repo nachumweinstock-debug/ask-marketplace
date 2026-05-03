@@ -1,8 +1,14 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import SupportChat from './SupportChat';
 
 export default function FloatingSupportButton() {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  if (location.pathname === '/support' || location.pathname.startsWith('/admin/support')) {
+    return null;
+  }
 
   return (
     <>

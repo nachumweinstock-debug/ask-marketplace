@@ -30,7 +30,7 @@ function ensureUsername(user) {
 // GET /api/account — full profile with stats
 router.get('/', requireAuth, (req, res) => {
   const user = db.prepare(
-    'SELECT id, email, name, username, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone, referral_code, referred_by, created_at FROM users WHERE id = ?'
+    'SELECT id, email, name, username, role, is_admin, avatar_url, major, interests, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone, referral_code, referred_by, created_at FROM users WHERE id = ?'
   ).get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   user.username = ensureUsername(user);
@@ -84,11 +84,12 @@ router.get('/', requireAuth, (req, res) => {
 // Avatar is sent as a base64 data URL; server uploads it to Supabase Storage (or keeps base64 as fallback)
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { name, username, major, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref, timezone } = req.body;
+    const { name, username, major, interests, classes_taking, gpa, user_bio, avatar_data_url, zelle, venmo, phone, contact_pref, timezone } = req.body;
     const userUpdates = {};
 
     if (name?.trim())                 userUpdates.name           = name.trim().slice(0, 100);
     if (major !== undefined)          userUpdates.major          = String(major || '').slice(0, 100);
+    if (interests !== undefined)      userUpdates.interests      = String(interests || '').slice(0, 500);
     if (classes_taking !== undefined) userUpdates.classes_taking = String(classes_taking || '').slice(0, 500);
     if (gpa !== undefined)            userUpdates.gpa            = gpa ? Math.min(Math.max(parseFloat(gpa) || 0, 0), 4.0) : null;
     if (user_bio !== undefined)       userUpdates.user_bio       = String(user_bio || '').slice(0, 1000);
@@ -120,7 +121,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     // Whitelist of allowed column names (defense-in-depth against injection)
-    const ALLOWED_COLS = new Set(['name','username','major','classes_taking','gpa','user_bio','zelle','venmo','phone','contact_pref','avatar_url','timezone']);
+    const ALLOWED_COLS = new Set(['name','username','major','interests','classes_taking','gpa','user_bio','zelle','venmo','phone','contact_pref','avatar_url','timezone']);
     const safeUpdates = Object.fromEntries(Object.entries(userUpdates).filter(([k]) => ALLOWED_COLS.has(k)));
     if (Object.keys(safeUpdates).length > 0) {
       const setClauses = Object.keys(safeUpdates).map(k => `${k} = ?`).join(', ');
@@ -146,7 +147,7 @@ router.put('/', requireAuth, async (req, res) => {
     }
 
     const updated = db.prepare(
-      'SELECT id, email, name, username, role, is_admin, avatar_url, major, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone, referral_code FROM users WHERE id = ?'
+      'SELECT id, email, name, username, role, is_admin, avatar_url, major, interests, classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone, referral_code FROM users WHERE id = ?'
     ).get(req.user.id);
     res.json(updated);
   } catch (err) {

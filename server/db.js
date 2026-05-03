@@ -101,6 +101,7 @@ if (!cols.includes('is_admin'))       db.exec('ALTER TABLE users ADD COLUMN is_a
 if (!cols.includes('major'))          db.exec('ALTER TABLE users ADD COLUMN major TEXT');
 if (!cols.includes('university'))     db.exec('ALTER TABLE users ADD COLUMN university TEXT');
 if (!cols.includes('classes_taking')) db.exec('ALTER TABLE users ADD COLUMN classes_taking TEXT');
+if (!cols.includes('interests'))      db.exec('ALTER TABLE users ADD COLUMN interests TEXT');
 if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa TEXT');
 if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
 if (!cols.includes('timezone'))       db.exec('ALTER TABLE users ADD COLUMN timezone TEXT');

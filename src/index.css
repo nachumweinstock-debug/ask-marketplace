@@ -710,6 +710,102 @@ body {
   border-radius: 14px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
+.profile-checklist-card {
+  margin-bottom: 16px;
+  border: 1px solid rgba(23,19,15,0.12);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(241,90,36,0.10), transparent 42%),
+    #fff;
+  box-shadow: 0 16px 48px rgba(23,19,15,0.08);
+  overflow: hidden;
+}
+.profile-checklist-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px);
+  gap: 18px;
+  align-items: end;
+  padding: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-checklist-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 56px);
+  line-height: 0.9;
+  margin-top: 8px;
+}
+.profile-checklist-head p {
+  margin-top: 9px;
+  color: var(--muted);
+  max-width: 560px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 650;
+}
+.profile-checklist-meter {
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--gray-50);
+}
+.profile-checklist-meter span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--orange), var(--green));
+  transition: width .2s ease;
+}
+.profile-checklist-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.profile-checklist-item {
+  min-height: 116px;
+  padding: 18px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,0.7);
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  color: var(--text);
+}
+.profile-checklist-item:last-child {
+  border-right: 0;
+}
+.profile-checklist-item:hover {
+  background: #fff;
+}
+.profile-checklist-item.done {
+  background: rgba(15,123,85,0.08);
+}
+.profile-checklist-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #fff;
+  background: var(--text);
+}
+.profile-checklist-item.done .profile-checklist-icon {
+  background: var(--green);
+}
+.profile-checklist-item strong {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.15;
+}
+.profile-checklist-item em {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  font-style: normal;
+}
 .profile-share-card,
 .profile-instagram-card {
   display: flex;
@@ -854,6 +950,21 @@ body {
   }
   .profile-ig { width: 100%; justify-content: center; }
   .profile-card { padding: 18px !important; border-radius: 12px; }
+  .profile-checklist-head {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+  .profile-checklist-items {
+    grid-template-columns: 1fr;
+  }
+  .profile-checklist-item {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .profile-checklist-item:last-child {
+    border-bottom: 0;
+  }
   .profile-share-card,
   .profile-instagram-card {
     align-items: stretch;

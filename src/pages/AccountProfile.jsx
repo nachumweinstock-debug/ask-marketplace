@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { AtSign, Camera, Copy, ExternalLink, QrCode, Share2, UserRound } from 'lucide-react';
+import { AtSign, BookOpenCheck, Camera, Check, Copy, ExternalLink, GraduationCap, Heart, ImagePlus, QrCode, Share2, UserRound } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
@@ -45,6 +45,39 @@ function Section({ title, children }) {
   );
 }
 
+function ProfileChecklist({ items, percent }) {
+  return (
+    <div className="profile-checklist-card">
+      <div className="profile-checklist-head">
+        <div>
+          <div className="section-label">Complete your profile</div>
+          <h2>{percent}% ready</h2>
+          <p>Small upgrades that make your account feel real and help people trust who they are booking.</p>
+        </div>
+        <div className="profile-checklist-meter" aria-label={`${percent}% profile complete`}>
+          <span style={{ width: `${percent}%` }} />
+        </div>
+      </div>
+      <div className="profile-checklist-items">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button key={item.label} type="button" onClick={item.onClick} className={`profile-checklist-item${item.done ? ' done' : ''}`}>
+              <span className="profile-checklist-icon">
+                {item.done ? <Check size={16} /> : <Icon size={16} />}
+              </span>
+              <span>
+                <strong>{item.label}</strong>
+                <em>{item.help}</em>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AccountProfile() {
   const { user: authUser, refreshUser } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -56,9 +89,11 @@ export default function AccountProfile() {
   const [shareCopied, setShareCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const avatarRef = useRef(null);
+  const majorRef = useRef(null);
+  const interestsRef = useRef(null);
 
   const [form, setForm] = useState({
-    name: '', username: '', user_bio: '', major: '', classes_taking: '', gpa: '',
+    name: '', username: '', user_bio: '', major: '', interests: '', classes_taking: '', gpa: '',
     zelle: '', venmo: '', phone: '', contact_pref: 'imessage',
   });
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -71,6 +106,7 @@ export default function AccountProfile() {
         username:       data.username || '',
         user_bio:       data.user_bio || '',
         major:          data.major || '',
+        interests:      data.interests || '',
         classes_taking: data.classes_taking || '',
         gpa:            data.gpa || '',
         zelle:          data.zelle || '',
@@ -136,6 +172,7 @@ export default function AccountProfile() {
         username:       updated.username       ?? f.username,
         user_bio:       updated.user_bio        ?? f.user_bio,
         major:          updated.major           ?? f.major,
+        interests:      updated.interests       ?? f.interests,
         classes_taking: updated.classes_taking  ?? f.classes_taking,
         gpa:            updated.gpa             ?? f.gpa,
         zelle:          updated.zelle           ?? f.zelle,
@@ -167,6 +204,37 @@ export default function AccountProfile() {
   const publicPath = username ? `/${username}` : `/people/${profile?.id}`;
   const profileUrl = `${window.location.origin}${publicPath}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(profileUrl)}`;
+  const checklistItems = [
+    {
+      label: 'Add a profile photo',
+      help: 'People recognize you faster.',
+      done: !!(avatarPreview || profile?.avatar_url),
+      icon: ImagePlus,
+      onClick: () => avatarRef.current?.click(),
+    },
+    {
+      label: 'Add your major',
+      help: 'Makes your profile useful in search.',
+      done: !!form.major.trim(),
+      icon: GraduationCap,
+      onClick: () => majorRef.current?.focus(),
+    },
+    {
+      label: 'Add interests',
+      help: 'Give the account some personality.',
+      done: !!form.interests.trim(),
+      icon: Heart,
+      onClick: () => interestsRef.current?.focus(),
+    },
+    {
+      label: 'Book your first instructor',
+      help: 'Start using Ask for real.',
+      done: Number(profile?.total_bookings || 0) > 0,
+      icon: BookOpenCheck,
+      onClick: () => { window.location.href = '/browse?category=tutor'; },
+    },
+  ];
+  const checklistPercent = Math.round((checklistItems.filter(item => item.done).length / checklistItems.length) * 100);
 
   function copyProfileLink() {
     navigator.clipboard.writeText(profileUrl).then(() => {
@@ -202,6 +270,7 @@ export default function AccountProfile() {
       </div>
 
       <form onSubmit={handleSave}>
+        <ProfileChecklist items={checklistItems} percent={checklistPercent} />
 
         {/* Identity card */}
         <Section title="Identity">
@@ -339,6 +408,7 @@ export default function AccountProfile() {
               <label style={labelStyle}>Major</label>
               <input value={form.major} onChange={e => set('major')(e.target.value)}
                 placeholder="e.g. Biology, CS, Finance"
+                ref={majorRef}
                 style={fieldStyle}
                 onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border)'}
@@ -353,6 +423,17 @@ export default function AccountProfile() {
                 onBlur={e => e.target.style.borderColor = 'var(--border)'}
               />
             </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Interests</label>
+            <input value={form.interests} onChange={e => set('interests')(e.target.value)}
+              placeholder="e.g. startups, lifting, photography, Knicks"
+              ref={interestsRef}
+              style={fieldStyle}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5, marginBottom: 14 }}>Comma-separated. This shows what you are into beyond classes.</div>
           </div>
           <div>
             <label style={labelStyle}>Classes I'm taking</label>
