@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 export const DEFAULT_FAQS = [
-  ['How does Ask Marketplace work?', 'Browse tutors and campus services, filter by subject or school, open a profile, choose a time, and send a booking request.'],
-  ['How do I become a tutor?', 'Create an account, post a listing, add your subjects, pricing, session type, and availability, then respond when students book or message you.'],
-  ['Are tutors verified?', 'Some tutors may be marked verified by admins as the marketplace reviews accounts and listings. Always check profile details, reviews, and messages before meeting.'],
-  ['Can I book online sessions?', 'Yes. Use the Online filter or look for the online session badge on tutor cards and profiles.'],
-  ['What happens if I cancel?', 'Cancel as early as possible and message the tutor. Refunds or payment issues depend on the timing, tutor policy, and payment method.'],
+  ['How does Ask Marketplace work?', 'Browse instructors and services, filter by subject or category, open a profile, choose a time, and send a booking request.'],
+  ['How do I become an instructor?', 'Create an account, post a listing, add your subjects, pricing, session type, and availability, then respond when students book or message you.'],
+  ['How do I choose the right instructor?', 'Ask shows trust signals like reviews, completed sessions, response rate, repeat bookings, and profile details so students can choose confidently.'],
+  ['Can I book online sessions?', 'Yes. Use the Online filter or look for the online session badge on instructor cards and profiles.'],
+  ['What happens if I cancel?', 'Cancel as early as possible and message the instructor. Refunds or payment issues depend on the timing, provider policy, and payment method.'],
 ];
 
 export default function FAQAccordion({ title = 'Questions students ask', faqs = DEFAULT_FAQS, schemaId }) {

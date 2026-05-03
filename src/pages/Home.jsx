@@ -4,7 +4,7 @@ import FAQAccordion from '../components/FAQAccordion';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'tutor', label: 'Tutors' },
+  { id: 'tutor', label: 'Instructors' },
   { id: 'barber', label: 'Barbers' },
   { id: 'languages', label: 'Languages' },
   { id: 'fitness', label: 'Fitness' },
@@ -13,7 +13,7 @@ const FILTERS = [
 
 const ACADEMIC_CATEGORIES = [
   {
-    title: 'STEM tutoring',
+    title: 'STEM instruction',
     copy: 'Support for pre-health, engineering, CS, data, math, and lab-heavy classes.',
     subjects: [
       ['Biology', '/subjects/biology-tutors'],
@@ -28,7 +28,7 @@ const ACADEMIC_CATEGORIES = [
     ],
   },
   {
-    title: 'Business tutoring',
+    title: 'Business instruction',
     copy: 'Course help for core business classes, quantitative work, and exam prep.',
     subjects: [
       ['Accounting', '/subjects/accounting-tutors'],
@@ -37,7 +37,7 @@ const ACADEMIC_CATEGORIES = [
     ],
   },
   {
-    title: 'Humanities tutoring',
+    title: 'Humanities instruction',
     copy: 'Writing, research, reading-heavy courses, and social science support.',
     subjects: [
       ['Psychology', '/subjects/psychology-tutors'],
@@ -79,7 +79,7 @@ export default function Home() {
                 fontSize: 18, color: 'var(--ink-500)', lineHeight: 1.6,
                 maxWidth: 400, marginBottom: 44,
               }}>
-                Tutors, barbers, fitness coaches, and more — all from students on your campus. Book in seconds.
+                Instructors, barbers, fitness coaches, and more. Book in seconds.
               </p>
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                 <button
@@ -118,7 +118,7 @@ export default function Home() {
             {/* Right — editorial card stack */}
             <div className="hero-cards fade-up-delay" style={{ position: 'relative', height: 340 }}>
               {[
-                { title: 'Calc I & II Tutoring', eyebrow: 'TUTORING', price: '$35', name: 'Ari K.', offset: { top: 80, left: 50 }, rotate: -4 },
+                { title: 'Calc I & II Instruction', eyebrow: 'INSTRUCTION', price: '$35', name: 'Ari K.', offset: { top: 80, left: 50 }, rotate: -4 },
                 { title: 'Clean Fades', eyebrow: 'BARBER', price: '$20', name: 'Yosef M.', offset: { top: 40, left: 25 }, rotate: 2.5 },
                 { title: 'Gemara & Hebrew', eyebrow: 'HEBREW', price: '$15', name: 'Moshe L.', offset: { top: 0, left: 0 }, rotate: -1 },
               ].map((card, i) => (
@@ -187,11 +187,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Academic tutoring */}
+      {/* Academic instruction */}
       <div style={{ background: 'var(--cream-50)', borderTop: '1px solid var(--cream-200)', padding: '56px 48px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div className="section-label" style={{ marginBottom: 16 }}>
-            COLLEGE TUTORING
+            COLLEGE INSTRUCTION
           </div>
           <div style={{
             display: 'grid',

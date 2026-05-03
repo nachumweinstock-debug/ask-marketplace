@@ -26,9 +26,9 @@ export default function SavedTutors() {
     return (
       <div className="page" style={{ maxWidth: 680 }}>
         <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, marginBottom: 10 }}>Save tutors for later</h1>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, marginBottom: 10 }}>Save instructors for later</h1>
           <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.65, marginBottom: 24 }}>
-            Log in to save tutors, compare profiles, and build a shortlist before you book.
+            Log in to save instructors, compare profiles, and build a shortlist before you book.
           </p>
           <Link to="/login?redirect=/saved-tutors" style={{ display: 'inline-block', background: 'var(--text)', color: '#fff', borderRadius: 999, padding: '11px 24px', fontWeight: 800, textDecoration: 'none' }}>
             Log in
@@ -43,7 +43,7 @@ export default function SavedTutors() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 7vw, 64px)', lineHeight: 0.96, color: 'var(--text)', marginBottom: 8 }}>
-            Saved tutors
+            Saved instructors
           </h1>
           <p style={{ fontSize: 14, color: 'var(--muted)' }}>{loading ? 'Loading your shortlist...' : `${tutors.length} saved profile${tutors.length === 1 ? '' : 's'}`}</p>
         </div>
@@ -58,10 +58,10 @@ export default function SavedTutors() {
         </div>
       ) : tutors.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, marginBottom: 8 }}>No saved tutors yet</h2>
-          <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Tap the heart on tutor cards or profiles to save them here.</p>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, marginBottom: 8 }}>No saved instructors yet</h2>
+          <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Tap the heart on instructor cards or profiles to save them here.</p>
           <Link to="/browse" style={{ display: 'inline-block', background: 'var(--text)', color: '#fff', borderRadius: 999, padding: '10px 22px', fontWeight: 800, textDecoration: 'none' }}>
-            Find tutors
+            Find instructors
           </Link>
         </div>
       ) : (

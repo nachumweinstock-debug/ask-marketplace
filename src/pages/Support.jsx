@@ -11,7 +11,7 @@ export default function Support() {
       meta.setAttribute('name', 'description');
       document.head.appendChild(meta);
     }
-    meta.setAttribute('content', 'Get help from Ask Marketplace support for tutoring, bookings, payments, tutor accounts, and technical issues.');
+    meta.setAttribute('content', 'Get help from Ask Marketplace support for instruction, bookings, payments, instructor accounts, and technical issues.');
   }, []);
 
   return (
@@ -22,7 +22,7 @@ export default function Support() {
           Ask Support
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: 18, maxWidth: 680, lineHeight: 1.55 }}>
-          Get instant help with bookings, tutors, payments, accounts, and technical issues.
+          Get instant help with bookings, instructors, payments, accounts, and technical issues.
         </p>
       </div>
 

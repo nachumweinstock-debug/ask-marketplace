@@ -2,14 +2,14 @@
 
 export const CATEGORY_MAP = {
   tutor: {
-    label: 'Tutor',
+    label: 'Instructor',
     emoji: '📚',
     color: '#1D4ED8',
     bg: '#EFF6FF',
     border: '#BFDBFE',
   },
   'hebrew tutor': {
-    label: 'Hebrew Tutor',
+    label: 'Hebrew Instructor',
     emoji: '✡️',
     color: '#047857',
     bg: '#ECFDF5',

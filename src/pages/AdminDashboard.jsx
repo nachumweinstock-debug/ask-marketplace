@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 
 const CATEGORIES = [
-  { id: 'tutor', label: 'Tutoring' },
+  { id: 'tutor', label: 'Instruction' },
   { id: 'barber', label: 'Barber' },
   { id: 'fitness', label: 'Fitness' },
   { id: 'languages', label: 'Languages' },
@@ -26,6 +27,27 @@ const STATUS_COLORS = {
   provider: { bg: '#F0FDF4', color: '#166534' },
 };
 const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
+
+function TextSuggestion({ value, onApply }) {
+  if (!value || !hasSuggestion(value)) return null;
+  const suggestion = suggestText(value);
+  return (
+    <button type="button" onClick={() => onApply(suggestion)} style={{
+      marginTop: 7,
+      border: '1px solid #BFDBFE',
+      background: '#EFF6FF',
+      color: '#1D4ED8',
+      borderRadius: 999,
+      padding: '5px 10px',
+      fontSize: 11.5,
+      fontWeight: 800,
+      cursor: 'pointer',
+      fontFamily: 'var(--font-ui)',
+    }}>
+      Apply spelling suggestion: {suggestion.slice(0, 70)}{suggestion.length > 70 ? '...' : ''}
+    </button>
+  );
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -634,8 +656,10 @@ export default function AdminDashboard() {
                   <input value={editModal.form.custom_category}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: e.target.value } }))}
                     placeholder="e.g. Photography, Golf Lessons…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.custom_category} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: value } }))} />
                 </div>
               )}
 
@@ -662,8 +686,10 @@ export default function AdminDashboard() {
                   <input value={editModal.form.subcategory}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: e.target.value } }))}
                     placeholder="Or type your own…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.subcategory} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: value } }))} />
                 </div>
               )}
 
@@ -671,9 +697,10 @@ export default function AdminDashboard() {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</label>
                 <textarea value={editModal.form.bio}
                   onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, bio: e.target.value } }))}
-                  rows={4} required
+                  rows={4} required spellCheck="true"
                   style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', resize: 'vertical', boxSizing: 'border-box' }}
                 />
+                <TextSuggestion value={editModal.form.bio} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, bio: value } }))} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -748,7 +775,7 @@ export default function AdminDashboard() {
 // ── CSV helpers ──────────────────────────────────────────────────────────────
 
 const CSV_TEMPLATE = `email,name,category,custom_category,bio,price_per_session,zelle,venmo
-yitz@yu.edu,Yitz Cohen,tutor,,I tutor Calc I and Orgo. 3 yrs experience.,35,9175551234,yitzcohen
+yitz@yu.edu,Yitz Cohen,tutor,,I teach Calc I and Orgo. 3 yrs experience.,35,9175551234,yitzcohen
 sarah@mail.yu.edu,Sarah Levy,other,Photography,Campus portrait sessions — headshots and events.,50,,sarahlevy
 `;
 const TEMPLATE_URL = URL.createObjectURL(new Blob([CSV_TEMPLATE], { type: 'text/csv' }));

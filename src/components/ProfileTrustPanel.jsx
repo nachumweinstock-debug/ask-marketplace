@@ -16,11 +16,6 @@ export default function ProfileTrustPanel({ provider }) {
           </div>
           <TrustBadges trust={trust} />
         </div>
-        {trust.verified && (
-          <span style={{ fontSize: 12, fontWeight: 900, color: '#1D4ED8', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 999, padding: '5px 10px' }}>
-            Verified
-          </span>
-        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
         <Metric label="Joined" value={dateLabel(trust.joined_at)} />
@@ -30,7 +25,6 @@ export default function ProfileTrustPanel({ provider }) {
         <Metric label="Repeat students" value={`${trust.repeat_student_percentage || 0}%`} />
         <Metric label="Saved" value={trust.saved_count || 0} />
         <Metric label="Last active" value={trust.last_active_at ? dateLabel(trust.last_active_at) : 'Recently'} />
-        <Metric label="School" value={trust.school_verified ? 'Verified' : provider?.college || provider?.university || 'Not set'} />
       </div>
     </section>
   );

@@ -445,10 +445,10 @@ router.get('/:id/ics', (req, res) => {
   const title = isProviderDownload
     ? `Session with ${student?.name || 'Student'}`
     : `Session with ${booking.provider_name}`;
-  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Tutoring';
+  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Instruction';
   const sessionLine = ['zoom', 'both'].includes(booking.session_type)
     ? 'Session link: coordinate the online meeting link in Ask Messages.'
-    : 'Session location: coordinate the meeting place in Ask Messages.';
+    : 'Meeting details: coordinate the meeting place in Ask Messages.';
 
   const icsContent = buildICS({
     title,
@@ -494,10 +494,10 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
   const title = isProvider && !isStudent
     ? `Session with ${booking.student_name}`
     : `Session with ${booking.provider_name}`;
-  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Tutoring';
+  const listing = booking.listing_title || booking.subcategory || booking.custom_category || booking.category || 'Instruction';
   const sessionLine = ['zoom', 'both'].includes(booking.session_type)
     ? 'Session link: coordinate the online meeting link in Ask Messages.'
-    : 'Session location: coordinate the meeting place in Ask Messages.';
+    : 'Meeting details: coordinate the meeting place in Ask Messages.';
   const description = `Booked through Ask Marketplace.\n\nListing: ${listing}\n${sessionLine}\nNotes: Bring class materials, questions, and any assignment details you want to review.`;
 
   res.json({

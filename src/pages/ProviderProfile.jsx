@@ -454,15 +454,6 @@ export default function ProviderProfile() {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <CategoryPill category={provider.category} customCategory={provider.custom_category} size="md" />
                   <SessionTypePill sessionType={provider.session_type} />
-                  {provider.college && (
-                    <span style={{
-                      fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
-                      background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
-                      fontFamily: 'var(--font-ui)',
-                    }}>
-                      {provider.college}
-                    </span>
-                  )}
                   {provider.allow_group && (
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
@@ -873,8 +864,8 @@ export default function ProviderProfile() {
                 >
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
-                      {l.title || l.subcategory || l.custom_category ||
-                        { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring', fitness: 'Fitness' }[l.category] || l.category}
+                        {l.title || l.subcategory || l.custom_category ||
+                        { tutor: 'Instruction', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Instruction', fitness: 'Fitness' }[l.category] || l.category}
                     </div>
                     {l.bio && (
                       <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 380 }}>
@@ -896,9 +887,9 @@ export default function ProviderProfile() {
         title={`Questions about ${provider.name}`}
         schemaId={`provider-faq-${provider.id}`}
         faqs={[
-          ['How do I book this tutor?', 'Choose an available time on this profile and send a booking request. The tutor can confirm it from their dashboard.'],
-          ['Can I message before booking?', 'Yes. Use the message button to ask about fit, class material, location, or online session details.'],
-          ['Can I book online sessions?', 'Check the session type badge on the profile. Online and both-mode tutors can coordinate remote sessions.'],
+          ['How do I book this instructor?', 'Choose an available time on this profile and send a booking request. The instructor can confirm it from their dashboard.'],
+          ['Can I message before booking?', 'Yes. Use the message button to ask about fit, class material, format, or online session details.'],
+          ['Can I book online sessions?', 'Check the session type badge on the profile. Online and both-mode instructors can coordinate remote sessions.'],
           ['What happens after I book?', 'Ask Marketplace sends the booking request, opens a message thread, and gives calendar options after confirmation.'],
           ['What if I need a different time?', 'Use the request time section if no listed availability works for you.'],
         ]}

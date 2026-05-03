@@ -12,13 +12,13 @@ function initials(name) {
 
 function listingLabel(l) {
   return l.title || l.subcategory || l.custom_category ||
-    { tutor: 'Tutoring', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Tutoring',
+    { tutor: 'Instruction', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Instruction',
       fitness: 'Fitness', tennis: 'Fitness' }[l.category] || l.category;
 }
 
 function categoryLabel(l) {
   if (l.custom_category) return l.custom_category;
-  const map = { tutor: 'Tutoring', barber: 'Barber', 'hebrew tutor': 'Hebrew', fitness: 'Fitness', tennis: 'Fitness', other: 'Service' };
+  const map = { tutor: 'Instruction', barber: 'Barber', 'hebrew tutor': 'Hebrew', fitness: 'Fitness', tennis: 'Fitness', other: 'Service' };
   return map[l.category] || 'Service';
 }
 

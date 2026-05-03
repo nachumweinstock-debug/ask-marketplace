@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: 'What subjects are available?',
-    a: "Tutoring, barbers, Hebrew, fitness, music and more. Can't find what you need? Use the request feature and we'll find someone for you.",
+    a: "Instruction, barbers, Hebrew, fitness, music and more. Can't find what you need? Use the request feature and we'll find someone for you.",
   },
 ];
 

@@ -4,9 +4,10 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 import { trackEvent } from '../lib/analytics';
+import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 
 const CATEGORIES = [
-  { id: 'tutor',     label: 'Tutoring'   },
+  { id: 'tutor',     label: 'Instruction'   },
   { id: 'barber',    label: 'Barber'     },
   { id: 'fitness',   label: 'Fitness'    },
   { id: 'languages', label: 'Languages'  },
@@ -16,8 +17,8 @@ const CATEGORIES = [
 ];
 
 const BIO_PLACEHOLDERS = {
-  tutor:     'e.g. I tutor Calc 1 & 2 and Orgo. 3 years experience, patient.',
-  barber:    'e.g. Fades, lineups, beard trims. Clean cuts right on campus.',
+  tutor:     'e.g. I teach Calc 1 & 2 and Orgo. 3 years experience, patient.',
+  barber:    'e.g. Fades, lineups, beard trims. Clean cuts by appointment.',
   fitness:   'e.g. USTA rated player, great with beginners and intermediates.',
   languages: 'e.g. Native Hebrew speaker — I teach conversational and written Ivrit for all levels.',
   music:     'e.g. Guitar teacher with 5 years experience. Acoustic and electric, all levels welcome.',
@@ -117,11 +118,32 @@ function ImageDrop({ value, onChange }) {
   );
 }
 
+function TextSuggestion({ value, onApply }) {
+  if (!value || !hasSuggestion(value)) return null;
+  const suggestion = suggestText(value);
+  return (
+    <button type="button" onClick={() => onApply(suggestion)} style={{
+      marginTop: 8,
+      border: '1px solid #BFDBFE',
+      background: '#EFF6FF',
+      color: '#1D4ED8',
+      borderRadius: 999,
+      padding: '6px 11px',
+      fontSize: 12,
+      fontWeight: 700,
+      cursor: 'pointer',
+      fontFamily: 'var(--font-ui)',
+    }}>
+      Apply spelling suggestion: {suggestion.slice(0, 80)}{suggestion.length > 80 ? '...' : ''}
+    </button>
+  );
+}
+
 // ── Live Preview Card ─────────────────────────────────────────────────────────
 function LivePreview({ category, customCategory, subcategory, bio, price, listingImage, sessionType }) {
   const label = subcategory || customCategory ||
-    { tutor: 'Tutoring', barber: 'Haircuts', fitness: 'Fitness', languages: 'Languages', music: 'Music', torah: 'Torah Studies', other: 'Service' }[category] || '';
-  const eyebrow = (customCategory || { tutor: 'TUTORING', barber: 'BARBER', fitness: 'FITNESS', languages: 'LANGUAGES', music: 'MUSIC', torah: 'TORAH STUDIES', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
+    { tutor: 'Instruction', barber: 'Haircuts', fitness: 'Fitness', languages: 'Languages', music: 'Music', torah: 'Torah Studies', other: 'Service' }[category] || '';
+  const eyebrow = (customCategory || { tutor: 'INSTRUCTION', barber: 'BARBER', fitness: 'FITNESS', languages: 'LANGUAGES', music: 'MUSIC', torah: 'TORAH STUDIES', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
   const fmt = sessionType === 'zoom' ? { color: '#7C3AED', label: 'ZOOM' }
     : sessionType === 'both' ? { color: '#7C3AED', label: 'ZOOM & IN-PERSON' }
     : { color: '#0E8345', label: 'IN-PERSON' };
@@ -223,7 +245,6 @@ export default function CreateListing() {
   const [zelle, setZelle] = useState('');
   const [venmo, setVenmo] = useState('');
   const [listingImage, setListingImage] = useState(null);
-  const [college, setCollege] = useState('');
   const [allowGroup, setAllowGroup] = useState(false);
   const [maxGroupSize, setMaxGroupSize] = useState(4);
   const [slots, setSlots] = useState([]);
@@ -291,7 +312,6 @@ export default function CreateListing() {
         price_per_session: price || 0,
         zelle,
         venmo,
-        college: ['in-person', 'both'].includes(sessionType) ? college : '',
         allow_group: allowGroup,
         max_group_size: allowGroup ? maxGroupSize : 1,
         ...(listingImage ? { listing_image_data_url: listingImage } : {}),
@@ -398,7 +418,9 @@ export default function CreateListing() {
                   onChange={e => setSubcategory(e.target.value)}
                   placeholder={{ tutor: 'Or type your own: Organic Chemistry, LSAT...', torah: 'Or type your own: Tefilla, Moed, Nach...', languages: 'Or type your own: Yiddish, Sign Language...', music: 'Or type your own: Harp, Banjo, Clarinet...' }[category] || 'Or type your own...'}
                   className="input-underline"
+                  spellCheck="true"
                 />
+                <TextSuggestion value={subcategory} onApply={setSubcategory} />
               </div>
             )}
 
@@ -409,7 +431,9 @@ export default function CreateListing() {
                 <input value={customCategory} onChange={e => setCustomCategory(e.target.value)}
                   placeholder="e.g. Photography, Guitar Lessons, Meal Prep..."
                   className="input-underline"
+                  spellCheck="true"
                 />
+                <TextSuggestion value={customCategory} onApply={setCustomCategory} />
                 <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 8, fontFamily: 'var(--font-ui)' }}>
                   This becomes your category label on the card.
                 </div>
@@ -443,20 +467,6 @@ export default function CreateListing() {
                 })}
               </div>
             </div>
-
-            {/* ── College (in-person) ── */}
-            {['in-person', 'both'].includes(sessionType) && (
-              <div style={{ marginBottom: 28 }}>
-                <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>CAMPUS / COLLEGE</label>
-                <input value={college} onChange={e => setCollege(e.target.value)}
-                  placeholder="e.g. Yeshiva University, NYU, Fordham..."
-                  className="input-underline"
-                />
-                <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 8, fontFamily: 'var(--font-ui)' }}>
-                  So students know where to meet you in person.
-                </div>
-              </div>
-            )}
 
             {/* ── Group bookings ── */}
             <div style={{ marginBottom: 28 }}>
@@ -537,8 +547,10 @@ export default function CreateListing() {
               <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
                 placeholder={BIO_PLACEHOLDERS[category] || BIO_PLACEHOLDERS.other}
                 className="input-underline"
+                spellCheck="true"
                 style={{ resize: 'none', lineHeight: 1.6, borderBottom: `1px solid var(--cream-300)` }}
               />
+              <TextSuggestion value={bio} onApply={setBio} />
             </div>
 
             {/* ── Price ── */}

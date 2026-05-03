@@ -323,7 +323,7 @@ export default function AdminAnalytics() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
               <Kpi label="Visitors" value={fmt(data?.kpis?.total_visitors)} hint={`${fmt(data?.kpis?.pageviews)} pageviews`} />
               <Kpi label="Searches" value={fmt(data?.eventCounts?.search_started)} hint="Tracked site searches" />
-              <Kpi label="Profile views" value={fmt(data?.eventCounts?.tutor_profile_viewed)} hint="Tutor profile intent" />
+              <Kpi label="Profile views" value={fmt(data?.eventCounts?.tutor_profile_viewed)} hint="Instructor profile intent" />
               <Kpi label="Contact clicks" value={fmt(data?.eventCounts?.contact_tutor_clicked)} hint="Contact/book intent" />
             </div>
           </Panel>

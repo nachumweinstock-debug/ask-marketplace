@@ -71,10 +71,10 @@ export function trustForProvider(providerId) {
   const rating = Math.round((reviewStats.avg || provider.rating || 0) * 10) / 10;
   const labels = [];
   if (rating >= 4.8 && (reviewStats.n || provider.review_count) >= 3) labels.push('Top Rated');
-  if (bookings.length >= 3 && pct(completed, bookings.length) >= 70 && pct(cancelled, bookings.length) <= 15) labels.push('Reliable Tutor');
+  if (bookings.length >= 3 && pct(completed, bookings.length) >= 70 && pct(cancelled, bookings.length) <= 15) labels.push('Reliable Instructor');
   if (inbound.length > 0 && pct(responded, inbound.length) >= 80) labels.push('Fast Responder');
   if (confirmedOrDone >= 5 || savedCount >= 5) labels.push('Highly Booked');
-  if (bookings.length < 2 && (reviewStats.n || 0) < 2) labels.push('New Tutor');
+  if (bookings.length < 2 && (reviewStats.n || 0) < 2) labels.push('New Instructor');
 
   return {
     response_rate: pct(responded, inbound.length),
@@ -90,7 +90,7 @@ export function trustForProvider(providerId) {
     report_count: reportCount,
     saved_count: savedCount,
     booking_count: bookings.length,
-    verified: !!provider.is_admin || !!provider.school_verified || completed > 0 || (reviewStats.n || 0) > 0,
+    verified: false,
     school_verified: !!provider.school_verified,
     joined_at: provider.joined_at,
     last_active_at: provider.last_active_at,

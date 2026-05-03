@@ -32,7 +32,7 @@ export default function SavedTutorButton({ tutorId, initialSaved = false, onChan
         onChange?.(true);
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Could not update saved tutors');
+      alert(err.response?.data?.error || 'Could not update saved instructors');
     } finally {
       setLoading(false);
     }
@@ -43,8 +43,8 @@ export default function SavedTutorButton({ tutorId, initialSaved = false, onChan
       type="button"
       onClick={toggle}
       disabled={loading}
-      aria-label={saved ? 'Remove saved tutor' : 'Save tutor'}
-      title={saved ? 'Remove saved tutor' : 'Save tutor'}
+      aria-label={saved ? 'Remove saved instructor' : 'Save instructor'}
+      title={saved ? 'Remove saved instructor' : 'Save instructor'}
       style={{
         height: compact ? 34 : 38,
         minWidth: compact ? 34 : 38,

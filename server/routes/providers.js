@@ -33,12 +33,12 @@ function canSeePayment(requesterId, providerUserId) {
 }
 
 function redactPayment(provider, requesterId) {
-  if (canSeePayment(requesterId, provider.user_id)) return provider;
-  return { ...provider, zelle: null, venmo: null };
+  if (canSeePayment(requesterId, provider.user_id)) return { ...provider, college: null };
+  return { ...provider, zelle: null, venmo: null, college: null };
 }
 
 function redactPublicListing(provider) {
-  return { ...provider, zelle: null, venmo: null };
+  return { ...provider, zelle: null, venmo: null, college: null };
 }
 
 const router = Router();
@@ -271,7 +271,7 @@ router.get('/me/profile', requireAuth, (req, res) => {
 
 // GET /providers — browse all
 router.get('/', (req, res) => {
-  const { category, subcategory, search, sort, session_type, school, min_price, max_price, min_rating, availability, verified } = req.query;
+  const { category, subcategory, search, sort, session_type, min_price, max_price, min_rating, availability } = req.query;
   let query = `
     SELECT pp.*, u.name, u.email, u.username,
       (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
@@ -301,10 +301,6 @@ router.get('/', (req, res) => {
     query += " AND (pp.session_type = ? OR pp.session_type = 'both')";
     params.push(session_type);
   }
-  if (school && school !== 'all') {
-    query += ' AND (LOWER(TRIM(pp.college)) = LOWER(TRIM(?)) OR LOWER(TRIM(u.university)) = LOWER(TRIM(?)))';
-    params.push(school, school);
-  }
   if (min_price !== undefined && min_price !== '') {
     query += ' AND COALESCE(pp.price_per_session, 0) >= ?';
     params.push(Number(min_price) || 0);
@@ -319,9 +315,6 @@ router.get('/', (req, res) => {
   }
   if (availability === 'open') {
     query += ' AND EXISTS (SELECT 1 FROM availability a WHERE a.provider_id = pp.id AND a.is_booked = 0)';
-  }
-  if (verified === '1') {
-    query += " AND (u.is_admin = 1 OR pp.review_count > 0 OR EXISTS (SELECT 1 FROM bookings vb WHERE vb.provider_id = pp.id AND vb.status = 'completed'))";
   }
   if (search) {
     query += ' AND (u.name LIKE ? OR pp.bio LIKE ? OR pp.subcategory LIKE ? OR pp.custom_category LIKE ? OR pp.title LIKE ?)';

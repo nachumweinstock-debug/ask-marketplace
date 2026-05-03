@@ -4,7 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 
-const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other' };
+const CAT_LABELS = { tutor: 'Instructor', barber: 'Barber', 'hebrew tutor': 'Hebrew Instructor', tennis: 'Tennis', other: 'Other' };
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();

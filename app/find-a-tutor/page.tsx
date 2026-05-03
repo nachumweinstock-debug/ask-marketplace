@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Find a Tutor | Ask Marketplace',
-  description: 'Get matched with trusted college tutors by school, subject, budget, and learning style.',
+  title: 'Find an Instructor | Ask Marketplace',
+  description: 'Get matched with trusted college instructors by subject, budget, availability, and learning style.',
 }
 
 export default function FindTutorPage() {

@@ -13,7 +13,7 @@ const STATUS = {
   cancelled: { label: 'Cancelled', bg: '#FEF2F2', color: '#DC2626' },
 };
 
-const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
+const CAT_LABELS = { tutor: 'Instructor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 
 function ReviewModal({ booking, onClose, onSubmit }) {
   const [rating, setRating] = useState(5);

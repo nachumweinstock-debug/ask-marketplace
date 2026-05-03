@@ -23,28 +23,28 @@ function classifySupport(message) {
     return {
       topic: 'Booking help',
       needsAdmin: wantsHuman,
-      reply: 'Here is how booking works on Ask Marketplace:\n\n1. Go to Browse and open the tutor or service listing you want.\n2. Pick an available time on their profile.\n3. Send the booking request.\n4. The tutor confirms it from their dashboard.\n5. You can coordinate details in Messages after the request is sent.\n\nIf you are already stuck on a booking, send me the tutor name, the date/time, and what status you see.',
+      reply: 'Here is how booking works on Ask Marketplace:\n\n1. Go to Browse and open the instructor or service listing you want.\n2. Pick an available time on their profile.\n3. Send the booking request.\n4. The instructor confirms it from their dashboard.\n5. You can coordinate details in Messages after the request is sent.\n\nIf you are already stuck on a booking, send me the instructor name, the date/time, and what status you see.',
     };
   }
-  if (/\b(tutor|become tutor|apply|listing|provider)\b/.test(text)) {
+  if (/\b(tutor|instructor|become tutor|become instructor|apply|listing|provider)\b/.test(text)) {
     return {
-      topic: 'Tutor account help',
+      topic: 'Instructor account help',
       needsAdmin: wantsHuman,
-      reply: 'To become a tutor or service provider:\n\n1. Log in or create an account.\n2. Choose Post in the navigation.\n3. Add what you offer, your subject/category, price, location or Zoom option, and availability.\n4. Save the listing so students can find and book you.\n\nIf your listing is not showing up, tell me the category, your account email, and what happens after you press save.',
+      reply: 'To become an instructor or service provider:\n\n1. Log in or create an account.\n2. Choose Post in the navigation.\n3. Add what you offer, your subject/category, price, online option, and availability.\n4. Save the listing so students can find and book you.\n\nIf your listing is not showing up, tell me the category, your account email, and what happens after you press save.',
     };
   }
   if (/\b(payment|charge|refund|paid|venmo|zelle)\b/.test(text)) {
     return {
       topic: 'Payment issue',
       needsAdmin: true,
-      reply: 'For payment issues, the fastest way to sort it out is to include:\n\n- tutor/provider name\n- booking date and time\n- amount involved\n- whether it was Zelle, Venmo, cash, or another method\n- what went wrong\n\nI marked this for admin review because payment/refund issues usually need a real person to verify details.',
+      reply: 'For payment issues, the fastest way to sort it out is to include:\n\n- instructor/provider name\n- booking date and time\n- amount involved\n- whether it was Zelle, Venmo, cash, or another method\n- what went wrong\n\nI marked this for admin review because payment/refund issues usually need a real person to verify details.',
     };
   }
   if (/\b(cancel|reschedule|move|change time)\b/.test(text)) {
     return {
       topic: 'Cancel or reschedule',
       needsAdmin: wantsHuman,
-      reply: 'To cancel or reschedule, message the tutor from Messages or the booking thread and agree on the new time. If the booking is pending, the tutor can confirm a different slot. If it is already confirmed, coordinate directly first so both sides know what changed.\n\nIf the tutor is not responding, send me the tutor name and booking time.',
+      reply: 'To cancel or reschedule, message the instructor from Messages or the booking thread and agree on the new time. If the booking is pending, the instructor can confirm a different slot. If it is already confirmed, coordinate directly first so both sides know what changed.\n\nIf the instructor is not responding, send me the instructor name and booking time.',
     };
   }
   if (/\b(login|account|password|sign in|signup|email)\b/.test(text)) {
@@ -65,13 +65,13 @@ function classifySupport(message) {
     return {
       topic: 'Needs admin',
       needsAdmin: true,
-      reply: 'Got it. I marked this for the Ask Marketplace team. Please send the key details so they can review it faster: account email, related tutor or booking, and what outcome you need.',
+      reply: 'Got it. I marked this for the Ask Marketplace team. Please send the key details so they can review it faster: account email, related instructor or booking, and what outcome you need.',
     };
   }
   return {
     topic: 'General support',
     needsAdmin: false,
-    reply: 'I can help with bookings, tutors, payments, account access, and site bugs. Tell me what you were trying to do, what happened, and the page or tutor involved if there is one.',
+    reply: 'I can help with bookings, instructors, payments, account access, and site bugs. Tell me what you were trying to do, what happened, and the page or instructor involved if there is one.',
   };
 }
 

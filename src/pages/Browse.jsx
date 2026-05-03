@@ -6,9 +6,10 @@ import ProviderCard from '../components/ProviderCard';
 import { trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
+import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 
 const EDIT_CATEGORIES = [
-  { id: 'tutor',     label: 'Tutoring'  },
+  { id: 'tutor',     label: 'Instruction'  },
   { id: 'barber',    label: 'Barber'    },
   { id: 'fitness',   label: 'Fitness'   },
   { id: 'languages', label: 'Languages' },
@@ -27,7 +28,7 @@ const CUSTOM_CAT_MAP = { torah: 'Torah Studies', languages: 'Languages', music: 
 
 const BASE_FILTERS = [
   { id: 'all',          label: 'All'           },
-  { id: 'tutor',        label: 'Tutors'        },
+  { id: 'tutor',        label: 'Instructors'   },
   { id: 'fitness',      label: 'Fitness'       },
   { id: 'barber',       label: 'Barbers'       },
   { id: 'languages',    label: 'Languages'     },
@@ -36,6 +37,27 @@ const BASE_FILTERS = [
 ];
 
 const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness', 'languages', 'music']);
+
+function TextSuggestion({ value, onApply }) {
+  if (!value || !hasSuggestion(value)) return null;
+  const suggestion = suggestText(value);
+  return (
+    <button type="button" onClick={() => onApply(suggestion)} style={{
+      marginTop: 7,
+      border: '1px solid #BFDBFE',
+      background: '#EFF6FF',
+      color: '#1D4ED8',
+      borderRadius: 999,
+      padding: '5px 10px',
+      fontSize: 11.5,
+      fontWeight: 800,
+      cursor: 'pointer',
+      fontFamily: 'var(--font-ui)',
+    }}>
+      Apply spelling suggestion: {suggestion.slice(0, 70)}{suggestion.length > 70 ? '...' : ''}
+    </button>
+  );
+}
 
 export default function Browse() {
   const { user, refreshUser } = useAuth();
@@ -47,12 +69,10 @@ export default function Browse() {
   const [subcategory, setSubcategory] = useState(searchParams.get('subcategory') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
   const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
-  const [school, setSchool] = useState(searchParams.get('school') || 'all');
   const [minPrice, setMinPrice] = useState(searchParams.get('min_price') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') || '');
   const [minRating, setMinRating] = useState(searchParams.get('min_rating') || '');
   const [availability, setAvailability] = useState(searchParams.get('availability') || 'all');
-  const [verifiedOnly, setVerifiedOnly] = useState(searchParams.get('verified') === '1');
   const [savedIds, setSavedIds] = useState(new Set());
   const [customCats, setCustomCats] = useState([]);
   const [subcats, setSubcats] = useState([]);
@@ -82,7 +102,7 @@ export default function Browse() {
       .catch(() => setSubcats([]));
   }, [category]);
 
-  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType, school, minPrice, maxPrice, minRating, availability, verifiedOnly]);
+  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType, minPrice, maxPrice, minRating, availability]);
 
   function syncParams(next = {}) {
     const state = {
@@ -91,12 +111,10 @@ export default function Browse() {
       subcategory,
       sort,
       session_type: sessionType,
-      school,
       min_price: minPrice,
       max_price: maxPrice,
       min_rating: minRating,
       availability,
-      verified: verifiedOnly ? '1' : '',
       ...next,
     };
     const p = {};
@@ -127,12 +145,10 @@ export default function Browse() {
       if (category !== 'all') params.category = category;
       if (subcategory !== 'all') params.subcategory = subcategory;
       if (sessionType !== 'all') params.session_type = sessionType;
-      if (school !== 'all') params.school = school;
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
       if (minRating) params.min_rating = minRating;
       if (availability !== 'all') params.availability = availability;
-      if (verifiedOnly) params.verified = '1';
       const q = searchVal !== undefined ? searchVal : search;
       if (q) params.search = q;
       params.sort = sort;
@@ -247,11 +263,6 @@ export default function Browse() {
     });
   }
 
-  const schoolOptions = [
-    'Yeshiva University', 'New York University', 'Baruch College', 'Columbia University',
-    'University of Michigan', 'UCLA', 'USC', 'Rutgers University', 'Boston University',
-  ];
-
   // Group listings by user
   const grouped = [];
   const seen = new Set();
@@ -281,7 +292,7 @@ export default function Browse() {
           </h1>
           {!loading && (
             <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, fontFamily: 'var(--font-ui)' }}>
-              {providers.length} listing{providers.length !== 1 ? 's' : ''} · {grouped.length} student{grouped.length !== 1 ? 's' : ''}
+              {providers.length} listing{providers.length !== 1 ? 's' : ''} · {grouped.length} instructor{grouped.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
@@ -325,7 +336,7 @@ export default function Browse() {
           </div>
           <input
             type="text"
-            placeholder="Search tutors, barbers, fitness..."
+            placeholder="Search instructors, barbers, fitness..."
             value={search}
             onChange={e => handleSearchInput(e.target.value)}
             style={{
@@ -365,13 +376,6 @@ export default function Browse() {
       <div className="card" style={{ padding: 14, marginBottom: 18, borderRadius: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, alignItems: 'end' }}>
           <label style={filterLabel}>
-            School
-            <select value={school} onChange={e => { setSchool(e.target.value); syncParams({ school: e.target.value }); }} style={filterInput}>
-              <option value="all">All schools</option>
-              {schoolOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label style={filterLabel}>
             Min price
             <input type="number" min="0" placeholder="$0" value={minPrice} onChange={e => { setMinPrice(e.target.value); syncParams({ min_price: e.target.value }); }} style={filterInput} />
           </label>
@@ -394,10 +398,6 @@ export default function Browse() {
               <option value="all">Any</option>
               <option value="open">Open slots only</option>
             </select>
-          </label>
-          <label style={{ ...filterLabel, flexDirection: 'row', alignItems: 'center', gap: 9, paddingBottom: 9 }}>
-            <input type="checkbox" checked={verifiedOnly} onChange={e => { setVerifiedOnly(e.target.checked); syncParams({ verified: e.target.checked ? '1' : '' }); }} style={{ accentColor: 'var(--text)' }} />
-            Verified tutors only
           </label>
         </div>
       </div>
@@ -460,7 +460,7 @@ export default function Browse() {
       ) : grouped.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-            No tutors found for this filter combination.
+            No instructors found for this filter combination.
           </div>
           <div style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>
             Clear a filter, widen the price range, or try another subject.
@@ -490,14 +490,14 @@ export default function Browse() {
       )}
 
       <FAQAccordion
-        title="Tutor search FAQ"
+        title="Instructor search FAQ"
         schemaId="browse-faq-schema"
         faqs={[
-          ['How do I find the right tutor?', 'Use the subject, school, price, rating, and online/in-person filters to narrow the marketplace, then open profiles to compare availability and reviews.'],
-          ['Are tutors verified?', 'Verified filtering prioritizes tutors with admin status, completed sessions, or reviews. You should still message the tutor and confirm fit before booking.'],
-          ['Can I book online sessions?', 'Yes. Use the Online filter to find tutors who offer Zoom or remote sessions.'],
-          ['Why do no tutors match my filters?', 'Some filters can be restrictive together. Try removing verified-only, widening price, or switching availability to any.'],
-          ['Can I save tutors for later?', 'Yes. Tap the heart on a card or profile to save tutors, then open Saved Tutors from your account.'],
+          ['How do I find the right instructor?', 'Use subject, price, rating, format, and availability filters to narrow the marketplace, then open profiles to compare schedule and reviews.'],
+          ['Can I message before booking?', 'Yes. Open an instructor profile and message them before requesting a session.'],
+          ['Can I book online sessions?', 'Yes. Use the Online filter to find instructors who offer Zoom or remote sessions.'],
+          ['Why do no instructors match my filters?', 'Some filters can be restrictive together. Try widening price or switching availability to any.'],
+          ['Can I save instructors for later?', 'Yes. Tap the heart on a card or profile to save instructors, then open Saved from your account.'],
         ]}
       />
 
@@ -539,8 +539,10 @@ export default function Browse() {
                   <input value={editModal.form.custom_category}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: e.target.value } }))}
                     placeholder="e.g. Photography, Golf Lessons…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.custom_category} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: value } }))} />
                 </div>
               )}
 
@@ -567,8 +569,10 @@ export default function Browse() {
                   <input value={editModal.form.subcategory}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: e.target.value } }))}
                     placeholder="Or type your own…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.subcategory} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: value } }))} />
                 </div>
               )}
 
@@ -577,8 +581,10 @@ export default function Browse() {
                 <textarea value={editModal.form.bio}
                   onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, bio: e.target.value } }))}
                   rows={4} required
+                  spellCheck="true"
                   style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', resize: 'vertical', boxSizing: 'border-box' }}
                 />
+                <TextSuggestion value={editModal.form.bio} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, bio: value } }))} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

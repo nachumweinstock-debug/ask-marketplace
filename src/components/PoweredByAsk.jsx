@@ -13,7 +13,7 @@ export default function PoweredByAsk({ title = 'Booked through Ask Marketplace',
 
   async function share() {
     if (navigator.share) {
-      await navigator.share({ title: 'Ask Marketplace', text: 'Find trusted tutors on Ask Marketplace.', url: shareUrl });
+      await navigator.share({ title: 'Ask Marketplace', text: 'Find trusted instructors and services on Ask Marketplace.', url: shareUrl });
     } else {
       await copy();
     }
@@ -34,7 +34,7 @@ export default function PoweredByAsk({ title = 'Booked through Ask Marketplace',
     }}>
       <div>
         <div style={{ fontSize: compact ? 12 : 13, fontWeight: 900, color: 'var(--text)' }}>{title}</div>
-        {!compact && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Invite someone who needs a tutor or campus service.</div>}
+        {!compact && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Invite someone who needs an instructor or service.</div>}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={share} style={actionStyle}>

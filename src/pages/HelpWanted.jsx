@@ -10,7 +10,7 @@ function initials(name) {
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
-  { id: 'tutor', label: 'Tutoring' },
+  { id: 'tutor', label: 'Instruction' },
   { id: 'barber', label: 'Barber' },
   { id: 'fitness', label: 'Fitness' },
   { id: 'other', label: 'Other' },
@@ -102,7 +102,7 @@ export default function HelpWanted() {
             Help Wanted.
           </h1>
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 17, color: 'var(--ink-500)', maxWidth: 480 }}>
-            Looking for a tutor, barber, or someone who can help? Post what you need. Providers will find you.
+            Looking for an instructor, barber, or someone who can help? Post what you need. Providers will find you.
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export default function HelpWanted() {
             <div style={{ marginBottom: 20 }}>
               <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>WHAT DO YOU NEED?</label>
               <input value={title} onChange={e => setTitle(e.target.value)}
-                placeholder="e.g. Need a Calc II tutor before finals"
+                placeholder="e.g. Need Calc II help before finals"
                 className="input-underline" style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 500 }}
               />
             </div>
@@ -155,7 +155,7 @@ export default function HelpWanted() {
                   fontFamily: 'var(--font-ui)', outline: 'none', cursor: 'pointer',
                 }}>
                   <option value="">Any</option>
-                  <option value="tutor">Tutoring</option>
+                  <option value="tutor">Instruction</option>
                   <option value="barber">Barber</option>
                   <option value="fitness">Fitness</option>
                   <option value="other">Other</option>

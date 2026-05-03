@@ -52,7 +52,7 @@ export default function AdminReviewModeration() {
                   <th style={th}>Reason</th>
                   <th style={th}>Review</th>
                   <th style={th}>Reporter</th>
-                  <th style={th}>Tutor</th>
+                  <th style={th}>Instructor</th>
                   <th style={th}>Actions</th>
                 </tr>
               </thead>

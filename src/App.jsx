@@ -32,12 +32,6 @@ import FindTutor from './pages/FindTutor';
 import Referrals from './pages/Referrals';
 import SessionReminders from './components/SessionReminders';
 
-const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
-
-function isDeveloperAdmin(user) {
-  return user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
-}
-
 function ProtectedRoute({ children, role, developerOnly = false }) {
   const { user, loading } = useAuth();
   if (loading) {
@@ -48,7 +42,7 @@ function ProtectedRoute({ children, role, developerOnly = false }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-  if (developerOnly && !isDeveloperAdmin(user)) return <Navigate to="/" replace />;
+  if (developerOnly && !user.is_admin) return <Navigate to="/" replace />;
   if (role === 'admin' && !user.is_admin) return <Navigate to="/" replace />;
   if (role && role !== 'admin' && user.role !== role) return <Navigate to="/" replace />;
   return children;
@@ -193,7 +187,7 @@ function AppRoutes() {
         <Route
           path="/admin/analytics"
           element={
-            <ProtectedRoute role="admin" developerOnly>
+            <ProtectedRoute role="admin">
               <Layout><AdminAnalytics /></Layout>
             </ProtectedRoute>
           }

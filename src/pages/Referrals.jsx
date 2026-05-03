@@ -28,7 +28,7 @@ export default function Referrals() {
         <div className="section-label">Growth</div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 42, lineHeight: 1, marginTop: 8 }}>Invite friends to Ask</h1>
         <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginTop: 10 }}>
-          Share your link with classmates who need tutors or want to offer tutoring. We track signups and bookings from your referral code.
+          Share your link with classmates who need instructors or want to offer services. We track signups and bookings from your referral code.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
           <input readOnly value={data?.invite_url || ''} style={{ flex: 1, minWidth: 240, border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: 12 }} />

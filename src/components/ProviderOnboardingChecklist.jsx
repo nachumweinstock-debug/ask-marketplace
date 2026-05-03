@@ -1,7 +1,6 @@
 export default function ProviderOnboardingChecklist({ profile, availability = [], reviews = [] }) {
   const checks = [
     ['Upload profile photo', !!profile?.avatar_url],
-    ['Verify school', !!profile?.school_verified || !!profile?.college],
     ['Complete bio', (profile?.bio || '').length >= 80],
     ['Create first listing', !!profile?.id],
     ['Add availability', availability.length > 0],

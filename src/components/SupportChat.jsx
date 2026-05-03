@@ -4,15 +4,15 @@ import { useAuth } from '../context/AuthContext';
 
 const SHORTCUTS = [
   'Booking help',
-  'Tutor account help',
+  'Instructor account help',
   'Payment issue',
   'Technical issue',
   'Report a problem',
 ];
 
 const PROMPTS = {
-  'Booking help': 'I need help with booking a tutoring session.',
-  'Tutor account help': 'I need help becoming a tutor or managing my tutor listing.',
+  'Booking help': 'I need help with booking an instructor session.',
+  'Instructor account help': 'I need help becoming an instructor or managing my instructor listing.',
   'Payment issue': 'I have a payment, charge, or refund issue.',
   'Technical issue': 'Something on the site is broken or not working.',
   'Report a problem': 'I want to report a problem with Ask Marketplace.',
@@ -131,7 +131,7 @@ export default function SupportChat({ compact = false, initialPrompt = '' }) {
       <div style={{ height: compact ? 280 : 390, overflowY: 'auto', padding: compact ? 12 : 18, background: '#fff' }}>
         {messages.length === 0 && (
           <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.6 }}>
-            Tell us what is going on. You can ask about bookings, tutors, payments, accounts, or technical problems.
+            Tell us what is going on. You can ask about bookings, instructors, payments, accounts, or technical problems.
           </div>
         )}
         {messages.map((message, index) => {

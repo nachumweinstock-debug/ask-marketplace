@@ -10,6 +10,7 @@ import PoweredByAsk from '../components/PoweredByAsk';
 import ProviderOnboardingChecklist from '../components/ProviderOnboardingChecklist';
 import TrustBadges from '../components/TrustBadges';
 import { mediaUrl } from '../lib/media';
+import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -90,10 +91,10 @@ function AddToCalendarButton({ bookingId }) {
   );
 }
 
-const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
+const CAT_LABELS = { tutor: 'Instructor', barber: 'Barber', 'hebrew tutor': 'Hebrew', tennis: 'Tennis', other: 'Other' };
 
 const CATEGORIES = [
-  { id: 'tutor',     label: 'Tutoring'  },
+  { id: 'tutor',     label: 'Instruction'  },
   { id: 'barber',    label: 'Barber'    },
   { id: 'fitness',   label: 'Fitness'   },
   { id: 'languages', label: 'Languages' },
@@ -119,6 +120,27 @@ const TABS = [
   { id: 'bookings',     label: 'Sessions'  },
   { id: 'availability', label: 'Schedule'  },
 ];
+
+function TextSuggestion({ value, onApply }) {
+  if (!value || !hasSuggestion(value)) return null;
+  const suggestion = suggestText(value);
+  return (
+    <button type="button" onClick={() => onApply(suggestion)} style={{
+      marginTop: 7,
+      border: '1px solid #BFDBFE',
+      background: '#EFF6FF',
+      color: '#1D4ED8',
+      borderRadius: 999,
+      padding: '5px 10px',
+      fontSize: 11.5,
+      fontWeight: 800,
+      cursor: 'pointer',
+      fontFamily: 'var(--font-ui)',
+    }}>
+      Apply spelling suggestion: {suggestion.slice(0, 70)}{suggestion.length > 70 ? '...' : ''}
+    </button>
+  );
+}
 
 
 export default function ProviderDashboard() {
@@ -916,8 +938,10 @@ export default function ProviderDashboard() {
                   <input value={editModal.form.custom_category}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: e.target.value } }))}
                     placeholder="e.g. Photography, Golf Lessons…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.custom_category} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, custom_category: value } }))} />
                 </div>
               )}
 
@@ -944,8 +968,10 @@ export default function ProviderDashboard() {
                   <input value={editModal.form.subcategory}
                     onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: e.target.value } }))}
                     placeholder="Or type your own…"
+                    spellCheck="true"
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', boxSizing: 'border-box' }}
                   />
+                  <TextSuggestion value={editModal.form.subcategory} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, subcategory: value } }))} />
                 </div>
               )}
 
@@ -954,8 +980,10 @@ export default function ProviderDashboard() {
                 <textarea value={editModal.form.bio}
                   onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, bio: e.target.value } }))}
                   rows={4} required
+                  spellCheck="true"
                   style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', resize: 'vertical', boxSizing: 'border-box' }}
                 />
+                <TextSuggestion value={editModal.form.bio} onApply={value => setEditModal(m => ({ ...m, form: { ...m.form, bio: value } }))} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

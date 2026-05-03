@@ -29,7 +29,7 @@ router.get('/ids', requireAuth, (req, res) => {
 
 router.post('/:tutorId', requireAuth, (req, res) => {
   const tutor = db.prepare('SELECT id FROM provider_profiles WHERE id = ?').get(req.params.tutorId);
-  if (!tutor) return res.status(404).json({ error: 'Tutor not found' });
+  if (!tutor) return res.status(404).json({ error: 'Instructor not found' });
   db.prepare('INSERT OR IGNORE INTO saved_tutors (user_id, tutor_id) VALUES (?, ?)').run(req.user.id, tutor.id);
   res.json({ saved: true, tutor_id: tutor.id });
 });

@@ -4,7 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { fmtTime, fmtDay } from '../lib/slots';
 
-const CAT_LABELS = { tutor: 'Tutor', barber: 'Barber', 'hebrew tutor': 'Hebrew Tutor', tennis: 'Tennis', other: 'Other' };
+const CAT_LABELS = { tutor: 'Instructor', barber: 'Barber', 'hebrew tutor': 'Hebrew Instructor', tennis: 'Tennis', other: 'Other' };
 
 export default function Chat() {
   const { bookingId } = useParams();

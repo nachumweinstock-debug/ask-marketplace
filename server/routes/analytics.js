@@ -3,7 +3,6 @@ import db from '../db.js';
 import { optionalAuth, requireAuth } from '../auth.js';
 
 const router = Router();
-const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
 
 const CONVERSION_EVENTS = new Set([
   'signup_started',
@@ -19,13 +18,6 @@ const CONVERSION_EVENTS = new Set([
 function requireAdmin(req, res, next) {
   const u = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
   if (!u?.is_admin) return res.status(403).json({ error: 'Admin only' });
-  next();
-}
-
-function requireDeveloperAdmin(req, res, next) {
-  if (req.user?.email?.toLowerCase() !== DEVELOPER_ADMIN_EMAIL) {
-    return res.status(403).json({ error: 'Developer admin only' });
-  }
   next();
 }
 
@@ -286,7 +278,7 @@ router.post('/events', optionalAuth, (req, res) => {
   res.status(202).json({ ok: true, inserted: inserted.length });
 });
 
-router.get('/admin/summary', requireAuth, requireAdmin, requireDeveloperAdmin, (req, res) => {
+router.get('/admin/summary', requireAuth, requireAdmin, (req, res) => {
   const range = req.query.range || '30d';
   const pageviewFilter = addFilters(rangeWhere(range, 'p'), req.query, 'p');
   const eventFilter = addFilters(rangeWhere(range, 'e'), req.query, 'e');
@@ -390,9 +382,9 @@ router.get('/admin/summary', requireAuth, requireAdmin, requireDeveloperAdmin, (
   const eventCounts = Object.fromEntries(eventCountRows.map((row) => [row.event_name, row.count]));
   const funnel = [
     { step: 'Landing page visit', count: pageviews.filter((p) => p.landing_page === p.path || p.page_type !== 'dashboard').length },
-    { step: 'Tutor search', count: eventCounts.search_started || 0 },
-    { step: 'Tutor profile view', count: eventCounts.tutor_profile_viewed || 0 },
-    { step: 'Contact/book tutor', count: (eventCounts.contact_tutor_clicked || 0) + (eventCounts.booking_started || 0) },
+    { step: 'Instructor search', count: eventCounts.search_started || 0 },
+    { step: 'Instructor profile view', count: eventCounts.tutor_profile_viewed || 0 },
+    { step: 'Contact/book instructor', count: (eventCounts.contact_tutor_clicked || 0) + (eventCounts.booking_started || 0) },
     { step: 'Signup', count: eventCounts.signup_completed || 0 },
   ];
   const tutorFunnel = [

@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import api from '../api';
 
-const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
-
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -134,11 +132,9 @@ export default function Navbar() {
     await signOut(); navigate('/');
   }
 
-  const isDeveloperAdmin = user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
-
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
-    { to: '/find-a-tutor', label: 'Find Tutor', show: true },
+    { to: '/find-a-tutor', label: 'Find Instructor', show: true },
     { to: '/saved-tutors', label: 'Saved', show: !!user },
     { to: '/people', label: 'People', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
@@ -151,7 +147,7 @@ export default function Navbar() {
     { to: '/admin', label: 'Admin', show: !!user && user.is_admin, admin: true },
     { to: '/admin/support', label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
     { to: '/admin/reviews', label: 'Reviews', show: !!user && user.is_admin, admin: true },
-    { to: '/admin/analytics', label: 'Analytics', show: isDeveloperAdmin, admin: true },
+    { to: '/admin/analytics', label: 'Analytics', show: !!user && user.is_admin, admin: true },
   ].filter(i => i.show);
 
   function isActive(to) {
@@ -246,7 +242,7 @@ export default function Navbar() {
                       zIndex: 100, animation: 'slideDown 0.15s ease both',
                     }}>
                       <DropItem to="/account" onClick={() => setDropOpen(false)}>My Profile</DropItem>
-                      <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Tutors</DropItem>
+                      <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Instructors</DropItem>
                       <DropItem to="/referrals" onClick={() => setDropOpen(false)}>Referrals</DropItem>
                       <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
                       <button onClick={handleSignOut} style={{
@@ -325,7 +321,7 @@ export default function Navbar() {
           {user ? (
             <>
               <DrawerLink to="/account" active={path === '/account'} onClick={() => setMobileOpen(false)}>My Profile</DrawerLink>
-              <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved Tutors</DrawerLink>
+              <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved Instructors</DrawerLink>
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--cream-200)', marginTop: 4 }}>
                 <button onClick={handleSignOut} style={{
                   width: '100%', background: '#FEF2F2', border: '1px solid #FECACA',
