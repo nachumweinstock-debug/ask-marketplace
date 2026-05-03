@@ -729,10 +729,63 @@ body {
   white-space: nowrap;
 }
 .profile-card {
-  background: linear-gradient(180deg, #fff, #fafafa);
-  border: 1px solid var(--gray-100);
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  background: #fff;
+  border: 1px solid rgba(23,19,15,0.11);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(23,19,15,0.03), 0 16px 40px rgba(23,19,15,0.045);
+}
+.profile-save-rail {
+  position: sticky;
+  top: 68px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid rgba(23,19,15,0.13);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 34px rgba(23,19,15,0.08);
+}
+.profile-save-rail strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.15;
+}
+.profile-save-rail span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.profile-save-rail button {
+  border: 0;
+  border-radius: 999px;
+  min-height: 38px;
+  padding: 0 17px;
+  background: var(--text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 850;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.profile-save-rail button:disabled {
+  background: var(--gray-200);
+  color: var(--gray-500);
+  cursor: default;
+}
+.profile-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 .profile-checklist-card {
   margin-bottom: 16px;
@@ -974,6 +1027,13 @@ body {
   }
   .profile-ig { width: 100%; justify-content: center; }
   .profile-card { padding: 18px !important; border-radius: 12px; }
+  .profile-save-rail {
+    top: 64px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .profile-save-rail button { width: 100%; }
+  .profile-field-grid { grid-template-columns: 1fr; }
   .profile-checklist-head {
     grid-template-columns: 1fr;
     padding: 18px;

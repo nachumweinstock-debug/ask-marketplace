@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AtSign, BookOpenCheck, Camera, Check, Copy, ExternalLink, GraduationCap, Heart, ImagePlus, QrCode, Share2, UserRound } from 'lucide-react';
 import api from '../api';
@@ -89,23 +89,26 @@ export default function AccountProfile() {
   const [shareCopied, setShareCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [igFollowed, setIgFollowed] = useState(() => localStorage.getItem('ask_followed_instagram') === '1');
+  const [savedSnapshot, setSavedSnapshot] = useState('');
   const avatarRef = useRef(null);
   const majorRef = useRef(null);
   const interestsRef = useRef(null);
 
   const [form, setForm] = useState({
-    name: '', username: '', user_bio: '', major: '', interests: '', classes_taking: '', gpa: '',
-    zelle: '', venmo: '', phone: '', contact_pref: 'imessage',
+    name: '', username: '', user_bio: '', university: '', major: '', interests: '', classes_taking: '', gpa: '',
+    zelle: '', venmo: '', phone: '', contact_pref: 'imessage', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
   });
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const isDirty = useMemo(() => JSON.stringify(form) !== savedSnapshot || !!avatarPreview, [form, savedSnapshot, avatarPreview]);
 
   useEffect(() => {
     api.get('/account').then(({ data }) => {
       setProfile(data);
-      setForm({
+      const nextForm = {
         name:           data.name || '',
         username:       data.username || '',
         user_bio:       data.user_bio || '',
+        university:     data.university || '',
         major:          data.major || '',
         interests:      data.interests || '',
         classes_taking: data.classes_taking || '',
@@ -114,9 +117,22 @@ export default function AccountProfile() {
         venmo:          data.venmo || '',
         phone:          data.phone || '',
         contact_pref:   data.contact_pref || 'imessage',
-      });
+        timezone:       data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      };
+      setForm(nextForm);
+      setSavedSnapshot(JSON.stringify(nextForm));
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    function warnBeforeUnload(e) {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [isDirty]);
 
   function set(k) { return v => setForm(f => ({ ...f, [k]: v })); }
 
@@ -167,20 +183,23 @@ export default function AccountProfile() {
       const { data: updated } = await api.put('/account', payload);
       // Sync profile and form with server-confirmed values
       setProfile(p => ({ ...p, ...updated }));
-      setForm(f => ({
-        ...f,
-        name:           updated.name           ?? f.name,
-        username:       updated.username       ?? f.username,
-        user_bio:       updated.user_bio        ?? f.user_bio,
-        major:          updated.major           ?? f.major,
-        interests:      updated.interests       ?? f.interests,
-        classes_taking: updated.classes_taking  ?? f.classes_taking,
-        gpa:            updated.gpa             ?? f.gpa,
-        zelle:          updated.zelle           ?? f.zelle,
-        venmo:          updated.venmo           ?? f.venmo,
-        phone:          updated.phone           ?? f.phone,
-        contact_pref:   updated.contact_pref    ?? f.contact_pref,
-      }));
+      const nextForm = {
+        name:           updated.name || '',
+        username:       updated.username || '',
+        user_bio:       updated.user_bio || '',
+        university:     updated.university || '',
+        major:          updated.major || '',
+        interests:      updated.interests || '',
+        classes_taking: updated.classes_taking || '',
+        gpa:            updated.gpa == null ? '' : String(updated.gpa),
+        zelle:          updated.zelle || '',
+        venmo:          updated.venmo || '',
+        phone:          updated.phone || '',
+        contact_pref:   updated.contact_pref || 'imessage',
+        timezone:       updated.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      };
+      setForm(nextForm);
+      setSavedSnapshot(JSON.stringify(nextForm));
       setAvatarPreview(null);
       if (avatarRef.current) avatarRef.current.value = '';
       setMsg('Saved!');
@@ -285,6 +304,16 @@ export default function AccountProfile() {
       </div>
 
       <form onSubmit={handleSave}>
+        <div className="profile-save-rail">
+          <div>
+            <strong>{isDirty ? 'Unsaved profile changes' : 'Profile saved'}</strong>
+            <span>{isDirty ? 'Save before leaving so your account details stay put.' : 'Your account info is stored on Ask.'}</span>
+          </div>
+          <button type="submit" disabled={saving || !isDirty}>
+            {saving ? 'Saving...' : isDirty ? 'Save changes' : 'Saved'}
+          </button>
+        </div>
+
         <ProfileChecklist items={checklistItems} percent={checklistPercent} />
 
         {/* Identity card */}
@@ -410,7 +439,7 @@ export default function AccountProfile() {
             <div className="profile-share-title">Help ASK grow on campus</div>
             <p>Follow us on Instagram and tag us when you share your profile.</p>
           </div>
-          <a href={IG_URL} target="_blank" rel="noopener noreferrer">
+          <a href={IG_URL} target="_blank" rel="noopener noreferrer" onClick={markInstagramFollowed}>
             <Camera size={16} />
             Follow @uasklive
           </a>
@@ -418,7 +447,16 @@ export default function AccountProfile() {
 
         {/* Academics */}
         <Section title="Academics">
-          <div className="grid-2col" style={{ gap: 14, marginBottom: 14 }}>
+          <div className="profile-field-grid" style={{ marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>University</label>
+              <input value={form.university} onChange={e => set('university')(e.target.value)}
+                placeholder="e.g. Yeshiva University"
+                style={fieldStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
             <div>
               <label style={labelStyle}>Major</label>
               <input value={form.major} onChange={e => set('major')(e.target.value)}
@@ -433,6 +471,15 @@ export default function AccountProfile() {
               <label style={labelStyle}>GPA</label>
               <input value={form.gpa} onChange={e => set('gpa')(e.target.value)}
                 placeholder="e.g. 3.8 / 4.0"
+                style={fieldStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Timezone</label>
+              <input value={form.timezone} onChange={e => set('timezone')(e.target.value)}
+                placeholder="America/New_York"
                 style={fieldStyle}
                 onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border)'}
