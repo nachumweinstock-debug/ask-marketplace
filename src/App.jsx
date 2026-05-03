@@ -297,6 +297,7 @@ function AppRoutes() {
         <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <FloatingSupportButton />
     </BrowserRouter>
   );
 }
@@ -306,7 +307,6 @@ export default function App() {
     <AuthProvider>
       <AppRoutes />
       <CookieBanner />
-      <FloatingSupportButton />
     </AuthProvider>
   );
 }
