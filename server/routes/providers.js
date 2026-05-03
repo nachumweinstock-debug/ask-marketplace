@@ -332,7 +332,7 @@ router.get('/', (req, res) => {
 
 // POST /providers/become — create a new listing (always creates new, no longer a toggle)
 router.post('/become', requireAuth, (req, res) => {
-  db.prepare('INSERT INTO provider_profiles (user_id, category) VALUES (?, ?)').run(req.user.id, 'other');
+  db.prepare("INSERT INTO provider_profiles (user_id, category, created_at) VALUES (?, ?, datetime('now'))").run(req.user.id, 'other');
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
   // Auto-assign username if not already set
   const existing = db.prepare('SELECT username, name FROM users WHERE id = ?').get(req.user.id);

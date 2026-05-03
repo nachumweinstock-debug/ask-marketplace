@@ -489,6 +489,28 @@ export async function sendAdminNewUserNotification({ name, email, method = 'emai
   });
 }
 
+export async function sendNoAvailabilityReminderEmail({ toEmail, toName, listingTitle, profileUrl }) {
+  const first = (toName || 'there').split(' ')[0];
+  await send({
+    to: toEmail,
+    subject: 'Add times so students can book you on ASK',
+    html: shell(`Your ASK listing needs availability`, `
+      ${header('⏰', `Add bookable times, ${first}`, 'Your listing is live, but students need open slots before they can book.')}
+      ${body(`
+        <p style="margin:0 0 16px;font-size:15px;color:${DARK};line-height:1.6">
+          Your ${listingTitle ? `<strong>${listingTitle}</strong>` : 'ASK'} listing does not have any available time slots yet.
+          Add a few regular times so students can book without texting back and forth.
+        </p>
+        <p style="margin:0 0 20px;font-size:14px;color:${MUTED};line-height:1.6">
+          Quick win: add weeknight or Sunday slots for the next 4 weeks. You can remove or change them anytime.
+        </p>
+        ${btn('https://uask.live/dashboard/provider?tab=availability', 'Add availability')}
+        ${profileUrl ? btn(profileUrl, 'View my profile', '#111111') : ''}
+      `)}
+    `),
+  });
+}
+
 export async function sendAdminPrankNotification() {
   await send({
     to: [DEV_ADMIN_EMAIL],

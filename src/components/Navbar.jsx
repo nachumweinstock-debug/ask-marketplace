@@ -66,11 +66,13 @@ export default function Navbar() {
   const [bookingNotifCount, setBookingNotifCount] = useState(0);
   const [pendingBookings, setPendingBookings] = useState(0);
   const [reminderCount, setReminderCount] = useState(0);
+  const [igFollowed, setIgFollowed] = useState(() => localStorage.getItem('ask_followed_instagram') === '1');
   const [toast, setToast] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const dropRef = useRef(null);
   const prevUnreadRef = useRef(null);
   const path = location.pathname;
+  const profileNeedsWork = !!user && (!user.avatar_url || !user.major || !user.interests || !igFollowed);
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
@@ -83,6 +85,18 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => { setMobileOpen(false); setDropOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    function syncIgFollowed() {
+      setIgFollowed(localStorage.getItem('ask_followed_instagram') === '1');
+    }
+    window.addEventListener('focus', syncIgFollowed);
+    window.addEventListener('storage', syncIgFollowed);
+    return () => {
+      window.removeEventListener('focus', syncIgFollowed);
+      window.removeEventListener('storage', syncIgFollowed);
+    };
+  }, []);
 
   // Scroll shadow
   useEffect(() => {
@@ -207,6 +221,7 @@ export default function Navbar() {
                     background: dropOpen ? 'var(--gray-100)' : 'transparent',
                     border: 'none', borderRadius: 99, cursor: 'pointer',
                     transition: 'background .12s',
+                    position: 'relative',
                   }}
                     onMouseEnter={e => { if (!dropOpen) e.currentTarget.style.background = 'var(--gray-100)'; }}
                     onMouseLeave={e => { if (!dropOpen) e.currentTarget.style.background = 'transparent'; }}
@@ -233,6 +248,7 @@ export default function Navbar() {
                     <svg width="10" height="6" viewBox="0 0 10 6" style={{ color: 'var(--muted)', flexShrink: 0 }}>
                       <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                     </svg>
+                    {profileNeedsWork && <ProfileDot />}
                   </button>
 
                   {dropOpen && (
@@ -243,7 +259,9 @@ export default function Navbar() {
                       minWidth: 168, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                       zIndex: 100, animation: 'slideDown 0.15s ease both',
                     }}>
-                      <DropItem to="/account" onClick={() => setDropOpen(false)}>My Profile</DropItem>
+                      <DropItem to="/account" onClick={() => setDropOpen(false)}>
+                        My Profile {profileNeedsWork && <ProfileDot inline />}
+                      </DropItem>
                       <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Instructors</DropItem>
                       <DropItem to="/referrals" onClick={() => setDropOpen(false)}>Referrals</DropItem>
                       <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
@@ -322,7 +340,9 @@ export default function Navbar() {
           ))}
           {user ? (
             <>
-              <DrawerLink to="/account" active={path === '/account'} onClick={() => setMobileOpen(false)}>My Profile</DrawerLink>
+              <DrawerLink to="/account" active={path === '/account'} onClick={() => setMobileOpen(false)}>
+                My Profile {profileNeedsWork && <ProfileDot inline />}
+              </DrawerLink>
               <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved Instructors</DrawerLink>
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--cream-200)', marginTop: 4 }}>
                 <button onClick={handleSignOut} style={{
@@ -364,8 +384,8 @@ export default function Navbar() {
             { to: '/people', label: 'People', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
             { to: '/messages', label: 'Messages', badge: unread, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
             { to: user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student', label: 'My Stuff', badge: notifCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
-            { to: '/account', label: 'Profile', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-          ].map(({ to, label, icon, badge }) => {
+            { to: '/account', label: 'Profile', dot: profileNeedsWork, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+          ].map(({ to, label, icon, badge, dot }) => {
             const active = to === '/messages' ? path.startsWith('/messages')
               : to.startsWith('/dashboard') ? path.startsWith('/dashboard')
               : to === '/account' ? path === '/account'
@@ -391,6 +411,7 @@ export default function Navbar() {
                       {badge > 9 ? '9+' : badge}
                     </span>
                   )}
+                  {dot && <ProfileDot />}
                 </div>
                 <span style={{ fontSize: 9.5, fontWeight: active ? 600 : 500, fontFamily: 'var(--font-ui)' }}>{label}</span>
                 {active && <span style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:2.5, background:'var(--accent)', borderRadius:2 }}/>}
@@ -404,6 +425,24 @@ export default function Navbar() {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+function ProfileDot({ inline = false }) {
+  return (
+    <span
+      aria-label="Profile needs attention"
+      style={inline ? {
+        display: 'inline-block', width: 7, height: 7, borderRadius: 999,
+        background: '#E11D48', marginLeft: 5, boxShadow: '0 0 0 2px #fff',
+        verticalAlign: 'middle',
+      } : {
+        position: 'absolute', top: -2, right: -2,
+        width: 9, height: 9, borderRadius: 999,
+        background: '#E11D48', border: '2px solid #fff',
+        boxShadow: '0 0 0 1px rgba(225,29,72,0.22)',
+      }}
+    />
+  );
+}
+
 function Badge({ n, color = 'var(--accent)' }) {
   return (
     <span style={{

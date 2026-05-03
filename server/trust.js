@@ -90,8 +90,6 @@ export function trustForProvider(providerId) {
     report_count: reportCount,
     saved_count: savedCount,
     booking_count: bookings.length,
-    verified: false,
-    school_verified: !!provider.school_verified,
     joined_at: provider.joined_at,
     last_active_at: provider.last_active_at,
     labels,

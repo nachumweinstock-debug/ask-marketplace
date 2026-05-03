@@ -254,6 +254,13 @@ if (!ppColsFinal.includes('max_group_size'))   db.exec('ALTER TABLE provider_pro
 if (!ppColsFinal.includes('intro_video_url'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN intro_video_url TEXT');
 if (!ppColsFinal.includes('portfolio_notes'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN portfolio_notes TEXT');
 if (!ppColsFinal.includes('school_verified'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN school_verified INTEGER DEFAULT 0');
+if (!ppColsFinal.includes('created_at')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN created_at DATETIME');
+  db.prepare("UPDATE provider_profiles SET created_at = datetime('now', '-3 days') WHERE created_at IS NULL").run();
+}
+if (!ppColsFinal.includes('last_no_availability_reminder_at')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN last_no_availability_reminder_at DATETIME');
+}
 
 const reviewCols = db.pragma('table_info(reviews)').map(c => c.name);
 if (!reviewCols.includes('hidden')) db.exec('ALTER TABLE reviews ADD COLUMN hidden INTEGER DEFAULT 0');

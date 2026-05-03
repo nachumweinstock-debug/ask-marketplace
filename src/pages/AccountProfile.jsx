@@ -88,6 +88,7 @@ export default function AccountProfile() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [igFollowed, setIgFollowed] = useState(() => localStorage.getItem('ask_followed_instagram') === '1');
   const avatarRef = useRef(null);
   const majorRef = useRef(null);
   const interestsRef = useRef(null);
@@ -204,6 +205,10 @@ export default function AccountProfile() {
   const publicPath = username ? `/${username}` : `/people/${profile?.id}`;
   const profileUrl = `${window.location.origin}${publicPath}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(profileUrl)}`;
+  function markInstagramFollowed() {
+    localStorage.setItem('ask_followed_instagram', '1');
+    setIgFollowed(true);
+  }
   const checklistItems = [
     {
       label: 'Add a profile photo',
@@ -225,6 +230,16 @@ export default function AccountProfile() {
       done: !!form.interests.trim(),
       icon: Heart,
       onClick: () => interestsRef.current?.focus(),
+    },
+    {
+      label: 'Follow Ask on Instagram',
+      help: 'Stay plugged into new instructors and promos.',
+      done: igFollowed,
+      icon: Camera,
+      onClick: () => {
+        markInstagramFollowed();
+        window.open(IG_URL, '_blank', 'noopener,noreferrer');
+      },
     },
     {
       label: 'Book your first instructor',
@@ -263,7 +278,7 @@ export default function AccountProfile() {
           <h1 className="profile-title">My Profile</h1>
           <p className="profile-subtitle">Tune how people see you, then share your profile anywhere.</p>
         </div>
-        <a className="profile-ig" href={IG_URL} target="_blank" rel="noopener noreferrer">
+        <a className="profile-ig" href={IG_URL} target="_blank" rel="noopener noreferrer" onClick={markInstagramFollowed}>
           <Camera size={18} />
           <span>@uasklive</span>
         </a>

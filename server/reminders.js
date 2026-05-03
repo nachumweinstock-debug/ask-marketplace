@@ -11,7 +11,7 @@
 
 import db from './db.js';
 import { smsAppointmentReminder, smsReviewReminder } from './sms.js';
-import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification } from './email.js';
+import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification, sendNoAvailabilityReminderEmail } from './email.js';
 
 // Returns "YYYY-MM-DD HH:MM" in Eastern time, offset by `mins` minutes from now
 function easternOffset(mins = 0) {
@@ -156,11 +156,61 @@ async function sendUnreadDmNudges() {
   }
 }
 
+function easternParts() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date());
+  return {
+    hour: Number(parts.find(p => p.type === 'hour')?.value || 0),
+    minute: Number(parts.find(p => p.type === 'minute')?.value || 0),
+  };
+}
+
+async function sendNoAvailabilityListingReminders() {
+  const { hour } = easternParts();
+  if (hour !== 7) return;
+
+  const listings = db.prepare(`
+    SELECT pp.id, pp.title, pp.category, pp.custom_category, pp.subcategory,
+           u.email, u.name, u.username
+    FROM provider_profiles pp
+    JOIN users u ON u.id = pp.user_id
+    WHERE COALESCE(pp.created_at, datetime('now', '-3 days')) <= datetime('now', '-2 days')
+      AND pp.last_no_availability_reminder_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM availability a
+        WHERE a.provider_id = pp.id
+          AND a.is_booked = 0
+          AND (a.date NOT GLOB '[0-9]*' OR a.date >= date('now'))
+      )
+  `).all();
+
+  for (const listing of listings) {
+    try {
+      const listingTitle = listing.title || listing.subcategory || listing.custom_category || listing.category || 'ASK';
+      await sendNoAvailabilityReminderEmail({
+        toEmail: listing.email,
+        toName: listing.name,
+        listingTitle,
+        profileUrl: listing.username ? `https://uask.live/${listing.username}` : `https://uask.live/providers/${listing.id}`,
+      });
+      db.prepare("UPDATE provider_profiles SET last_no_availability_reminder_at = datetime('now') WHERE id = ?").run(listing.id);
+      console.log(`[REMINDER] no-availability reminder sent → ${listing.email} listing ${listing.id}`);
+    } catch (err) {
+      console.error(`[REMINDER] no-availability reminder error listing ${listing.id}:`, err.message);
+    }
+  }
+}
+
 export function startReminderJobs() {
   const run = () => {
     sendAppointmentReminders().catch(e => console.error('[REMINDER] before job error:', e.message));
     sendReviewReminders().catch(e => console.error('[REMINDER] review job error:', e.message));
     sendUnreadDmNudges().catch(e => console.error('[REMINDER] DM nudge error:', e.message));
+    sendNoAvailabilityListingReminders().catch(e => console.error('[REMINDER] no-availability job error:', e.message));
   };
 
   // Run once at startup, then every 15 minutes

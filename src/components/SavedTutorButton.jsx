@@ -7,6 +7,7 @@ export default function SavedTutorButton({ tutorId, initialSaved = false, onChan
   const { user } = useAuth();
   const [saved, setSaved] = useState(!!initialSaved);
   const [loading, setLoading] = useState(false);
+  const [burst, setBurst] = useState(false);
 
   useEffect(() => {
     setSaved(!!initialSaved);
@@ -30,6 +31,8 @@ export default function SavedTutorButton({ tutorId, initialSaved = false, onChan
         await api.post(`/saved-tutors/${tutorId}`);
         setSaved(true);
         onChange?.(true);
+        setBurst(true);
+        setTimeout(() => setBurst(false), 650);
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Could not update saved instructors');
@@ -61,11 +64,18 @@ export default function SavedTutorButton({ tutorId, initialSaved = false, onChan
         fontSize: 12.5,
         fontWeight: 800,
         fontFamily: 'var(--font-ui)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+        boxShadow: saved ? '0 6px 18px rgba(219,39,119,0.13)' : '0 4px 16px rgba(0,0,0,0.10)',
+        position: 'relative',
+        overflow: 'visible',
       }}
     >
       <Heart size={16} fill={saved ? 'currentColor' : 'none'} />
       {!compact && (saved ? 'Saved' : 'Save')}
+      {burst && (
+        <span aria-hidden="true" className="saved-heart-burst">
+          <span>♥</span><span>♥</span><span>♥</span>
+        </span>
+      )}
     </button>
   );
 }

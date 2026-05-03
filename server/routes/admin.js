@@ -320,7 +320,7 @@ router.post('/import', requireAuth, requireAdmin, (req, res) => {
     const existing = db.prepare('SELECT id FROM provider_profiles WHERE user_id = ?').get(user.id);
     if (!existing) {
       db.prepare(
-        'INSERT INTO provider_profiles (user_id, category, custom_category, bio, price_per_session, zelle, venmo) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        "INSERT INTO provider_profiles (user_id, category, custom_category, bio, price_per_session, zelle, venmo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))"
       ).run(user.id, category, custom_cat, bio, price, zelle, venmo);
     } else {
       db.prepare(
