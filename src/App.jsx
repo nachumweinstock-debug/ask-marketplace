@@ -162,7 +162,7 @@ function LayoutNoFooter({ children }) {
 function AppRoutes() {
   const { user } = useAuth();
   return (
-    <BrowserRouter>
+    <>
       <AnalyticsTracker />
       <Routes>
         <Route path="/" element={<Layout><Home /></Layout>} />
@@ -310,15 +310,17 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <FloatingSupportButton />
-    </BrowserRouter>
+    </>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-      <CookieBanner />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+        <CookieBanner />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
