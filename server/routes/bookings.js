@@ -9,7 +9,7 @@ function icsToken(bookingId) {
   const secret = process.env.JWT_SECRET || 'dev-only-insecure-fallback-do-not-use-in-prod';
   return createHmac('sha256', secret).update(`ics-${bookingId}`).digest('hex').slice(0, 24);
 }
-import { sendBookingNotification, sendAdminBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification, sendBookingDeclinedNotification, sendRescheduleProposalEmail, sendRescheduleResponseEmail } from '../email.js';
+import { sendBookingNotification, sendAdminBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification, sendBookingDeclinedNotification, sendRescheduleProposalEmail, sendRescheduleResponseEmail, sendStudentRescheduleProposalEmail, sendStudentRescheduleResponseEmail } from '../email.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 import posthog from '../posthog.js';
@@ -93,11 +93,13 @@ router.get('/mine', requireAuth, (req, res) => {
     const bookings = db.prepare(`
       SELECT b.*, a.date, a.start_time, a.end_time,
              u.name as student_name, u.email as student_email,
-             pp.category, pp.custom_category, pp.title as listing_title
+             pp.category, pp.custom_category, pp.title as listing_title,
+             pa.date as reschedule_date, pa.start_time as reschedule_start_time, pa.end_time as reschedule_end_time
       FROM bookings b
       JOIN availability a ON b.availability_id = a.id
       JOIN users u ON b.student_id = u.id
       JOIN provider_profiles pp ON b.provider_id = pp.id
+      LEFT JOIN availability pa ON b.reschedule_proposed_availability_id = pa.id
       WHERE pp.user_id = ?
       ORDER BY a.date DESC, a.start_time DESC
     `).all(req.user.id);
@@ -523,7 +525,7 @@ router.get('/:id/calendar', requireAuth, (req, res) => {
   });
 });
 
-// POST /bookings/:id/reschedule — provider proposes a new time slot
+// POST /bookings/:id/reschedule — provider or student proposes a new time slot
 router.post('/:id/reschedule', requireAuth, async (req, res) => {
   try {
     const { new_availability_id } = req.body;
@@ -532,38 +534,60 @@ router.post('/:id/reschedule', requireAuth, async (req, res) => {
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Can only reschedule confirmed bookings' });
+    if (booking.reschedule_status && booking.reschedule_status !== 'none') {
+      return res.status(400).json({ error: 'A reschedule proposal is already pending' });
+    }
 
-    const isOwner = db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?')
+    const isProvider = db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?')
       .get(req.user.id, booking.provider_id);
-    if (!isOwner) return res.status(403).json({ error: 'Forbidden' });
+    const isStudent = booking.student_id === req.user.id;
+    if (!isProvider && !isStudent) return res.status(403).json({ error: 'Forbidden' });
 
     const newSlot = db.prepare('SELECT * FROM availability WHERE id = ?').get(new_availability_id);
     if (!newSlot) return res.status(404).json({ error: 'Proposed slot not found' });
     if (newSlot.is_booked) return res.status(400).json({ error: 'That slot is already booked' });
-    if (newSlot.provider_id !== booking.provider_id) return res.status(400).json({ error: 'Slot does not belong to your listing' });
+    if (newSlot.provider_id !== booking.provider_id) return res.status(400).json({ error: 'Slot does not belong to this listing' });
     if (String(newSlot.id) === String(booking.availability_id)) return res.status(400).json({ error: 'That is already the current slot' });
+
+    const proposedBy = isProvider ? 'provider' : 'student';
+    const newStatus = isProvider ? 'pending_student_approval' : 'pending_provider_approval';
 
     db.prepare(`
       UPDATE bookings SET
         reschedule_proposed_availability_id = ?,
-        reschedule_proposed_by = 'provider',
-        reschedule_status = 'pending_student_approval'
+        reschedule_proposed_by = ?,
+        reschedule_status = ?
       WHERE id = ?
-    `).run(new_availability_id, booking.id);
+    `).run(new_availability_id, proposedBy, newStatus, booking.id);
 
     const originalSlot = db.prepare('SELECT * FROM availability WHERE id = ?').get(booking.availability_id);
-    const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
-    const providerUser = db.prepare(`
-      SELECT u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
-    `).get(booking.provider_id);
 
-    if (student && providerUser && originalSlot) {
-      sendRescheduleProposalEmail({
-        studentEmail: student.email, studentName: student.name,
-        providerName: providerUser.name,
-        originalDate: originalSlot.date, originalStart: originalSlot.start_time, originalEnd: originalSlot.end_time,
-        newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
-      }).catch(() => {});
+    if (isProvider) {
+      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const providerUser = db.prepare(`
+        SELECT u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      if (student && providerUser && originalSlot) {
+        sendRescheduleProposalEmail({
+          studentEmail: student.email, studentName: student.name,
+          providerName: providerUser.name,
+          originalDate: originalSlot.date, originalStart: originalSlot.start_time, originalEnd: originalSlot.end_time,
+          newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
+        }).catch(() => {});
+      }
+    } else {
+      const providerUser = db.prepare(`
+        SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
+      if (providerUser && student && originalSlot) {
+        sendStudentRescheduleProposalEmail({
+          providerEmail: providerUser.email, providerName: providerUser.name,
+          studentName: student.name,
+          originalDate: originalSlot.date, originalStart: originalSlot.start_time, originalEnd: originalSlot.end_time,
+          newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
+        }).catch(() => {});
+      }
     }
 
     res.json(db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking.id));
@@ -573,18 +597,23 @@ router.post('/:id/reschedule', requireAuth, async (req, res) => {
   }
 });
 
-// POST /bookings/:id/reschedule/accept — student accepts the proposed reschedule
+// POST /bookings/:id/reschedule/accept — accepting party confirms the proposed reschedule
 router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
   try {
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.student_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    if (booking.reschedule_status !== 'pending_student_approval') return res.status(400).json({ error: 'No pending reschedule proposal' });
+
+    const isStudentAccepting = booking.student_id === req.user.id && booking.reschedule_status === 'pending_student_approval';
+    const isProviderAccepting = !!db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?')
+      .get(req.user.id, booking.provider_id) && booking.reschedule_status === 'pending_provider_approval';
+
+    if (!isStudentAccepting && !isProviderAccepting) {
+      return res.status(403).json({ error: 'Forbidden or no pending proposal for you to accept' });
+    }
 
     const newSlot = db.prepare('SELECT * FROM availability WHERE id = ?').get(booking.reschedule_proposed_availability_id);
     if (!newSlot) return res.status(404).json({ error: 'Proposed slot no longer available' });
 
-    // Free old slot, claim new slot
     db.prepare('UPDATE availability SET is_booked = 0 WHERE id = ?').run(booking.availability_id);
     db.prepare('UPDATE availability SET is_booked = 1 WHERE id = ?').run(newSlot.id);
     db.prepare(`
@@ -596,17 +625,30 @@ router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
       WHERE id = ?
     `).run(newSlot.id, booking.id);
 
-    const providerUser = db.prepare(`
-      SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
-    `).get(booking.provider_id);
-    const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
-
-    if (providerUser && student) {
-      sendRescheduleResponseEmail({
-        providerEmail: providerUser.email, providerName: providerUser.name,
-        studentName: student.name, accepted: true,
-        newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
-      }).catch(() => {});
+    if (isStudentAccepting) {
+      const providerUser = db.prepare(`
+        SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
+      if (providerUser && student) {
+        sendRescheduleResponseEmail({
+          providerEmail: providerUser.email, providerName: providerUser.name,
+          studentName: student.name, accepted: true,
+          newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
+        }).catch(() => {});
+      }
+    } else {
+      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const providerUser = db.prepare(`
+        SELECT u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      if (student && providerUser) {
+        sendStudentRescheduleResponseEmail({
+          studentEmail: student.email, studentName: student.name,
+          providerName: providerUser.name, accepted: true,
+          newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
+        }).catch(() => {});
+      }
     }
 
     res.json(db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking.id));
@@ -616,13 +658,19 @@ router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
   }
 });
 
-// POST /bookings/:id/reschedule/decline — student declines the proposed reschedule
+// POST /bookings/:id/reschedule/decline — accepting party declines the proposed reschedule
 router.post('/:id/reschedule/decline', requireAuth, async (req, res) => {
   try {
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.student_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
-    if (booking.reschedule_status !== 'pending_student_approval') return res.status(400).json({ error: 'No pending reschedule proposal' });
+
+    const isStudentDeclining = booking.student_id === req.user.id && booking.reschedule_status === 'pending_student_approval';
+    const isProviderDeclining = !!db.prepare('SELECT 1 FROM provider_profiles WHERE user_id = ? AND id = ?')
+      .get(req.user.id, booking.provider_id) && booking.reschedule_status === 'pending_provider_approval';
+
+    if (!isStudentDeclining && !isProviderDeclining) {
+      return res.status(403).json({ error: 'Forbidden or no pending proposal for you to decline' });
+    }
 
     db.prepare(`
       UPDATE bookings SET
@@ -632,17 +680,30 @@ router.post('/:id/reschedule/decline', requireAuth, async (req, res) => {
       WHERE id = ?
     `).run(booking.id);
 
-    const providerUser = db.prepare(`
-      SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
-    `).get(booking.provider_id);
-    const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
-
-    if (providerUser && student) {
-      sendRescheduleResponseEmail({
-        providerEmail: providerUser.email, providerName: providerUser.name,
-        studentName: student.name, accepted: false,
-        newDate: null, newStart: null, newEnd: null,
-      }).catch(() => {});
+    if (isStudentDeclining) {
+      const providerUser = db.prepare(`
+        SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
+      if (providerUser && student) {
+        sendRescheduleResponseEmail({
+          providerEmail: providerUser.email, providerName: providerUser.name,
+          studentName: student.name, accepted: false,
+          newDate: null, newStart: null, newEnd: null,
+        }).catch(() => {});
+      }
+    } else {
+      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
+      const providerUser = db.prepare(`
+        SELECT u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+      `).get(booking.provider_id);
+      if (student && providerUser) {
+        sendStudentRescheduleResponseEmail({
+          studentEmail: student.email, studentName: student.name,
+          providerName: providerUser.name, accepted: false,
+          newDate: null, newStart: null, newEnd: null,
+        }).catch(() => {});
+      }
     }
 
     res.json(db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking.id));

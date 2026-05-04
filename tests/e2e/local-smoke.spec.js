@@ -14,8 +14,8 @@ const FRONT = process.env.VITE_PORT ? `http://localhost:${process.env.VITE_PORT}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-let _counter = Date.now();
-function uid() { return ++_counter; }
+let _counter = 0;
+function uid() { return `${Date.now()}${process.pid}${++_counter}${Math.random().toString(36).slice(2, 6)}`; }
 function randEmail() { return `smoke-${uid()}@yutest.edu`; }
 
 async function post(path, body, token) {
@@ -264,18 +264,21 @@ test.describe('Reschedule lifecycle', () => {
     expect(body.error).toMatch(/confirmed/i);
   });
 
-  test('student cannot propose reschedule (forbidden)', async () => {
-    const provider = await signup('Reschedule Forbidden Provider');
+  test('student can propose reschedule → pending_provider_approval', async () => {
+    const provider = await signup('Reschedule Student Proposer Provider');
     const profile = await createListing(provider.token);
     const slot1 = await addSlot(provider.token, profile.id, 35, '16:00', '17:00');
     const slot2 = await addSlot(provider.token, profile.id, 36, '16:00', '17:00');
 
-    const student = await signup('Reschedule Forbidden Student');
+    const student = await signup('Reschedule Student Proposer');
     const booking = await book(student.token, slot1.id);
     await patch(`/api/bookings/${booking.id}`, { status: 'confirmed' }, provider.token);
 
     const res = await post(`/api/bookings/${booking.id}/reschedule`, { new_availability_id: slot2.id }, student.token);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    const updated = await res.json();
+    expect(updated.reschedule_status).toBe('pending_provider_approval');
+    expect(updated.reschedule_proposed_by).toBe('student');
   });
 
   test('student cannot accept someone else reschedule (forbidden)', async () => {

@@ -506,6 +506,43 @@ export async function sendRescheduleProposalEmail({ studentEmail, studentName, p
   });
 }
 
+export async function sendStudentRescheduleProposalEmail({ providerEmail, providerName, studentName, originalDate, originalStart, originalEnd, newDate, newStart, newEnd }) {
+  await send({
+    to: providerEmail,
+    subject: `${studentName} wants to reschedule your session`,
+    html: shell(`Reschedule request from ${studentName}`, `
+      ${header('📅', 'Reschedule request', `${studentName} would like to move your session to a new time.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Original time', originalDate, `${originalStart} – ${originalEnd}`),
+          infoRow('Proposed new time', newDate, `${newStart} – ${newEnd}`)
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          Head to your dashboard to accept or decline this request.
+        </p>
+        ${btn('https://uask.live/dashboard/provider', 'Accept or Decline')}
+      `)}
+    `),
+  });
+}
+
+export async function sendStudentRescheduleResponseEmail({ studentEmail, studentName, providerName, accepted, newDate, newStart, newEnd }) {
+  await send({
+    to: studentEmail,
+    subject: `${providerName} ${accepted ? 'accepted' : 'declined'} your reschedule request`,
+    html: shell(`Reschedule ${accepted ? 'accepted' : 'declined'}`, `
+      ${header(accepted ? '✅' : '❌', `Reschedule ${accepted ? 'accepted' : 'declined'}`, `${providerName} has ${accepted ? 'accepted' : 'declined'} your reschedule request.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Provider', providerName),
+          ...(accepted && newDate ? [infoRow('New session time', newDate, `${newStart} – ${newEnd}`)] : [infoRow('Status', 'Original booking unchanged')])
+        )}
+        ${btn('https://uask.live/dashboard/student', 'Open dashboard')}
+      `)}
+    `),
+  });
+}
+
 export async function sendRescheduleResponseEmail({ providerEmail, providerName, studentName, accepted, newDate, newStart, newEnd }) {
   await send({
     to: providerEmail,

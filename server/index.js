@@ -58,7 +58,7 @@ app.use(helmet({
 // (login, signup, password reset). NOT applied to /auth/me or OAuth callbacks.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30,
+  max: process.env.NODE_ENV === 'production' ? 30 : 300,
   message: { error: 'Too many attempts — please wait 15 minutes and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -66,7 +66,7 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 200,
+  max: process.env.NODE_ENV === 'production' ? 200 : 2000,
   message: { error: 'Too many requests — slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -75,7 +75,7 @@ const apiLimiter = rateLimit({
 // Tighter limiter for write-heavy endpoints (DMs, bookings, help-wanted, connections)
 const writeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 15,
+  max: process.env.NODE_ENV === 'production' ? 15 : 200,
   message: { error: 'Too many requests — slow down.' },
   standardHeaders: true,
   legacyHeaders: false,

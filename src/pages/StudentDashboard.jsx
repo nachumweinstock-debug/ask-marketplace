@@ -91,6 +91,10 @@ export default function StudentDashboard() {
   const [groupInvites, setGroupInvites] = useState([]);
   const [inviteLoading, setInviteLoading] = useState(null);
   const [rescheduleLoading, setRescheduleLoading] = useState(null);
+  const [rescheduleModal, setRescheduleModal] = useState(null); // booking object
+  const [rescheduleSlots, setRescheduleSlots] = useState([]);
+  const [rescheduleSlotId, setRescheduleSlotId] = useState('');
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
 
   useEffect(() => { fetchBookings(); fetchGroupInvites(); }, []);
 
@@ -143,6 +147,28 @@ export default function StudentDashboard() {
       fetchBookings();
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
     finally { setRescheduleLoading(null); }
+  }
+
+  async function openRescheduleModal(booking) {
+    setRescheduleModal(booking);
+    setRescheduleSlots([]);
+    setRescheduleSlotId('');
+    try {
+      const { data } = await api.get(`/availability/${booking.provider_profile_id}`);
+      const openSlots = (data || []).filter(s => !s.is_booked && String(s.id) !== String(booking.availability_id));
+      setRescheduleSlots(openSlots);
+    } catch { setRescheduleSlots([]); }
+  }
+
+  async function submitStudentReschedule() {
+    if (!rescheduleSlotId) return alert('Please select a new time slot');
+    setRescheduleSubmitting(true);
+    try {
+      await api.post(`/bookings/${rescheduleModal.id}/reschedule`, { new_availability_id: Number(rescheduleSlotId) });
+      setRescheduleModal(null);
+      fetchBookings();
+    } catch (err) { alert(err.response?.data?.error || 'Failed to propose reschedule'); }
+    finally { setRescheduleSubmitting(false); }
   }
 
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
@@ -270,7 +296,8 @@ export default function StudentDashboard() {
                 {upcoming.map(b => (
                   <BookingRow key={b.id} booking={b} onCancel={handleCancel} cancelLoading={cancelLoading} showChat
                     onMarkDone={b.status === 'confirmed' ? () => handleMarkDone(b.id) : null}
-                    doneLoading={doneLoading === b.id} />
+                    doneLoading={doneLoading === b.id}
+                    onReschedule={b.status === 'confirmed' ? () => openRescheduleModal(b) : null} />
                 ))}
               </div>
             </div>
@@ -291,6 +318,46 @@ export default function StudentDashboard() {
 
       {reviewTarget && (
         <ReviewModal booking={reviewTarget} onClose={() => setReviewTarget(null)} onSubmit={handleReview} />
+      )}
+
+      {rescheduleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}>
+          <div className="card" style={{ padding: 28, width: '100%', maxWidth: 420 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)', marginBottom: 4 }}>
+              Request a reschedule
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
+              Session with {rescheduleModal.provider_name} · {fmtDay(rescheduleModal.date)} · {fmtTime(rescheduleModal.start_time)}–{fmtTime(rescheduleModal.end_time)}
+            </div>
+            {rescheduleSlots.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+                {rescheduleSlots === null ? 'Loading available slots…' : 'No open slots available for this provider right now.'}
+              </div>
+            ) : (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 8 }}>Select a new time</div>
+                <select
+                  value={rescheduleSlotId}
+                  onChange={e => setRescheduleSlotId(e.target.value)}
+                  style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)', outline: 'none' }}
+                >
+                  <option value="">— choose a slot —</option>
+                  {rescheduleSlots.map(s => (
+                    <option key={s.id} value={s.id}>{s.date} · {fmtTime(s.start_time)}–{fmtTime(s.end_time)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setRescheduleModal(null)} style={{ flex: 1, padding: 10, border: '1.5px solid var(--border)', borderRadius: 999, fontSize: 13, cursor: 'pointer', background: 'var(--card)', color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>Cancel</button>
+              {rescheduleSlots.length > 0 && (
+                <button onClick={submitStudentReschedule} disabled={rescheduleSubmitting || !rescheduleSlotId} style={{ flex: 1, padding: 10, background: rescheduleSubmitting ? '#93C5FD' : 'var(--primary)', color: '#fff', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: rescheduleSubmitting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)' }}>
+                  {rescheduleSubmitting ? 'Sending…' : 'Send request'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -375,9 +442,11 @@ function AddToCalendarButton({ bookingId }) {
   );
 }
 
-function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, doneLoading, showChat }) {
+function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, doneLoading, showChat, onReschedule }) {
   const s = STATUS[booking.status] || STATUS.pending;
   const showCalendar = booking.status === 'confirmed';
+  const reschedulePending = booking.reschedule_status === 'pending_provider_approval';
+  const rescheduleAvailable = booking.status === 'confirmed' && (!booking.reschedule_status || booking.reschedule_status === 'none');
   return (
     <div className="card" style={{ padding: '16px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -411,6 +480,17 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, do
               style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
               Chat
             </Link>
+          )}
+          {reschedulePending && (
+            <span style={{ fontSize: 11, color: '#92600A', background: '#FFF8E6', border: '1px solid #FCD34D', borderRadius: 999, padding: '3px 10px' }}>
+              Reschedule pending
+            </span>
+          )}
+          {rescheduleAvailable && onReschedule && (
+            <button onClick={onReschedule}
+              style={{ fontSize: 12, color: '#92600A', background: '#FFF8E6', border: '1px solid #FCD34D', borderRadius: 999, padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>
+              Reschedule
+            </button>
           )}
           {onMarkDone && (
             <button onClick={onMarkDone} disabled={doneLoading}

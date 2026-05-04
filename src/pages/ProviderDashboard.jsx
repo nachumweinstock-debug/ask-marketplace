@@ -144,6 +144,58 @@ function TextSuggestion({ value, onApply }) {
 }
 
 
+function ProviderBookingCard({ b, profile, user, declineLoading, rescheduleLoading, onUpdateStatus, onDecline, onOpenReschedule, onProviderRescheduleResponse }) {
+  const profileUrl = `${window.location.origin}${profile ? providerUrl(user?.name, profile.id, user?.username) : '/browse'}`;
+  const hasPendingStudentReschedule = b.reschedule_status === 'pending_provider_approval';
+  return (
+    <div className="card" style={{ padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+            {b.student_email}
+            {' · '}
+            {fmtDay(b.date)}
+            {' · '}{fmtTime(b.start_time)}–{fmtTime(b.end_time)}
+          </div>
+          {hasPendingStudentReschedule && b.reschedule_date && (
+            <div style={{ marginTop: 6, fontSize: 12, color: '#92600A', background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 6, padding: '4px 10px', display: 'inline-block' }}>
+              Wants to move to {fmtDay(b.reschedule_date)} · {fmtTime(b.reschedule_start_time)}–{fmtTime(b.reschedule_end_time)}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color }}>
+            {STATUS[b.status]?.label}
+          </span>
+          <Link to={`/chat/${b.id}`} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', padding: '5px 12px', borderRadius: 999, border: '1px solid #BFDBFE', background: 'var(--accent)' }}>Chat</Link>
+          {b.status === 'pending' && (
+            <>
+              <button onClick={() => onUpdateStatus(b.id, 'confirmed')} style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Confirm</button>
+              <button onClick={() => onDecline(b)} disabled={declineLoading === b.id} style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)', opacity: declineLoading === b.id ? 0.6 : 1 }}>{declineLoading === b.id ? '…' : 'Decline'}</button>
+            </>
+          )}
+          {b.status === 'confirmed' && (
+            hasPendingStudentReschedule ? (
+              <>
+                <button onClick={() => onProviderRescheduleResponse(b.id, 'accept')} disabled={rescheduleLoading === b.id + 'accept'} style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>{rescheduleLoading === b.id + 'accept' ? '…' : 'Accept reschedule'}</button>
+                <button onClick={() => onProviderRescheduleResponse(b.id, 'decline')} disabled={rescheduleLoading === b.id + 'decline'} style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>{rescheduleLoading === b.id + 'decline' ? '…' : 'Decline'}</button>
+              </>
+            ) : (
+              <>
+                <AddToCalendarButton bookingId={b.id} />
+                <button onClick={() => onOpenReschedule(b)} style={{ background: '#FFF8E6', color: '#92600A', border: '1px solid #FCD34D', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Reschedule</button>
+                <button onClick={() => onUpdateStatus(b.id, 'completed')} style={{ background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Complete</button>
+              </>
+            )
+          )}
+        </div>
+      </div>
+      {b.status === 'confirmed' && <PoweredByAsk compact url={profileUrl} />}
+    </div>
+  );
+}
+
 export default function ProviderDashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -268,9 +320,23 @@ export default function ProviderDashboard() {
     }
   }
 
+  async function refreshBookings() {
+    try { const { data } = await api.get('/bookings/mine?as=provider'); setBookings(data); }
+    catch { /* ignore */ }
+  }
+
   async function updateBookingStatus(id, status) {
     try { await api.patch(`/bookings/${id}`, { status }); setBookings(bs => bs.map(b => b.id === id ? { ...b, status } : b)); }
     catch (err) { alert(err.response?.data?.error || 'Failed'); }
+  }
+
+  async function handleProviderRescheduleResponse(bookingId, action) {
+    setRescheduleLoading(bookingId + action);
+    try {
+      await api.post(`/bookings/${bookingId}/reschedule/${action}`);
+      await refreshBookings();
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setRescheduleLoading(null); }
   }
 
   async function handleDecline(booking) {
@@ -381,6 +447,17 @@ export default function ProviderDashboard() {
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
   const displayCat = profile?.custom_category || CAT_LABELS[profile?.category] || 'Other';
+
+  // Group upcoming bookings by listing (provider_id) for multi-listing providers
+  const listingMap = Object.fromEntries(myListings.map(l => [String(l.id), l]));
+  const upcomingGrouped = {};
+  for (const b of upcoming) {
+    const key = String(b.provider_id);
+    if (!upcomingGrouped[key]) upcomingGrouped[key] = [];
+    upcomingGrouped[key].push(b);
+  }
+  const groupedListingIds = Object.keys(upcomingGrouped);
+  const isMultiListing = myListings.length > 1;
 
   return (
     <div className="page" style={{ maxWidth: 840 }}>
@@ -652,69 +729,40 @@ export default function ProviderDashboard() {
             <div>
               {upcoming.length > 0 && (
                 <div style={{ marginBottom: 32 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
-                    Upcoming ({upcoming.length})
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {upcoming.map(b => (
-                      <div key={b.id} className="card" style={{ padding: '16px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                          <div style={{ flex: 1, minWidth: 200 }}>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
-                            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-                              {b.student_email}
-                              {' · '}
-                              {fmtDay(b.date)}
-                              {' · '}{fmtTime(b.start_time)}–{fmtTime(b.end_time)}
+                  {isMultiListing ? (
+                    // Multi-listing: group by listing with section headers
+                    groupedListingIds.map(listingId => {
+                      const listing = listingMap[listingId];
+                      const listingLabel = listing?.custom_category || listing?.subcategory || listing?.title || listing?.category || 'Listing';
+                      const listingBookings = upcomingGrouped[listingId];
+                      return (
+                        <div key={listingId} style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                              {listingLabel}
                             </div>
+                            {listing?.price_per_session > 0 && (
+                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>${listing.price_per_session}/session</span>
+                            )}
+                            <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {listingBookings.length} upcoming</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                            <span style={{
-                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
-                              background: STATUS[b.status]?.bg, color: STATUS[b.status]?.color,
-                            }}>
-                              {STATUS[b.status]?.label}
-                            </span>
-                            <Link to={`/chat/${b.id}`} style={{
-                              fontSize: 12, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none',
-                              padding: '5px 12px', borderRadius: 999, border: '1px solid #BFDBFE',
-                              background: 'var(--accent)',
-                            }}>Chat</Link>
-                            {b.status === 'pending' && (
-                              <>
-                                <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
-                                  background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
-                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                  fontFamily: 'var(--font-ui)',
-                                }}>Confirm</button>
-                                <button onClick={() => handleDecline(b)} disabled={declineLoading === b.id} style={{
-                                  background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA',
-                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                  fontFamily: 'var(--font-ui)', opacity: declineLoading === b.id ? 0.6 : 1,
-                                }}>{declineLoading === b.id ? '…' : 'Decline'}</button>
-                              </>
-                            )}
-                            {b.status === 'confirmed' && (
-                              <>
-                                <AddToCalendarButton bookingId={b.id} />
-                                <button onClick={() => openRescheduleModal(b)} style={{
-                                  background: '#FFF8E6', color: '#92600A', border: '1px solid #FCD34D',
-                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                  fontFamily: 'var(--font-ui)',
-                                }}>Reschedule</button>
-                                <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
-                                  background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
-                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                  fontFamily: 'var(--font-ui)',
-                                }}>Complete</button>
-                              </>
-                            )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {listingBookings.map(b => <ProviderBookingCard key={b.id} b={b} profile={profile} user={user} declineLoading={declineLoading} rescheduleLoading={rescheduleLoading} onUpdateStatus={updateBookingStatus} onDecline={handleDecline} onOpenReschedule={openRescheduleModal} onProviderRescheduleResponse={handleProviderRescheduleResponse} />)}
                           </div>
                         </div>
-                        {b.status === 'confirmed' && <PoweredByAsk compact url={`${window.location.origin}${profile ? providerUrl(user?.name, profile.id, user?.username) : '/browse'}`} />}
+                      );
+                    })
+                  ) : (
+                    // Single listing: flat list
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
+                        Upcoming ({upcoming.length})
                       </div>
-                    ))}
-                  </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {upcoming.map(b => <ProviderBookingCard key={b.id} b={b} profile={profile} user={user} declineLoading={declineLoading} rescheduleLoading={rescheduleLoading} onUpdateStatus={updateBookingStatus} onDecline={handleDecline} onOpenReschedule={openRescheduleModal} onProviderRescheduleResponse={handleProviderRescheduleResponse} />)}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
               {past.length > 0 && (
@@ -726,7 +774,12 @@ export default function ProviderDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                           <div style={{ flex: 1, minWidth: 180 }}>
                             <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{b.student_name}</div>
-                            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fmtDay(b.date)} · {fmtTime(b.start_time)}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                              {isMultiListing && (b.custom_category || b.listing_title || b.category) && (
+                                <span>{b.custom_category || b.listing_title || b.category} · </span>
+                              )}
+                              {fmtDay(b.date)} · {fmtTime(b.start_time)}
+                            </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                             <Link to={`/chat/${b.id}`} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
@@ -754,6 +807,27 @@ export default function ProviderDashboard() {
       {/* Availability */}
       {tab === 'availability' && (
         <div>
+          {/* Active listing indicator for multi-listing providers */}
+          {isMultiListing && profile && (
+            <div style={{ marginBottom: 16, padding: '10px 16px', background: 'var(--accent)', border: '1.5px solid #BFDBFE', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>Managing schedule for:</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {myListings.map(l => {
+                  const isActive = l.id === profile?.id;
+                  const label = l.custom_category || l.subcategory || l.title || l.category;
+                  return (
+                    <button key={l.id} onClick={() => setProfile(l)} style={{
+                      padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                      border: `1.5px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+                      background: isActive ? 'var(--primary)' : 'var(--card)',
+                      color: isActive ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    }}>{label}</button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {/* Listing cover image */}
           <div className="card" style={{ padding: '24px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>
