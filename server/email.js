@@ -350,11 +350,21 @@ export async function sendAdminBookingNotification({ bookingId, providerName, pr
   });
 }
 
-export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId, icsToken = '' }) {
+export async function sendBookingConfirmation({ studentEmail, studentName, providerName, date, startTime, endTime, bookingId, icsToken = '', zelleHandle, venmoHandle }) {
   const calTitle = `Session with ${providerName}`;
   const calDesc  = `Booked via ASK Marketplace · uask.live`;
   const gCalUrl  = googleCalendarUrl({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime });
   const icsData  = buildICS({ title: calTitle, description: calDesc, slotDate: date, startTime, endTime, uid: `booking-${bookingId}@uask.live`, url: 'https://uask.live/dashboard/student' });
+
+  const paymentRows = [];
+  if (zelleHandle) paymentRows.push(infoRow('Zelle', zelleHandle));
+  if (venmoHandle) paymentRows.push(infoRow('Venmo', venmoHandle));
+  const paymentSection = paymentRows.length ? `
+    ${divider()}
+    <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:${DARK}">Payment info</p>
+    ${infoTable(...paymentRows)}
+    ${note('Pay your provider before or after the session using the handle above.')}
+  ` : '';
 
   await send({
     to: studentEmail,
@@ -366,7 +376,8 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
           infoRow('Provider', providerName),
           infoRow('Date & time', date, `${startTime} – ${endTime}`)
         )}
-        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+        ${paymentSection}
+        <p style="margin:${paymentRows.length ? '16' : '0'} 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
           Add it to your calendar so you don't miss it:
         </p>
         <div>
@@ -381,7 +392,7 @@ export async function sendBookingConfirmation({ studentEmail, studentName, provi
   });
 }
 
-export async function sendCancellationNotification({ toEmail, toName, otherName, date, startTime, endTime, role }) {
+export async function sendCancellationNotification({ toEmail, toName, otherName, date, startTime, endTime, role, rebookUrl }) {
   const isProvider = role === 'provider';
   await send({
     to: toEmail,
@@ -389,7 +400,7 @@ export async function sendCancellationNotification({ toEmail, toName, otherName,
     html: shell(`Session cancellation — ${date}`, `
       ${header('❌', 'Session cancelled', isProvider
         ? `${otherName} has cancelled their booking with you.`
-        : `${otherName} has cancelled your upcoming session.`)}
+        : `${otherName} cancelled your upcoming session.`)}
       ${body(`
         ${infoTable(
           infoRow(isProvider ? 'Student' : 'Provider', otherName),
@@ -398,9 +409,115 @@ export async function sendCancellationNotification({ toEmail, toName, otherName,
         <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
           ${isProvider
             ? 'The time slot has been freed up on your dashboard.'
-            : 'Your booking has been removed from your dashboard.'}
+            : 'Your booking has been removed. Browse other available providers to rebook.'}
         </p>
-        ${btn(isProvider ? 'https://uask.live/dashboard/provider' : 'https://uask.live/dashboard/student', 'Open dashboard')}
+        ${isProvider
+          ? btn('https://uask.live/dashboard/provider', 'Open dashboard')
+          : `${btn(rebookUrl || 'https://uask.live/browse', 'Find another provider')}
+             ${btn('https://uask.live/dashboard/student', 'My bookings', '#111111')}`}
+      `)}
+    `),
+  });
+}
+
+export async function sendBookingDeclinedNotification({ studentEmail, studentName, providerName, date, startTime, endTime, category }) {
+  const browseUrl = category
+    ? `https://uask.live/browse?category=${encodeURIComponent(category)}`
+    : 'https://uask.live/browse';
+  await send({
+    to: studentEmail,
+    subject: `${providerName} can't take your booking for ${date}`,
+    html: shell(`Booking declined — ${date}`, `
+      ${header('😔', `${providerName} passed`, `Your booking request for ${date} was not accepted.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Provider', providerName),
+          infoRow('Requested time', date, `${startTime} – ${endTime}`)
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          No worries — other great providers are available. Browse and find someone who fits your schedule.
+        </p>
+        ${btn(browseUrl, 'Find another provider')}
+        ${note('Your time slot has been released.')}
+      `)}
+    `),
+  });
+}
+
+export async function sendNewReviewNotification({ providerEmail, providerName, studentName, rating, comment }) {
+  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  await send({
+    to: providerEmail,
+    subject: `${studentName} left you a ${rating}-star review`,
+    html: shell(`New ${rating}-star review from ${studentName}`, `
+      ${header('⭐', 'New review!', `${studentName} rated your session.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Student', studentName),
+          infoRow('Rating', stars),
+          ...(comment ? [infoRow('Comment', comment)] : [])
+        )}
+        ${btn('https://uask.live/dashboard/provider', 'View dashboard')}
+        ${note('Reviews help other students find great providers — keep it up!')}
+      `)}
+    `),
+  });
+}
+
+export async function sendAdminReviewNotification({ providerName, providerEmail, studentName, rating, comment, bookingId }) {
+  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  await send({
+    to: ADMIN_EMAILS,
+    subject: `New ${rating}★ review: ${studentName} → ${providerName}`,
+    html: shell(`New review on ASK`, `
+      ${header('⭐', `New review #${bookingId}`, 'A student just left a rating on ASK Marketplace.')}
+      ${body(`
+        ${infoTable(
+          infoRow('Student', studentName),
+          infoRow('Provider', providerName, providerEmail),
+          infoRow('Rating', stars),
+          ...(comment ? [infoRow('Comment', comment)] : []),
+          infoRow('Booking ID', bookingId),
+          infoRow('Time', new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+        )}
+        ${btn('https://uask.live/admin', 'Open admin panel')}
+      `)}
+    `),
+  });
+}
+
+export async function sendRescheduleProposalEmail({ studentEmail, studentName, providerName, originalDate, originalStart, originalEnd, newDate, newStart, newEnd }) {
+  await send({
+    to: studentEmail,
+    subject: `${providerName} wants to reschedule your session`,
+    html: shell(`Reschedule request from ${providerName}`, `
+      ${header('📅', 'Reschedule request', `${providerName} would like to move your session to a new time.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Original time', originalDate, `${originalStart} – ${originalEnd}`),
+          infoRow('Proposed new time', newDate, `${newStart} – ${newEnd}`)
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          Head to your dashboard to accept or decline this request. If you decline, your original booking stays as-is.
+        </p>
+        ${btn('https://uask.live/dashboard/student', 'Accept or Decline')}
+      `)}
+    `),
+  });
+}
+
+export async function sendRescheduleResponseEmail({ providerEmail, providerName, studentName, accepted, newDate, newStart, newEnd }) {
+  await send({
+    to: providerEmail,
+    subject: `${studentName} ${accepted ? 'accepted' : 'declined'} your reschedule request`,
+    html: shell(`Reschedule ${accepted ? 'accepted' : 'declined'}`, `
+      ${header(accepted ? '✅' : '❌', `Reschedule ${accepted ? 'accepted' : 'declined'}`, `${studentName} has ${accepted ? 'accepted' : 'declined'} your reschedule request.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Student', studentName),
+          ...(accepted && newDate ? [infoRow('New session time', newDate, `${newStart} – ${newEnd}`)] : [infoRow('Status', 'Original booking unchanged')])
+        )}
+        ${btn('https://uask.live/dashboard/provider', 'Open dashboard')}
       `)}
     `),
   });

@@ -164,6 +164,9 @@ export default function ProviderDashboard() {
   const imageInputRef = useRef(null);
   const [imgDragging, setImgDragging] = useState(false);
 
+  const [declineLoading, setDeclineLoading] = useState(null);
+  const [rescheduleModal, setRescheduleModal] = useState(null); // { booking, slots, selectedSlotId }
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [myListings, setMyListings] = useState([]);
   const [shareCopied, setShareCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -268,6 +271,36 @@ export default function ProviderDashboard() {
   async function updateBookingStatus(id, status) {
     try { await api.patch(`/bookings/${id}`, { status }); setBookings(bs => bs.map(b => b.id === id ? { ...b, status } : b)); }
     catch (err) { alert(err.response?.data?.error || 'Failed'); }
+  }
+
+  async function handleDecline(booking) {
+    if (!confirm(`Decline booking request from ${booking.student_name}? They'll be notified and prompted to rebook with someone else.`)) return;
+    setDeclineLoading(booking.id);
+    try {
+      await api.patch(`/bookings/${booking.id}`, { status: 'cancelled' });
+      setBookings(bs => bs.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setDeclineLoading(null); }
+  }
+
+  async function openRescheduleModal(booking) {
+    setRescheduleModal({ booking, slots: [], selectedSlotId: '' });
+    try {
+      const { data } = await api.get(`/availability/${booking.provider_id}`);
+      const futureSlots = (data || []).filter(s => !s.is_booked && String(s.id) !== String(booking.availability_id));
+      setRescheduleModal(m => ({ ...m, slots: futureSlots }));
+    } catch { setRescheduleModal(m => ({ ...m, slots: [] })); }
+  }
+
+  async function submitReschedule() {
+    if (!rescheduleModal?.selectedSlotId) return alert('Please select a new time slot');
+    setRescheduleLoading(true);
+    try {
+      await api.post(`/bookings/${rescheduleModal.booking.id}/reschedule`, { new_availability_id: rescheduleModal.selectedSlotId });
+      setRescheduleModal(null);
+      alert('Reschedule proposal sent — the student will receive an email to accept or decline.');
+    } catch (err) { alert(err.response?.data?.error || 'Failed to propose reschedule'); }
+    finally { setRescheduleLoading(false); }
   }
 
   function openEdit() {
@@ -648,15 +681,27 @@ export default function ProviderDashboard() {
                               background: 'var(--accent)',
                             }}>Chat</Link>
                             {b.status === 'pending' && (
-                              <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
-                                background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
-                                padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                fontFamily: 'var(--font-ui)',
-                              }}>Confirm</button>
+                              <>
+                                <button onClick={() => updateBookingStatus(b.id, 'confirmed')} style={{
+                                  background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                  fontFamily: 'var(--font-ui)',
+                                }}>Confirm</button>
+                                <button onClick={() => handleDecline(b)} disabled={declineLoading === b.id} style={{
+                                  background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA',
+                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                  fontFamily: 'var(--font-ui)', opacity: declineLoading === b.id ? 0.6 : 1,
+                                }}>{declineLoading === b.id ? '…' : 'Decline'}</button>
+                              </>
                             )}
                             {b.status === 'confirmed' && (
                               <>
                                 <AddToCalendarButton bookingId={b.id} />
+                                <button onClick={() => openRescheduleModal(b)} style={{
+                                  background: '#FFF8E6', color: '#92600A', border: '1px solid #FCD34D',
+                                  padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                  fontFamily: 'var(--font-ui)',
+                                }}>Reschedule</button>
                                 <button onClick={() => updateBookingStatus(b.id, 'completed')} style={{
                                   background: 'var(--accent)', color: 'var(--primary)', border: '1px solid #BFDBFE',
                                   padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -901,6 +946,56 @@ export default function ProviderDashboard() {
       )}
 
       {/* Edit listing modal */}
+      {/* Reschedule modal */}
+      {rescheduleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}>
+          <div className="card" style={{ padding: 28, width: '100%', maxWidth: 420 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)', marginBottom: 4 }}>
+              Propose reschedule
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
+              Session with {rescheduleModal.booking.student_name} on {rescheduleModal.booking.date}
+            </div>
+            {rescheduleModal.slots.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+                No open slots available. Add availability first from the Schedule tab.
+              </div>
+            ) : (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 8 }}>Select a new time</div>
+                <select
+                  value={rescheduleModal.selectedSlotId}
+                  onChange={e => setRescheduleModal(m => ({ ...m, selectedSlotId: e.target.value }))}
+                  style={{
+                    width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+                    padding: '9px 12px', fontSize: 13, background: '#fff', color: 'var(--text)',
+                    fontFamily: 'var(--font-ui)', outline: 'none',
+                  }}
+                >
+                  <option value="">— choose a slot —</option>
+                  {rescheduleModal.slots.map(s => (
+                    <option key={s.id} value={s.id}>{s.date} · {fmtTime(s.start_time)}–{fmtTime(s.end_time)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setRescheduleModal(null)} style={{
+                flex: 1, padding: 10, border: '1.5px solid var(--border)', borderRadius: 999,
+                fontSize: 13, cursor: 'pointer', background: 'var(--card)', color: 'var(--text)', fontFamily: 'var(--font-ui)',
+              }}>Cancel</button>
+              {rescheduleModal.slots.length > 0 && (
+                <button onClick={submitReschedule} disabled={rescheduleLoading || !rescheduleModal.selectedSlotId} style={{
+                  flex: 1, padding: 10, background: rescheduleLoading ? '#93C5FD' : 'var(--primary)',
+                  color: '#fff', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                  cursor: rescheduleLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+                }}>{rescheduleLoading ? 'Sending…' : 'Send proposal'}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {editModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,

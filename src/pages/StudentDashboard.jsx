@@ -90,6 +90,7 @@ export default function StudentDashboard() {
   const [doneLoading, setDoneLoading] = useState(null);
   const [groupInvites, setGroupInvites] = useState([]);
   const [inviteLoading, setInviteLoading] = useState(null);
+  const [rescheduleLoading, setRescheduleLoading] = useState(null);
 
   useEffect(() => { fetchBookings(); fetchGroupInvites(); }, []);
 
@@ -135,6 +136,15 @@ export default function StudentDashboard() {
 
   async function handleReview(data) { await api.post('/reviews', data); fetchBookings(); }
 
+  async function handleRescheduleResponse(bookingId, action) {
+    setRescheduleLoading(bookingId + action);
+    try {
+      await api.post(`/bookings/${bookingId}/reschedule/${action}`);
+      fetchBookings();
+    } catch (err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setRescheduleLoading(null); }
+  }
+
   const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
   const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
 
@@ -155,6 +165,49 @@ export default function StudentDashboard() {
           {user?.role === 'provider' ? 'Edit listing' : 'Post a listing'}
         </button>
       </div>
+
+      {/* Reschedule proposals */}
+      {bookings.filter(b => b.reschedule_status === 'pending_student_approval').length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
+            Reschedule Requests
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {bookings.filter(b => b.reschedule_status === 'pending_student_approval').map(b => (
+              <div key={b.id} className="card" style={{ padding: '14px 20px', border: '1.5px solid #FCD34D', background: '#FFFBEB' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+                  {b.provider_name} wants to reschedule
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
+                  <span style={{ textDecoration: 'line-through' }}>{fmtDay(b.date)} · {fmtTime(b.start_time)}–{fmtTime(b.end_time)}</span>
+                  {' → '}
+                  <strong>{fmtDay(b.reschedule_date)} · {fmtTime(b.reschedule_start_time)}–{fmtTime(b.reschedule_end_time)}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleRescheduleResponse(b.id, 'accept')}
+                    disabled={rescheduleLoading === b.id + 'accept'}
+                    style={{
+                      background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                      padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    }}
+                  >{rescheduleLoading === b.id + 'accept' ? '…' : 'Accept'}</button>
+                  <button
+                    onClick={() => handleRescheduleResponse(b.id, 'decline')}
+                    disabled={rescheduleLoading === b.id + 'decline'}
+                    style={{
+                      background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA',
+                      padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                    }}
+                  >{rescheduleLoading === b.id + 'decline' ? '…' : 'Decline'}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Group invites */}
       {groupInvites.length > 0 && (

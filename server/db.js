@@ -348,6 +348,14 @@ if (!bookingCols.includes('reminder_sent_at'))      db.exec('ALTER TABLE booking
 if (!bookingCols.includes('sms_reminder_sent'))     db.exec('ALTER TABLE bookings ADD COLUMN sms_reminder_sent INTEGER DEFAULT 0');
 if (!bookingCols.includes('sms_review_sent'))       db.exec('ALTER TABLE bookings ADD COLUMN sms_review_sent INTEGER DEFAULT 0');
 
+// Reschedule proposal columns
+if (!bookingCols.includes('reschedule_proposed_availability_id'))
+  db.exec('ALTER TABLE bookings ADD COLUMN reschedule_proposed_availability_id INTEGER REFERENCES availability(id)');
+if (!bookingCols.includes('reschedule_proposed_by'))
+  db.exec('ALTER TABLE bookings ADD COLUMN reschedule_proposed_by TEXT');
+if (!bookingCols.includes('reschedule_status'))
+  db.exec("ALTER TABLE bookings ADD COLUMN reschedule_status TEXT DEFAULT 'none'");
+
 // OAuth identity columns + token versioning for session invalidation
 const colsLatest = db.pragma('table_info(users)').map(c => c.name);
 if (!colsLatest.includes('google_id'))     db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');

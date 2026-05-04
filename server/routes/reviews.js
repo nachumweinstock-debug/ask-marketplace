@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import posthog from '../posthog.js';
+import { sendNewReviewNotification, sendAdminReviewNotification } from '../email.js';
 
 const router = Router();
 
@@ -42,6 +43,26 @@ router.post('/', requireAuth, (req, res) => {
       has_comment: !!comment,
     },
   });
+
+  // Notify provider and admin of new review (non-blocking)
+  try {
+    const providerUser = db.prepare(`
+      SELECT u.email, u.name FROM provider_profiles pp
+      JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+    `).get(booking.provider_id);
+    const student = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+    if (providerUser && student) {
+      sendNewReviewNotification({
+        providerEmail: providerUser.email, providerName: providerUser.name,
+        studentName: student.name, rating: Number(rating), comment: comment || null,
+      }).catch(() => {});
+      sendAdminReviewNotification({
+        providerName: providerUser.name, providerEmail: providerUser.email,
+        studentName: student.name, rating: Number(rating), comment: comment || null,
+        bookingId: booking_id,
+      }).catch(() => {});
+    }
+  } catch { /* non-fatal */ }
 
   res.json(review);
 });
