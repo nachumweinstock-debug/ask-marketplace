@@ -145,7 +145,7 @@ export default function HelpWanted() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 24 }}>
+          <div className="helpwanted-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 24 }}>
               <div>
                 <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>CATEGORY</label>
                 <select value={formCat} onChange={e => setFormCat(e.target.value)} style={{

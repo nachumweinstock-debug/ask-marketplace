@@ -37,8 +37,16 @@ export default function DirectMessages() {
   const [otherUser, setOtherUser] = useState(null);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+  useEffect(() => {
+    function onResize() { setWindowWidth(window.innerWidth); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -119,19 +127,20 @@ export default function DirectMessages() {
       fetchConversations();
     } catch (err) {
       setMessages(ms => ms.filter(m => m.id !== optimistic.id));
-      alert(err.response?.data?.error || 'Failed to send');
+      setSendError(err.response?.data?.error || 'Failed to send');
+      setTimeout(() => setSendError(''), 4000);
     } finally {
       setSending(false);
     }
   }
 
   const hasConvo = userId && otherUser;
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const isMobile = windowWidth < 640;
   const showList = !isMobile || !hasConvo;
   const showChat = !isMobile || hasConvo;
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 48px 80px' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: isMobile ? '20px 14px 100px' : '40px 48px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }} className="fade-up">
         <h1 style={{
@@ -143,7 +152,7 @@ export default function DirectMessages() {
         </h1>
       </div>
 
-      <div style={{
+      <div className="messages-shell" style={{
         display: 'flex', border: '1px solid var(--cream-200)', borderRadius: 16,
         overflow: 'hidden', minHeight: 560, background: 'var(--cream-50)',
       }}>
@@ -258,6 +267,9 @@ export default function DirectMessages() {
             </div>
 
             {/* Input */}
+            {sendError && (
+              <div style={{ padding: '6px 20px 0', fontSize: 12, color: '#DC2626' }}>{sendError}</div>
+            )}
             <form onSubmit={handleSend} style={{
               padding: '14px 20px', borderTop: '1px solid var(--cream-200)',
               display: 'flex', gap: 10, flexShrink: 0, background: 'var(--cream-50)',

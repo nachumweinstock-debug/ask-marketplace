@@ -13,7 +13,7 @@ export default function FloatingSupportButton() {
   return (
     <>
       {open && (
-        <div style={{
+        <div className="floating-support-panel" style={{
           position: 'fixed',
           right: 18,
           bottom: 78,
@@ -25,6 +25,7 @@ export default function FloatingSupportButton() {
       )}
       <button
         type="button"
+        className="floating-help-btn"
         onClick={() => setOpen((value) => !value)}
         style={{
           position: 'fixed',

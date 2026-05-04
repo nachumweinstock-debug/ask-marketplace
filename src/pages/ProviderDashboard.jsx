@@ -11,6 +11,7 @@ import ProviderOnboardingChecklist from '../components/ProviderOnboardingCheckli
 import TrustBadges from '../components/TrustBadges';
 import { mediaUrl } from '../lib/media';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
+import { copyText } from '../lib/clipboard';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -451,11 +452,10 @@ export default function ProviderDashboard() {
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(profileUrl).then(() => {
-                      setShareCopied(true);
-                      setTimeout(() => setShareCopied(false), 2000);
-                    });
+                  onClick={async () => {
+                    try { await copyText(profileUrl); } catch { return; }
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
                   }}
                   style={{
                     fontSize: 13, fontWeight: 600,

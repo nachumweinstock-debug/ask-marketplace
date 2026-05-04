@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+import { copyText } from '../lib/clipboard';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import { fmtTime, fmtDay, DAYS } from '../lib/slots';
@@ -19,11 +20,10 @@ import ProfileTrustPanel from '../components/ProfileTrustPanel';
 function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
   const url = `${window.location.origin}${providerUrl(providerName, providerId, username)}`;
-  function handleCopy() {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  async function handleCopy() {
+    try { await copyText(url); } catch { return; }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
   return (
     <button onClick={handleCopy} style={{

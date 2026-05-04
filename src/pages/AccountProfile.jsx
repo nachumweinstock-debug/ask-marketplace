@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AtSign, BookOpenCheck, Camera, Check, Copy, ExternalLink, GraduationCap, Heart, ImagePlus, QrCode, Share2, UserRound } from 'lucide-react';
+import { copyText } from '../lib/clipboard';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
@@ -88,6 +89,7 @@ export default function AccountProfile() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [igFollowed, setIgFollowed] = useState(() => localStorage.getItem('ask_followed_instagram') === '1');
   const [savedSnapshot, setSavedSnapshot] = useState('');
   const avatarRef = useRef(null);
@@ -137,7 +139,8 @@ export default function AccountProfile() {
   function set(k) { return v => setForm(f => ({ ...f, [k]: v })); }
 
   async function deleteListing() {
-    if (!confirm('Delete your listing? This removes all your availability, bookings, and reviews. This cannot be undone.')) return;
+    if (!deleteConfirm) { setDeleteConfirm(true); return; }
+    setDeleteConfirm(false);
     setDeleteLoading(true);
     try {
       await api.delete('/providers/me');
@@ -270,11 +273,10 @@ export default function AccountProfile() {
   ];
   const checklistPercent = Math.round((checklistItems.filter(item => item.done).length / checklistItems.length) * 100);
 
-  function copyProfileLink() {
-    navigator.clipboard.writeText(profileUrl).then(() => {
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 1800);
-    }).catch(() => setMsg('Could not copy link'));
+  async function copyProfileLink() {
+    try { await copyText(profileUrl); } catch { setMsg('Could not copy link'); return; }
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 1800);
   }
 
   async function shareProfileLink() {
@@ -717,17 +719,32 @@ export default function AccountProfile() {
             <div>
               <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>Delete listing</div>
               <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-                Removes your service, all availability slots, and booking history.
+                {deleteConfirm
+                  ? 'Are you sure? This removes all availability, bookings, and reviews. Cannot be undone.'
+                  : 'Removes your service, all availability slots, and booking history.'}
               </div>
             </div>
-            <button onClick={deleteListing} disabled={deleteLoading} style={{
-              background: 'none', border: '1.5px solid #FECACA', color: '#DC2626',
-              borderRadius: 999, padding: '8px 20px', fontSize: 13, fontWeight: 600,
-              cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
-              opacity: deleteLoading ? 0.6 : 1, whiteSpace: 'nowrap',
-            }}>
-              {deleteLoading ? 'Deleting...' : 'Delete listing'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {deleteConfirm && (
+                <button onClick={() => setDeleteConfirm(false)} style={{
+                  background: 'none', border: '1.5px solid var(--border)', color: 'var(--muted)',
+                  borderRadius: 999, padding: '8px 16px', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap',
+                }}>
+                  Cancel
+                </button>
+              )}
+              <button onClick={deleteListing} disabled={deleteLoading} style={{
+                background: deleteConfirm ? '#DC2626' : 'none',
+                color: deleteConfirm ? '#fff' : '#DC2626',
+                border: '1.5px solid #FECACA', borderRadius: 999, padding: '8px 20px',
+                fontSize: 13, fontWeight: 600,
+                cursor: deleteLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
+                opacity: deleteLoading ? 0.6 : 1, whiteSpace: 'nowrap',
+              }}>
+                {deleteLoading ? 'Deleting...' : deleteConfirm ? 'Yes, delete' : 'Delete listing'}
+              </button>
+            </div>
           </div>
         </div>
       )}

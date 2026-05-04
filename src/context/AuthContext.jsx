@@ -5,6 +5,30 @@ import api from '../api';
 const AuthContext = createContext(null);
 const SUPERADMINS = ['nachumweinstock@gmail.com'];
 
+function readToken() {
+  try {
+    return localStorage.getItem('ask_token');
+  } catch {
+    return null;
+  }
+}
+
+function clearToken() {
+  try {
+    localStorage.removeItem('ask_token');
+  } catch {
+    // Storage can be unavailable in locked-down browsers.
+  }
+}
+
+function writeToken(token) {
+  try {
+    localStorage.setItem('ask_token', token);
+  } catch {
+    // Keep the in-memory user active even if persistent storage fails.
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +41,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       // If our token is expired/invalid, clear it so the user is treated as logged out
       if (err.response?.status === 401) {
-        localStorage.removeItem('ask_token');
+        clearToken();
       }
       if (!keepExisting) setUser(null);
     } finally {
@@ -27,7 +51,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // 1. Our own JWT in localStorage
-    const localToken = localStorage.getItem('ask_token');
+    const localToken = readToken();
     if (localToken) {
       syncUser();
       return;
@@ -37,7 +61,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         syncUser();
-      } else if (!localStorage.getItem('ask_token')) {
+      } else if (!readToken()) {
         setUser(null);
         setLoading(false);
       }
@@ -57,7 +81,7 @@ export function AuthProvider({ children }) {
   // Called after our own login/verify to store token and set user.
   // skipMe: pass true when the caller will fetch /auth/me itself (e.g. AuthCallback).
   async function loginWithToken(token, userData, { skipMe = false } = {}) {
-    localStorage.setItem('ask_token', token);
+    writeToken(token);
     setUser(userData); // set immediately so navigation works right away
     if (!skipMe) {
       // Replace with full record (includes is_admin, provider_profile_id, etc.)
@@ -73,10 +97,12 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
-    localStorage.removeItem('ask_token');
+    clearToken();
     setUser(null);
     // Also sign out of Supabase in case they were a legacy user
-    try { await supabase.auth.signOut(); } catch {}
+    try { await supabase.auth.signOut(); } catch {
+      // Legacy Supabase signout is best-effort only.
+    }
   }
 
   return (

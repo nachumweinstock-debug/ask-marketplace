@@ -73,6 +73,28 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
 body {
   font-family: var(--font-ui);
   background:
@@ -87,6 +109,13 @@ body {
 
 #root { min-height: 100vh; }
 
+:focus {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none; /* remove ring on mouse click — keep only for keyboard nav */
+}
 :focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
@@ -162,6 +191,9 @@ body {
   .page { padding: 24px 20px 100px; }
   .support-page-grid { grid-template-columns: 1fr !important; }
   .slot-quick-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 520px) {
+  .page { padding-left: 14px; padding-right: 14px; }
 }
 
 /* ── Navbar ───────────────────────────────────────────────── */
@@ -359,6 +391,14 @@ body {
 @media (max-width: 640px) {
   .admin-page { padding-left: 14px !important; padding-right: 14px !important; }
   .admin-overview-grid .card > div[style*="repeat(3"] { grid-template-columns: 1fr !important; }
+  .admin-page div[style*="minmax(360px"],
+  .admin-page div[style*="minmax(340px"],
+  .admin-page div[style*="minmax(320px"],
+  .admin-page div[style*="minmax(300px"] {
+    grid-template-columns: 1fr !important;
+  }
+  .admin-page .card { padding: 16px !important; }
+  .admin-page table { min-width: 620px; }
 }
 
 /* ── Utility ─────────────────────────────────────────────── */
@@ -388,6 +428,66 @@ body {
   color: var(--muted); cursor: pointer; transition: all 0.15s ease;
 }
 .segmented-control button.active { background: var(--white); color: var(--text); box-shadow: var(--shadow-sm); }
+
+.create-listing-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 48px 100px;
+}
+.create-listing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 56px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .create-listing-page {
+    padding: 28px 16px 104px !important;
+  }
+  .create-listing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+  .create-listing-preview {
+    display: none !important;
+  }
+  .create-listing-page div[style*="inline-flex"] {
+    display: flex !important;
+    width: 100% !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .create-listing-page div[style*="inline-flex"] button {
+    flex: 1 0 auto;
+    white-space: nowrap;
+  }
+  .create-listing-page div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .helpwanted-form-grid,
+  .page div[style*="grid-template-columns: 1fr 1fr 1fr"],
+  .page div[style*="grid-template-columns: 130px 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .messages-shell {
+    min-height: calc(100dvh - 170px) !important;
+    border-radius: 10px !important;
+  }
+  .messages-shell form {
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+  .messages-shell form button {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}
 
 /* ── Input underline style ───────────────────────────────── */
 .input-underline {
@@ -1018,6 +1118,36 @@ body {
   border-radius: 12px;
   border: 1px solid var(--border);
 }
+/* ── Create listing page ─────────────────────────────────── */
+@media (max-width: 860px) {
+  .create-listing-page { padding: 24px 16px 100px !important; }
+  .create-listing-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+}
+
+/* ── Chat page (booking chat) ────────────────────────────── */
+.chat-container {
+  height: calc(100vh - 102px); /* viewport minus igbar (~38px) + navbar (~61px) */
+}
+@media (max-width: 860px) {
+  .chat-container {
+    height: calc(100vh - 160px);   /* vh fallback for older browsers */
+    height: calc(100dvh - 160px); /* dynamic vh for mobile (handles address bar) */
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ── Floating support button — clear the mobile bottom bar ── */
+@media (max-width: 860px) {
+  .floating-help-btn   { bottom: 74px !important; }
+  .floating-support-panel { bottom: 134px !important; }
+}
+
+/* ── Footer — clear the mobile bottom bar ───────────────── */
+@media (max-width: 860px) {
+  .app-footer { padding-bottom: 76px !important; }
+}
+
 @media (max-width: 700px) {
   .profile-page { padding-left: 14px; padding-right: 14px; }
   .profile-hero {

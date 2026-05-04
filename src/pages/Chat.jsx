@@ -15,6 +15,7 @@ export default function Chat() {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sendError, setSendError] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const pollRef = useRef(null);
@@ -57,7 +58,8 @@ export default function Chat() {
       setBody('');
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to send');
+      setSendError(err.response?.data?.error || 'Failed to send');
+      setTimeout(() => setSendError(''), 4000);
     } finally {
       setSending(false);
       inputRef.current?.focus();
@@ -84,7 +86,7 @@ export default function Chat() {
   const catLabel = booking.custom_category || CAT_LABELS[booking.category] || 'Other';
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 0', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)' }}>
+    <div className="chat-container" style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 0', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
@@ -177,10 +179,15 @@ export default function Chat() {
       {/* Input */}
       <div style={{
         flexShrink: 0,
-        padding: '12px 0 24px',
+        padding: '12px 0 16px',
         borderTop: '1px solid var(--border)',
         background: 'var(--bg)',
       }}>
+        {sendError && (
+          <div style={{ fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '6px 12px', marginBottom: 8 }}>
+            {sendError}
+          </div>
+        )}
         <form onSubmit={handleSend} style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
           <textarea
             ref={inputRef}

@@ -336,10 +336,10 @@ export default function CreateListing() {
   }
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 48px 80px' }}>
+    <div className="create-listing-page" style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 48px 100px' }}>
 
       {/* ── Two-column layout ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 56, alignItems: 'start' }}>
+      <div className="create-listing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 56, alignItems: 'start' }}>
 
         {/* ── LEFT: Form ── */}
         <div>

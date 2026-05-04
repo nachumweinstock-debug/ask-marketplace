@@ -7,7 +7,7 @@ const inputStyle = {
   padding: '10px 14px', fontSize: 13.5, outline: 'none',
   background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
   transition: 'border-color .15s', boxSizing: 'border-box', cursor: 'pointer',
-  appearance: 'none', WebkitAppearance: 'none',
+  appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
 };
 
 function TimeSelect({ value, onChange, minTime, label, placeholder }) {

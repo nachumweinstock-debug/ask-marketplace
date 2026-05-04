@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Share2, Copy } from 'lucide-react';
+import { copyText } from '../lib/clipboard';
 
 export default function PoweredByAsk({ title = 'Booked through Ask Marketplace', url, compact = false }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = url || `${window.location.origin}/browse`;
 
   async function copy() {
-    await navigator.clipboard.writeText(shareUrl);
+    try { await copyText(shareUrl); } catch { return; }
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   }

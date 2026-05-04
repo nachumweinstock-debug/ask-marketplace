@@ -7,6 +7,7 @@ import ProviderProfile from './pages/ProviderProfile';
 import StudentDashboard from './pages/StudentDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
 import { SignUp, Login, ForgotPassword } from './pages/Auth';
+import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 import CreateListing from './pages/CreateListing';
 import AccountProfile from './pages/AccountProfile';
@@ -59,7 +60,7 @@ function Footer() {
   };
 
   return (
-    <footer style={{
+    <footer className="app-footer" style={{
       borderTop: '1px solid var(--border)',
       padding: '20px 24px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -143,6 +144,17 @@ function Layout({ children }) {
       <SessionReminders />
       <main style={{ flex: 1 }}>{children}</main>
       <Footer />
+    </div>
+  );
+}
+
+function LayoutNoFooter({ children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <IgBar />
+      <Navbar />
+      <SessionReminders />
+      <main style={{ flex: 1, overflow: 'hidden' }}>{children}</main>
     </div>
   );
 }
@@ -265,7 +277,7 @@ function AppRoutes() {
           element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Login />}
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<Navigate to="/forgot-password" replace />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/chat/:bookingId"

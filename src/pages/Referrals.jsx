@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { RowSkeleton } from '../components/Skeletons';
+import { copyText } from '../lib/clipboard';
 
 export default function Referrals() {
   const [data, setData] = useState(null);
@@ -15,11 +16,10 @@ export default function Referrals() {
 
   if (loading) return <div className="page" style={{ maxWidth: 900 }}><RowSkeleton rows={5} /></div>;
 
-  function copy() {
-    navigator.clipboard.writeText(data.invite_url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    });
+  async function copy() {
+    try { await copyText(data.invite_url); } catch { return; }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
   }
 
   return (
