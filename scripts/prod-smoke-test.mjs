@@ -50,7 +50,17 @@ async function request(method, path, { token, body, expected = [200], label = `$
 async function signup(kind, name) {
   const email = `codex-smoke-${kind}-${stamp}@example.com`;
   const { data } = await request('POST', '/auth/signup', {
-    body: { email, name, password, phone: '5551234567' },
+    body: {
+      email,
+      name,
+      password,
+      phone: '5551234567',
+      university: 'Yeshiva University',
+      termsAccepted: true,
+      termsVersion: '2026-05-02',
+      privacyVersion: '2026-05-02',
+      timezone: 'America/New_York',
+    },
     label: `signup ${kind}`,
   });
   if (!data.token || !data.user?.id) throw new Error(`signup ${kind} missing token/user`);
