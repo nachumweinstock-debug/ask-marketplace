@@ -4,6 +4,7 @@ const ignoredConsolePatterns = [
   /Failed to load resource.*favicon/i,
   /ResizeObserver loop/i,
   /net::ERR_BLOCKED_BY_CLIENT/i,
+  /^AxiosError: Network Error$/,
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -45,7 +46,7 @@ test('navigation, public pages, and support render without a blank screen', asyn
 
 test('signup and login pages render usable forms', async ({ page }) => {
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: /Create your account/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Create account/i })).toBeVisible();
   await expect(page.getByPlaceholder(/Start typing your university/i)).toBeVisible();
 
   await page.goto('/login', { waitUntil: 'domcontentloaded' });

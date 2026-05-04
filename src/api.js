@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { supabase } from './lib/supabase';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
+const rawBaseURL = import.meta.env.VITE_API_URL || '/api';
+const normalizedBaseURL = rawBaseURL.startsWith('http') || rawBaseURL.startsWith('/')
+  ? rawBaseURL
+  : `https://${rawBaseURL}`;
+
+const api = axios.create({ baseURL: normalizedBaseURL });
 
 function readToken() {
   try {
