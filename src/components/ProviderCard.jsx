@@ -54,7 +54,6 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
-  const allListings = provider.allListings || [provider];
   const hasPhoto = !!provider.listing_image;
 
   useEffect(() => {
@@ -193,65 +192,16 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           {catLabel}
         </div>
 
-        {/* Multi-listing pills or single title */}
-        {allListings.length > 1 ? (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
-            {allListings.map(l => {
-              const lbl = listingLabel(l);
-              const isFilterable = !!(onTagClick && l.subcategory);
-              return (
-                <button key={l.id}
-                  onClick={e => {
-                    e.stopPropagation();
-                    if (isFilterable) onTagClick(l);
-                    else openProvider(l);
-                  }}
-                  title={isFilterable ? `Show only ${lbl}` : undefined}
-                  style={{
-                    padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: 760,
-                    border: '1px solid var(--gray-200)', background: 'var(--gray-50)',
-                    color: 'var(--text)', cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    transition: 'background 0.12s, color 0.12s, border-color 0.12s',
-                  }}
-                  onMouseEnter={e => {
-                    if (isFilterable) {
-                      e.currentTarget.style.background = '#EEF3FF';
-                      e.currentTarget.style.color = '#1D4ED8';
-                      e.currentTarget.style.borderColor = '#BFDBFE';
-                    } else {
-                      e.currentTarget.style.background = 'var(--gray-900)';
-                      e.currentTarget.style.color = '#fff';
-                      e.currentTarget.style.borderColor = 'var(--gray-900)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'var(--gray-50)';
-                    e.currentTarget.style.color = 'var(--text)';
-                    e.currentTarget.style.borderColor = 'var(--gray-200)';
-                  }}
-                >
-                  {isFilterable && (
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                    </svg>
-                  )}
-                  {lbl}
-                </button>
-              );
-            })}
+        {/* Listing title — always shown when there's a photo, otherwise the gradient card already shows it */}
+        {hasPhoto && (
+          <div style={{
+            fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+            fontSize: 19, fontWeight: 760, color: 'var(--text)',
+            lineHeight: 1.2, marginBottom: 4,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {label}
           </div>
-        ) : (
-          hasPhoto && (
-            <div style={{
-              fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-              fontSize: 19, fontWeight: 760, color: 'var(--text)',
-              lineHeight: 1.2, marginBottom: 4,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {label}
-            </div>
-          )
         )}
 
         {/* Bio — hidden on very small cards */}

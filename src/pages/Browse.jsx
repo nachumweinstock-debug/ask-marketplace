@@ -298,16 +298,6 @@ export default function Browse() {
     });
   }
 
-  // Group listings by user
-  const grouped = [];
-  const seen = new Set();
-  for (const p of providers) {
-    if (!seen.has(p.user_id)) {
-      seen.add(p.user_id);
-      grouped.push({ ...p, allListings: providers.filter(q => q.user_id === p.user_id) });
-    }
-  }
-
   const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
 
@@ -332,7 +322,7 @@ export default function Browse() {
           </h1>
           {!loading && (
             <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 7, fontFamily: 'var(--font-ui)', fontWeight: 650 }}>
-              {providers.length} listing{providers.length !== 1 ? 's' : ''} · {grouped.length} instructor{grouped.length !== 1 ? 's' : ''}
+              {providers.length} listing{providers.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
@@ -498,7 +488,7 @@ export default function Browse() {
             <TutorCardSkeleton key={i} />
           ))}
         </div>
-      ) : grouped.length === 0 ? (
+      ) : providers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
             No instructors found for this filter combination.
@@ -509,9 +499,9 @@ export default function Browse() {
         </div>
       ) : (
         <div className="provider-grid">
-          {grouped.map(p => (
+          {providers.map(p => (
             <ProviderCard
-              key={p.user_id}
+              key={p.id}
               provider={p}
               isOwn={!!user && user.id === p.user_id}
               isAdmin={!!user?.is_admin}
