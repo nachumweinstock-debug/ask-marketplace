@@ -6,6 +6,149 @@ import { useAuth } from '../context/AuthContext';
 const NAVY = '#1B3A6B';
 const CREAM = '#FAF7F2';
 
+const YU_LOCATIONS = [
+  { id: 'furst',   name: 'Furst Hall',   short: 'Furst',   floors: ['1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
+  { id: 'library', name: 'Wilf Library', short: 'Library', floors: ['1st Floor', '2nd Floor', '3rd Floor — Quiet', '4th Floor', '5th Floor'] },
+  { id: 'glueck',  name: 'Glueck',       short: 'Glueck',  floors: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor'] },
+  { id: 'morg',    name: 'Morg',         short: 'Morg',    floors: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
+  { id: 'belfer',  name: 'Belfer Hall',  short: 'Belfer',  floors: ['1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
+  { id: 'zysman',  name: 'Zysman Hall',  short: 'Zysman',  floors: ['1st Floor', '2nd Floor', '3rd Floor'] },
+  { id: 'rubin',   name: 'Rubin Hall',   short: 'Rubin',   floors: ['Lobby', '1st Floor', '2nd Floor', '3rd Floor'] },
+  { id: 'other',   name: 'Other',        short: 'Other…',  floors: [] },
+];
+
+function LocationPicker({ value, onChange }) {
+  const [building, setBuilding] = useState(null);
+  const [floor, setFloor] = useState('');
+  const [customText, setCustomText] = useState('');
+
+  function pickBuilding(b) {
+    setBuilding(b);
+    setFloor('');
+    setCustomText('');
+    onChange('');
+  }
+
+  function pickFloor(f) {
+    setFloor(f);
+    onChange(`${building.name} — ${f}`);
+  }
+
+  function clear() {
+    setBuilding(null);
+    setFloor('');
+    setCustomText('');
+    onChange('');
+  }
+
+  const isOther = building?.id === 'other';
+
+  return (
+    <div>
+      {/* Confirmed location badge */}
+      {value && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: '#EEF3FF', border: '1.5px solid #BFDBFE',
+          borderRadius: 9, padding: '9px 13px', marginBottom: 10,
+        }}>
+          <span style={{ fontSize: 13, color: NAVY, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+            📍 {value}
+          </span>
+          <button type="button" onClick={clear} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#8D8577', fontSize: 13, lineHeight: 1, padding: '0 0 0 10px',
+          }}>✕</button>
+        </div>
+      )}
+
+      {/* Building grid — 4 per row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+        {YU_LOCATIONS.map(b => {
+          const active = building?.id === b.id;
+          return (
+            <button
+              type="button"
+              key={b.id}
+              onClick={() => pickBuilding(b)}
+              style={{
+                padding: '9px 4px', borderRadius: 8, textAlign: 'center',
+                border: `1.5px solid ${active ? NAVY : '#D9D2C3'}`,
+                background: active ? NAVY : '#fff',
+                color: active ? '#fff' : '#342F29',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                transition: 'all 0.12s',
+              }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.background = '#F0F4FF'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = '#D9D2C3'; e.currentTarget.style.background = '#fff'; } }}
+            >
+              {b.short}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Floor chips — revealed after building is picked */}
+      {building && !isOther && building.floors.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{
+            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em',
+            textTransform: 'uppercase', color: '#8D8577',
+            fontFamily: 'var(--font-ui)', marginBottom: 7,
+          }}>
+            {building.name} — select floor
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {building.floors.map(f => {
+              const active = floor === f;
+              return (
+                <button
+                  type="button"
+                  key={f}
+                  onClick={() => pickFloor(f)}
+                  style={{
+                    padding: '6px 13px', borderRadius: 7,
+                    border: `1.5px solid ${active ? NAVY : '#D9D2C3'}`,
+                    background: active ? '#EEF3FF' : '#fff',
+                    color: active ? NAVY : '#6D665C',
+                    fontSize: 12.5, fontWeight: active ? 700 : 500,
+                    cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                    transition: 'all 0.1s',
+                  }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.color = NAVY; } }}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = '#D9D2C3'; e.currentTarget.style.color = '#6D665C'; } }}
+                >
+                  {f}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Free-text for "Other" */}
+      {isOther && (
+        <input
+          autoFocus
+          style={{
+            marginTop: 10, width: '100%', padding: '11px 13px', borderRadius: 8,
+            border: '1.5px solid #D9D2C3', fontSize: 14, boxSizing: 'border-box',
+            fontFamily: "'Outfit', sans-serif", color: '#17130F',
+            background: '#fff', outline: 'none', transition: 'border-color 0.15s',
+          }}
+          placeholder="Describe the location…"
+          value={customText}
+          onChange={e => { setCustomText(e.target.value); onChange(e.target.value); }}
+          onFocus={e => { e.currentTarget.style.borderColor = NAVY; }}
+          onBlur={e => { e.currentTarget.style.borderColor = '#D9D2C3'; }}
+          maxLength={80}
+        />
+      )}
+    </div>
+  );
+}
+
 function timeLeft(expiresAt) {
   const diff = new Date(expiresAt) - Date.now();
   if (diff <= 0) return 'Expired';
@@ -212,8 +355,9 @@ function StartSessionModal({ onClose, onCreate }) {
     >
       <div style={{
         background: CREAM, borderRadius: 20, padding: '32px 30px',
-        maxWidth: 460, width: '100%',
+        maxWidth: 480, width: '100%',
         boxShadow: '0 24px 64px rgba(27,58,107,0.20)',
+        maxHeight: '92vh', overflowY: 'auto',
       }}>
         <h2 style={{
           fontFamily: "'DM Serif Display', Georgia, serif",
@@ -242,14 +386,9 @@ function StartSessionModal({ onClose, onCreate }) {
 
           <div>
             <label style={labelStyle}>Location *</label>
-            <input
-              style={inputStyle}
-              placeholder="e.g. Wilf Library 3rd floor, Furst Hall 202"
+            <LocationPicker
               value={form.location}
-              onChange={set('location')}
-              onFocus={e => { e.currentTarget.style.borderColor = NAVY; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#D9D2C3'; }}
-              maxLength={80}
+              onChange={loc => setForm(f => ({ ...f, location: loc }))}
             />
           </div>
 
