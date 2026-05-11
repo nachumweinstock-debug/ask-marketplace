@@ -403,10 +403,11 @@ export default function Navbar() {
                 <div style={{ position: 'relative' }}>
                   {icon}
                   {live && <span style={{
-                    position: 'absolute', top: -3, right: -3,
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: '#4ADE80', border: '1.5px solid #fff',
-                    animation: 'ask-live-pulse 2s ease-in-out infinite',
+                    position: 'absolute', top: -4, right: -5,
+                    width: 9, height: 9, borderRadius: '50%',
+                    background: '#16A34A', border: '1.5px solid #fff',
+                    animation: 'ask-live-pulse 1.6s ease-out infinite',
+                    boxShadow: '0 0 0 0 rgba(22,163,74,0.55)',
                   }} />}
                   {badge > 0 && (
                     <span style={{
@@ -421,7 +422,7 @@ export default function Navbar() {
                   )}
                   {dot && <ProfileDot />}
                 </div>
-                <span style={{ fontSize: 9.5, fontWeight: active ? 600 : 500, fontFamily: 'var(--font-ui)' }}>{label}</span>
+                <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, fontFamily: 'var(--font-ui)', color: live && !active ? '#16A34A' : undefined }}>{label}</span>
                 {active && <span style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:2.5, background:'var(--accent)', borderRadius:2 }}/>}
               </Link>
             );
@@ -456,19 +457,47 @@ function LiveDot() {
     <>
       <style>{`
         @keyframes ask-live-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.55; transform: scale(1.35); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.55); }
+          60% { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
         }
-        .ask-live-dot {
-          display: inline-block;
-          width: 7px; height: 7px; border-radius: 50%;
-          background: #4ADE80;
-          margin-right: 5px; flex-shrink: 0;
-          animation: ask-live-pulse 2s ease-in-out infinite;
-          box-shadow: 0 0 0 2px rgba(74,222,128,0.22);
+        @keyframes ask-live-badge-shimmer {
+          0% { background-position: -100% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .ask-live-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 2px 6px 2px 5px;
+          border-radius: 99px;
+          background: linear-gradient(135deg, #15803D 0%, #16A34A 50%, #15803D 100%);
+          background-size: 200% auto;
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #fff;
+          line-height: 1;
+          margin-right: 3px;
+          flex-shrink: 0;
+          box-shadow: 0 1px 6px rgba(22,163,74,0.45);
+          animation: ask-live-badge-shimmer 3s linear infinite;
+          text-transform: uppercase;
+          font-family: var(--font-ui);
+          position: relative;
+          top: -0.5px;
+        }
+        .ask-live-badge-dot {
+          width: 5px; height: 5px;
+          border-radius: 50%;
+          background: #bbf7d0;
+          flex-shrink: 0;
+          animation: ask-live-pulse 1.6s ease-out infinite;
         }
       `}</style>
-      <span className="ask-live-dot" aria-hidden="true" />
+      <span className="ask-live-badge" aria-hidden="true">
+        <span className="ask-live-badge-dot" />
+        LIVE
+      </span>
     </>
   );
 }
