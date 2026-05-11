@@ -665,6 +665,44 @@ export async function sendNoAvailabilityReminderEmail({ toEmail, toName, listing
   });
 }
 
+export async function sendHangoutJoinNotification({ hostEmail, hostName, joinerName, subject, location, sessionId }) {
+  await send({
+    to: hostEmail,
+    subject: `${joinerName} just joined your study session`,
+    html: shell(`${joinerName} joined your session`, `
+      ${header('📚', `${joinerName} joined!`, `Someone just joined your study session on ASK.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Session', subject),
+          infoRow('Location', location),
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          You can chat with everyone in the session right from the Hangouts page.
+        </p>
+        ${btn('https://uask.live/hangouts', 'Open Hangouts')}
+      `)}
+    `),
+  });
+}
+
+export async function sendHangoutChatNotification({ toEmail, toName, fromName, subject, preview }) {
+  await send({
+    to: toEmail,
+    subject: `${fromName} sent a message in "${subject}"`,
+    html: shell(`New chat message in ${subject}`, `
+      ${header('💬', `New message in "${subject}"`, `${fromName} posted in your study session.`)}
+      ${body(`
+        <div style="background:${BG};border:1px solid ${BORDER};border-radius:10px;padding:16px 20px;margin:0 0 20px">
+          <div style="font-size:13px;color:${MUTED};margin-bottom:6px;font-weight:500">${fromName}</div>
+          <div style="font-size:15px;color:${DARK};line-height:1.55">${preview}</div>
+        </div>
+        ${btn('https://uask.live/hangouts', 'Reply in Hangouts')}
+        ${note('Open the session on Hangouts to see the full conversation.')}
+      `)}
+    `),
+  });
+}
+
 export async function sendAdminPrankNotification() {
   await send({
     to: [DEV_ADMIN_EMAIL],

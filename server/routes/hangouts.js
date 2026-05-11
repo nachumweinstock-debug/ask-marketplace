@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
+import { sendHangoutJoinNotification, sendHangoutChatNotification } from '../email.js';
 
 const router = Router();
 
@@ -78,9 +79,82 @@ router.post('/:id/join', requireAuth, (req, res) => {
   db.prepare(`UPDATE study_sessions SET attendee_count = attendee_count + 1 WHERE id = ?`).run(session.id);
   const updated = db.prepare(`SELECT attendee_count FROM study_sessions WHERE id = ?`).get(session.id);
 
-  // TODO: notification hook — notify session host when a new person joins (future upgrade)
+  // Email the host (unless they're the one joining)
+  if (session.user_id !== req.user.id) {
+    const host = db.prepare('SELECT email, name FROM users WHERE id = ?').get(session.user_id);
+    if (host) {
+      sendHangoutJoinNotification({
+        hostEmail: host.email,
+        hostName: host.name,
+        joinerName: req.user.name,
+        subject: session.subject,
+        location: session.location,
+        sessionId: session.id,
+      }).catch(() => {});
+    }
+  }
 
   res.json({ attendee_count: updated.attendee_count, joined: true });
+});
+
+// GET /api/hangouts/:id/messages
+router.get('/:id/messages', requireAuth, (req, res) => {
+  const session = db.prepare(`SELECT id FROM study_sessions WHERE id = ? AND expires_at > datetime('now')`).get(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+
+  const isAttendee = db.prepare(`SELECT 1 FROM session_attendees WHERE session_id = ? AND user_id = ?`).get(session.id, req.user.id);
+  if (!isAttendee) return res.status(403).json({ error: 'Join the session to see messages' });
+
+  const messages = db.prepare(`
+    SELECT m.id, m.body, m.created_at, u.id AS user_id, u.name, u.avatar_url
+    FROM session_messages m
+    JOIN users u ON u.id = m.user_id
+    WHERE m.session_id = ?
+    ORDER BY m.created_at ASC
+  `).all(session.id);
+
+  res.json(messages);
+});
+
+// POST /api/hangouts/:id/messages
+router.post('/:id/messages', requireAuth, (req, res) => {
+  const { body: msgBody } = req.body;
+  if (!msgBody?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
+  if (msgBody.trim().length > 500) return res.status(400).json({ error: 'Message too long' });
+
+  const session = db.prepare(`SELECT * FROM study_sessions WHERE id = ? AND expires_at > datetime('now')`).get(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+
+  const isAttendee = db.prepare(`SELECT 1 FROM session_attendees WHERE session_id = ? AND user_id = ?`).get(session.id, req.user.id);
+  if (!isAttendee) return res.status(403).json({ error: 'Join the session to chat' });
+
+  const result = db.prepare(`
+    INSERT INTO session_messages (session_id, user_id, body) VALUES (?, ?, ?)
+  `).run(session.id, req.user.id, msgBody.trim());
+
+  const message = db.prepare(`
+    SELECT m.id, m.body, m.created_at, u.id AS user_id, u.name, u.avatar_url
+    FROM session_messages m JOIN users u ON u.id = m.user_id WHERE m.id = ?
+  `).get(result.lastInsertRowid);
+
+  // Notify all other attendees (fire-and-forget, cap at 10 to avoid spam)
+  const others = db.prepare(`
+    SELECT u.email, u.name FROM session_attendees sa
+    JOIN users u ON u.id = sa.user_id
+    WHERE sa.session_id = ? AND sa.user_id != ?
+    LIMIT 10
+  `).all(session.id, req.user.id);
+  for (const attendee of others) {
+    sendHangoutChatNotification({
+      toEmail: attendee.email,
+      toName: attendee.name,
+      fromName: req.user.name,
+      subject: session.subject,
+      preview: msgBody.trim().slice(0, 140),
+    }).catch(() => {});
+  }
+
+  res.status(201).json(message);
 });
 
 export default router;

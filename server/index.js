@@ -99,6 +99,7 @@ app.post('/api/people/connections', writeLimiter);
 app.post('/api/time-requests', writeLimiter);
 app.post('/api/hangouts', writeLimiter);
 app.post('/api/hangouts/:id/join', writeLimiter);
+app.post('/api/hangouts/:id/messages', writeLimiter);
 
 app.use(cors({
   origin: (origin, cb) => {

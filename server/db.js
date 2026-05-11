@@ -588,4 +588,19 @@ if (!tablesHangouts.includes('study_sessions')) {
 db.exec('CREATE INDEX IF NOT EXISTS idx_study_sessions_expires ON study_sessions(expires_at)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_session_attendees_session ON session_attendees(session_id)');
 
+// Session chat messages
+const tablesChat = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+if (!tablesChat.includes('session_messages')) {
+  db.exec(`
+    CREATE TABLE session_messages (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES study_sessions(id) ON DELETE CASCADE,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body       TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_session_messages_session ON session_messages(session_id, created_at)');
+
 export default db;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -321,11 +321,136 @@ function Avatar({ src, name, size = 30 }) {
   );
 }
 
-function SessionCard({ session, onJoin, joining }) {
+function SessionChat({ sessionId, currentUser }) {
+  const [messages, setMessages] = useState([]);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const bottomRef = useRef(null);
+
+  const load = useCallback(() => {
+    api.get(`/hangouts/${sessionId}/messages`)
+      .then(({ data }) => setMessages(data))
+      .catch(() => {});
+  }, [sessionId]);
+
+  useEffect(() => {
+    load();
+    const iv = setInterval(load, 5000);
+    return () => clearInterval(iv);
+  }, [load]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  async function send(e) {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    setSending(true);
+    setError('');
+    try {
+      const { data } = await api.post(`/hangouts/${sessionId}/messages`, { body: draft.trim() });
+      setMessages(m => [...m, data]);
+      setDraft('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to send');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function fmt(ts) {
+    const d = new Date(ts + (ts.endsWith('Z') ? '' : 'Z'));
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  return (
+    <div style={{
+      borderTop: '1px solid #E8E3DA', marginTop: 6, paddingTop: 12,
+    }}>
+      <div style={{
+        maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10,
+        marginBottom: 10, paddingRight: 2,
+      }}>
+        {messages.length === 0 && (
+          <p style={{ fontSize: 12.5, color: '#8D8577', fontFamily: "'Outfit', sans-serif", textAlign: 'center', margin: '8px 0' }}>
+            No messages yet — say hi!
+          </p>
+        )}
+        {messages.map(m => {
+          const isMe = m.user_id === currentUser?.id;
+          return (
+            <div key={m.id} style={{
+              display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row',
+              alignItems: 'flex-end', gap: 7,
+            }}>
+              {!isMe && <Avatar src={m.avatar_url} name={m.name} size={24} />}
+              <div style={{ maxWidth: '75%' }}>
+                {!isMe && (
+                  <div style={{ fontSize: 10.5, color: '#8D8577', fontFamily: "'Outfit', sans-serif", marginBottom: 2, paddingLeft: 3 }}>
+                    {m.name}
+                  </div>
+                )}
+                <div style={{
+                  padding: '8px 11px', borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                  background: isMe ? NAVY : '#F0F4F8',
+                  color: isMe ? '#fff' : '#17130F',
+                  fontSize: 13.5, fontFamily: "'Outfit', sans-serif", lineHeight: 1.45,
+                  wordBreak: 'break-word',
+                }}>
+                  {m.body}
+                </div>
+                <div style={{ fontSize: 10, color: '#B0A898', fontFamily: 'var(--font-ui)', marginTop: 2, textAlign: isMe ? 'right' : 'left', paddingLeft: isMe ? 0 : 3 }}>
+                  {fmt(m.created_at)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+      <form onSubmit={send} style={{ display: 'flex', gap: 7 }}>
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          placeholder="Message the group…"
+          maxLength={500}
+          style={{
+            flex: 1, padding: '9px 12px', borderRadius: 20,
+            border: '1.5px solid #D9D2C3', fontSize: 13.5,
+            fontFamily: "'Outfit', sans-serif", outline: 'none',
+            background: '#fff', color: '#17130F',
+            transition: 'border-color 0.15s',
+          }}
+          onFocus={e => { e.currentTarget.style.borderColor = NAVY; }}
+          onBlur={e => { e.currentTarget.style.borderColor = '#D9D2C3'; }}
+        />
+        <button
+          type="submit"
+          disabled={sending || !draft.trim()}
+          style={{
+            padding: '9px 16px', borderRadius: 20, border: 'none',
+            background: draft.trim() ? NAVY : '#E8E3DA',
+            color: draft.trim() ? '#fff' : '#B0A898',
+            fontSize: 13, fontWeight: 600, cursor: draft.trim() ? 'pointer' : 'default',
+            fontFamily: "'Outfit', sans-serif", transition: 'all 0.15s', flexShrink: 0,
+          }}
+        >
+          {sending ? '…' : 'Send'}
+        </button>
+      </form>
+      {error && <p style={{ fontSize: 12, color: '#DC2626', margin: '4px 0 0', fontFamily: 'var(--font-ui)' }}>{error}</p>}
+    </div>
+  );
+}
+
+function SessionCard({ session, onJoin, joining, currentUser }) {
   const expired = new Date(session.expires_at) <= Date.now();
   if (expired) return null;
 
   const isJoined = !!session.joined;
+  const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <div style={{
@@ -403,18 +528,36 @@ function SessionCard({ session, onJoin, joining }) {
         </span>
       </div>
 
-      {/* Join / You're in */}
+      {/* Join / You're in + chat toggle */}
       {isJoined ? (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '10px', borderRadius: 10,
-          background: '#EDF7F0', color: '#0F7B55',
-          fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-        }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          You're in
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '10px', borderRadius: 10,
+            background: '#EDF7F0', color: '#0F7B55',
+            fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            You're in
+          </div>
+          <button
+            onClick={() => setChatOpen(o => !o)}
+            style={{
+              padding: '10px 16px', borderRadius: 10, border: 'none',
+              background: chatOpen ? NAVY : '#EEF3FF',
+              color: chatOpen ? '#fff' : NAVY,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.15s',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Chat
+          </button>
         </div>
       ) : (
         <button
@@ -433,6 +576,10 @@ function SessionCard({ session, onJoin, joining }) {
         >
           {joining === session.id ? 'Joining…' : 'Join'}
         </button>
+      )}
+
+      {isJoined && chatOpen && (
+        <SessionChat sessionId={session.id} currentUser={currentUser} />
       )}
     </div>
   );
@@ -760,7 +907,7 @@ export default function StudyHangouts() {
             gap: 16,
           }}>
             {active.map(s => (
-              <SessionCard key={s.id} session={s} onJoin={handleJoin} joining={joining} />
+              <SessionCard key={s.id} session={s} onJoin={handleJoin} joining={joining} currentUser={user} />
             ))}
           </div>
         )}
