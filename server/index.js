@@ -26,6 +26,7 @@ import trustRoutes from './routes/trust.js';
 import providerMediaRoutes from './routes/providerMedia.js';
 import reminderRoutes from './routes/reminders.js';
 import referralRoutes from './routes/referrals.js';
+import hangoutsRoutes from './routes/hangouts.js';
 import db from './db.js';
 import { startReminderJobs } from './reminders.js';
 import posthog from './posthog.js';
@@ -96,6 +97,8 @@ app.post('/api/bookings', writeLimiter);
 app.post('/api/help-wanted', writeLimiter);
 app.post('/api/people/connections', writeLimiter);
 app.post('/api/time-requests', writeLimiter);
+app.post('/api/hangouts', writeLimiter);
+app.post('/api/hangouts/:id/join', writeLimiter);
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -158,6 +161,7 @@ app.use('/api/trust', trustRoutes);
 app.use('/api/provider-media', providerMediaRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/hangouts', hangoutsRoutes);
 
 startReminderJobs();
 

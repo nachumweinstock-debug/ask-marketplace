@@ -77,6 +77,7 @@ export default function Browse() {
   const [customCats, setCustomCats] = useState([]);
   const [subcats, setSubcats] = useState([]);
   const debounceRef = useRef(null);
+  const skipSubcatReset = useRef(false);
   const [editModal, setEditModal] = useState(null); // { profileId, isAdminEdit, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
@@ -95,6 +96,16 @@ export default function Browse() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (skipSubcatReset.current) {
+      skipSubcatReset.current = false;
+      // Still refresh the sibling-subcategory list for the new category, but keep selected subcategory
+      if (SUBCATEGORY_PARENT.has(category)) {
+        api.get('/providers/subcategories', { params: { category } })
+          .then(({ data }) => setSubcats(data))
+          .catch(() => setSubcats([]));
+      }
+      return;
+    }
     setSubcategory('all');
     if (!SUBCATEGORY_PARENT.has(category)) { setSubcats([]); return; }
     api.get('/providers/subcategories', { params: { category } })
@@ -242,6 +253,30 @@ export default function Browse() {
   function handleSubcategory(sub) {
     setSubcategory(sub);
     syncParams({ subcategory: sub });
+  }
+
+  // Called when a subject pill on a card is clicked — sets category + subcategory atomically
+  function handleTagClick(listing) {
+    const sub = listing.subcategory;
+    if (!sub) return;
+    // Map DB category to the filter-bar category id
+    const CAT_ID = {
+      tutor: 'tutor', barber: 'barber',
+      fitness: 'fitness', tennis: 'fitness',
+      'hebrew tutor': 'languages',
+    };
+    let cat = CAT_ID[listing.category] || 'all';
+    if (listing.custom_category) {
+      const cc = listing.custom_category.toLowerCase();
+      if (cc === 'music') cat = 'music';
+      else if (cc === 'torah studies') cat = 'torah';
+      else if (cc === 'languages') cat = 'languages';
+    }
+    skipSubcatReset.current = true;
+    setCategory(cat);
+    setSubcategory(sub);
+    syncParams({ category: cat, subcategory: sub });
+    // fetchProviders is triggered automatically by the [category, subcategory] effect
   }
 
   function handleSessionType(st) {
@@ -482,6 +517,7 @@ export default function Browse() {
               isAdmin={!!user?.is_admin}
               saved={savedIds.has(p.id)}
               onSavedChange={handleSavedChange}
+              onTagClick={handleTagClick}
               onDelete={user && user.id === p.user_id ? () => handleDeleteOwn(p.id) : undefined}
               onEdit={
                 user?.is_admin

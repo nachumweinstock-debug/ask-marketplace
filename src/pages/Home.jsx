@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FAQAccordion from '../components/FAQAccordion';
+import api from '../api';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -55,6 +56,71 @@ const ACADEMIC_CATEGORIES = [
     ],
   },
 ];
+
+function HangoutsStrip() {
+  const [count, setCount] = useState(null);
+  useEffect(() => {
+    api.get('/hangouts').then(({ data }) => setCount(data.length)).catch(() => {});
+  }, []);
+
+  return (
+    <section style={{
+      background: '#1B3A6B',
+      padding: '36px 24px',
+    }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%', background: '#4ADE80', display: 'inline-block',
+              boxShadow: '0 0 0 3px rgba(74,222,128,0.25)',
+            }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#93C5FD', letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'var(--font-ui)' }}>
+              Live now
+            </span>
+          </div>
+          <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(24px,4vw,36px)', color: '#FAF7F2', fontWeight: 400, margin: 0, lineHeight: 1.15 }}>
+            Study Hangouts
+          </h2>
+          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, color: '#93C5FD', marginTop: 6 }}>
+            {count === null
+              ? "See who's studying right now — show up and join."
+              : count === 0
+              ? 'No sessions running yet — be the first one out.'
+              : `${count} active session${count !== 1 ? 's' : ''} happening right now.`}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link to="/hangouts" style={{
+            padding: '11px 24px', borderRadius: 99,
+            background: '#FAF7F2', color: '#1B3A6B',
+            fontSize: 14, fontWeight: 700, textDecoration: 'none',
+            fontFamily: "'Outfit', sans-serif",
+            transition: 'opacity 0.15s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+          >
+            Join a session
+          </Link>
+          <Link to="/hangouts" state={{ openModal: true }} style={{
+            padding: '11px 24px', borderRadius: 99,
+            background: 'transparent', color: '#FAF7F2',
+            border: '1.5px solid rgba(250,247,242,0.35)',
+            fontSize: 14, fontWeight: 600, textDecoration: 'none',
+            fontFamily: "'Outfit', sans-serif",
+            transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(250,247,242,0.7)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,247,242,0.35)'; }}
+          >
+            Start one
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -163,6 +229,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <HangoutsStrip />
 
       <section className="home-section" style={{ background: '#fff' }}>
         <div className="home-section-inner">

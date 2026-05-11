@@ -562,4 +562,30 @@ for (const email of SUPERADMINS) {
   db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(email);
 }
 
+// Study Hangouts — real-time "who's studying now" board
+const tablesHangouts = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+if (!tablesHangouts.includes('study_sessions')) {
+  db.exec(`
+    CREATE TABLE study_sessions (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject        TEXT NOT NULL,
+      location       TEXT NOT NULL,
+      class_code     TEXT,
+      expires_at     DATETIME NOT NULL,
+      attendee_count INTEGER DEFAULT 1,
+      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE session_attendees (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES study_sessions(id) ON DELETE CASCADE,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(session_id, user_id)
+    );
+  `);
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_study_sessions_expires ON study_sessions(expires_at)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_session_attendees_session ON session_attendees(session_id)');
+
 export default db;

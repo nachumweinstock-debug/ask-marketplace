@@ -151,6 +151,7 @@ export default function Navbar() {
     { to: '/find-a-tutor', label: 'Find Instructor', show: true },
     { to: '/saved-tutors', label: 'Saved', show: !!user },
     { to: '/people', label: 'People', show: true },
+    { to: '/hangouts', label: 'Hangouts', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
     { to: '/support', label: 'Support', show: true },
     { to: '/create-listing', label: 'Post', show: !!user },

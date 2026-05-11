@@ -2,6 +2,98 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+
+const CHECKLIST_KEY = 'ask_getting_started_v1';
+
+function GettingStarted({ hasBookings }) {
+  const [done, setDone] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CHECKLIST_KEY) || '{}'); } catch { return {}; }
+  });
+
+  const items = [
+    { key: 'browse', label: 'Browse listings', sub: 'Find a tutor, barber, or fitness coach', to: '/browse', autoDone: hasBookings },
+    { key: 'hangouts', label: 'Study Hangouts', sub: 'Join one or make one', to: '/hangouts' },
+    { key: 'profile', label: 'Fill out your profile', sub: 'Add your major and classes', to: '/account' },
+  ];
+
+  function mark(key) {
+    const next = { ...done, [key]: true };
+    setDone(next);
+    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(next));
+  }
+
+  const allDone = items.every(i => i.autoDone || done[i.key]);
+  if (allDone) return null;
+
+  const completed = items.filter(i => i.autoDone || done[i.key]).length;
+
+  return (
+    <div style={{
+      marginBottom: 28,
+      background: '#FAF7F2',
+      border: '1.5px solid #E8E3DA',
+      borderRadius: 14,
+      padding: '20px 22px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#1B3A6B', fontFamily: 'var(--font-ui)', letterSpacing: '0.02em' }}>
+          Getting started
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>
+          {completed}/{items.length}
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map(item => {
+          const isDone = item.autoDone || done[item.key];
+          return (
+            <Link
+              key={item.key}
+              to={item.to}
+              onClick={() => mark(item.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 9,
+                textDecoration: 'none',
+                background: isDone ? '#F0FDF4' : '#fff',
+                border: `1px solid ${isDone ? '#BBF7D0' : '#E8E3DA'}`,
+                transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={e => { if (!isDone) e.currentTarget.style.borderColor = '#1B3A6B'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isDone ? '#BBF7D0' : '#E8E3DA'; }}
+            >
+              <span style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isDone ? '#16A34A' : 'transparent',
+                border: isDone ? 'none' : '1.5px solid #B9B09F',
+              }}>
+                {isDone && (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </span>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: isDone ? '#6D665C' : '#17130F', fontFamily: 'var(--font-ui)', textDecoration: isDone ? 'line-through' : 'none' }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-ui)', marginTop: 1 }}>
+                  {item.sub}
+                </div>
+              </div>
+              {!isDone && (
+                <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B9B09F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 import { fmtTime, fmtDay } from '../lib/slots';
 import { RowSkeleton } from '../components/Skeletons';
 import PoweredByAsk from '../components/PoweredByAsk';
@@ -191,6 +283,8 @@ export default function StudentDashboard() {
           {user?.role === 'provider' ? 'Edit listing' : 'Post a listing'}
         </button>
       </div>
+
+      <GettingStarted hasBookings={!loading && bookings.length > 0} />
 
       {/* Reschedule proposals */}
       {bookings.filter(b => b.reschedule_status === 'pending_student_approval').length > 0 && (

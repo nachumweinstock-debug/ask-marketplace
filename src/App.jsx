@@ -32,6 +32,8 @@ import AdminReviewModeration from './pages/AdminReviewModeration';
 import FindTutor from './pages/FindTutor';
 import Referrals from './pages/Referrals';
 import SessionReminders from './components/SessionReminders';
+import StudyHangouts from './pages/StudyHangouts';
+import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children, role, developerOnly = false }) {
   const { user, loading } = useAuth();
@@ -177,6 +179,7 @@ function AppRoutes() {
         <Route path="/refund-policy" element={<Layout><LegalDocument type="refunds" /></Layout>} />
         <Route path="/community-guidelines" element={<Layout><LegalDocument type="guidelines" /></Layout>} />
         <Route path="/people" element={<Layout><People /></Layout>} />
+        <Route path="/hangouts" element={<Layout><StudyHangouts /></Layout>} />
         <Route path="/help-wanted" element={<Layout><HelpWanted /></Layout>} />
         <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />
         <Route path="/providers/:id" element={<Layout><ProviderProfile /></Layout>} />
@@ -307,7 +310,7 @@ function AppRoutes() {
         <Route path="/u/:username" element={<Layout><UserProfile /></Layout>} />
         {/* Pretty URLs: /sacha-feit-7 → ProviderProfile (ID parsed from slug) */}
         <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Layout><NotFound /></Layout>} />
       </Routes>
       <FloatingSupportButton />
     </>
