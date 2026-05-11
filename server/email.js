@@ -665,6 +665,30 @@ export async function sendNoAvailabilityReminderEmail({ toEmail, toName, listing
   });
 }
 
+export async function sendHangoutHostReminder({ toEmail, hostName, subject, location, attendeeCount, expiresAt }) {
+  const mins = Math.max(0, Math.round((new Date(expiresAt) - Date.now()) / 60000));
+  const timeStr = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+  await send({
+    to: toEmail,
+    subject: `Your "${subject}" session is still live`,
+    html: shell(`Your study session is still going`, `
+      ${header('⏱️', `Still going: ${subject}`, `Your session expires in ${timeStr}.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Subject', subject),
+          infoRow('Location', location),
+          infoRow('Attendees', String(attendeeCount)),
+          infoRow('Time left', timeStr),
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          People can still join. Head to Hangouts to chat with everyone in the session.
+        </p>
+        ${btn('https://uask.live/hangouts', 'Open my session')}
+      `)}
+    `),
+  });
+}
+
 export async function sendNewHangoutNotification({ toEmail, hostName, subject, location }) {
   await send({
     to: toEmail,

@@ -445,60 +445,79 @@ function SessionChat({ sessionId, currentUser }) {
   );
 }
 
-function SessionCard({ session, onJoin, joining, currentUser }) {
+function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
   const expired = new Date(session.expires_at) <= Date.now();
   if (expired) return null;
 
   const isJoined = !!session.joined;
+  const isHost = currentUser?.id === session.user_id;
   const [chatOpen, setChatOpen] = useState(false);
+  const [attendees, setAttendees] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  useEffect(() => {
+    if (!isJoined) return;
+    api.get(`/hangouts/${session.id}/attendees`)
+      .then(({ data }) => setAttendees(data))
+      .catch(() => {});
+  }, [session.id, isJoined, session.attendee_count]);
+
+  function copyInvite() {
+    navigator.clipboard.writeText(`${window.location.origin}/hangouts`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  async function handleCancel() {
+    if (!window.confirm('End your session? Everyone will be removed.')) return;
+    setCancelling(true);
+    try {
+      await api.delete(`/hangouts/${session.id}`);
+      onCancel(session.id);
+    } catch {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div style={{
       background: '#fff',
       borderRadius: 16,
       padding: '20px 22px',
-      border: '1px solid #E8E3DA',
-      boxShadow: '0 2px 12px rgba(27,58,107,0.06)',
+      border: `1px solid ${isHost ? 'rgba(27,58,107,0.25)' : '#E8E3DA'}`,
+      boxShadow: isHost ? '0 2px 12px rgba(27,58,107,0.10)' : '0 2px 12px rgba(27,58,107,0.06)',
       display: 'flex', flexDirection: 'column', gap: 14,
       transition: 'box-shadow 0.18s, transform 0.18s',
     }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 28px rgba(27,58,107,0.13)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(27,58,107,0.06)'; e.currentTarget.style.transform = 'none'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = isHost ? '0 2px 12px rgba(27,58,107,0.10)' : '0 2px 12px rgba(27,58,107,0.06)'; e.currentTarget.style.transform = 'none'; }}
     >
       {/* Subject + time remaining */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <h3 style={{
-            fontFamily: "'DM Serif Display', Georgia, serif",
-            fontSize: 20, color: NAVY, fontWeight: 400, margin: 0, lineHeight: 1.2,
-          }}>
+          {isHost && (
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: NAVY, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'var(--font-ui)', display: 'block', marginBottom: 4 }}>
+              Your session
+            </span>
+          )}
+          <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 20, color: NAVY, fontWeight: 400, margin: 0, lineHeight: 1.2 }}>
             {session.subject}
           </h3>
           {session.class_code && (
-            <span style={{
-              display: 'inline-block', marginTop: 5,
-              background: '#EEF3FF', color: '#2558D8',
-              fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
-              padding: '2px 9px', borderRadius: 99, fontFamily: 'var(--font-ui)',
-            }}>
+            <span style={{ display: 'inline-block', marginTop: 5, background: '#EEF3FF', color: '#2558D8', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', padding: '2px 9px', borderRadius: 99, fontFamily: 'var(--font-ui)' }}>
               {session.class_code.toUpperCase()}
             </span>
           )}
         </div>
-        <span style={{
-          fontSize: 11.5, color: '#8D8577', fontFamily: 'var(--font-ui)',
-          fontWeight: 500, flexShrink: 0, marginTop: 3, whiteSpace: 'nowrap',
-        }}>
+        <span style={{ fontSize: 11.5, color: '#8D8577', fontFamily: 'var(--font-ui)', fontWeight: 500, flexShrink: 0, marginTop: 3, whiteSpace: 'nowrap' }}>
           {timeLeft(session.expires_at)}
         </span>
       </div>
 
       {/* Location */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        color: '#6D665C', fontSize: 13.5,
-        fontFamily: "'Outfit', sans-serif",
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#6D665C', fontSize: 13.5, fontFamily: "'Outfit', sans-serif" }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
           <circle cx="12" cy="10" r="3"/>
@@ -506,71 +525,65 @@ function SessionCard({ session, onJoin, joining, currentUser }) {
         {session.location}
       </div>
 
-      {/* Host row + attendee count */}
+      {/* Attendees row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Avatar src={session.host_avatar} name={session.host_name} size={26} />
-          <span style={{ fontSize: 13, color: '#342F29', fontFamily: "'Outfit', sans-serif" }}>
-            {session.host_name}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {attendees ? (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {attendees.slice(0, 6).map((a, i) => (
+                <div key={a.id} title={a.name} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 6 - i, borderRadius: '50%', border: '2px solid #fff' }}>
+                  <Avatar src={a.avatar_url} name={a.name} size={26} />
+                </div>
+              ))}
+              {attendees.length > 6 && (
+                <span style={{ marginLeft: 4, fontSize: 11.5, color: '#8D8577', fontFamily: 'var(--font-ui)' }}>+{attendees.length - 6}</span>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Avatar src={session.host_avatar} name={session.host_name} size={26} />
+              <span style={{ fontSize: 13, color: '#342F29', fontFamily: "'Outfit', sans-serif" }}>{session.host_name}</span>
+            </div>
+          )}
         </div>
-        <span style={{
-          fontSize: 13, color: NAVY, fontWeight: 600, fontFamily: 'var(--font-ui)',
-          display: 'flex', alignItems: 'center', gap: 4,
-        }}>
+        <span style={{ fontSize: 13, color: NAVY, fontWeight: 600, fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
           {session.attendee_count}
         </span>
       </div>
 
-      {/* Join / You're in + chat toggle */}
+      {/* Actions */}
       {isJoined ? (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px', borderRadius: 10,
-            background: '#EDF7F0', color: '#0F7B55',
-            fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 10, background: '#EDF7F0', color: '#0F7B55', fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             You're in
           </div>
-          <button
-            onClick={() => setChatOpen(o => !o)}
-            style={{
-              padding: '10px 16px', borderRadius: 10, border: 'none',
-              background: chatOpen ? NAVY : '#EEF3FF',
-              color: chatOpen ? '#fff' : NAVY,
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 6,
-              transition: 'all 0.15s',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+          <button onClick={() => setChatOpen(o => !o)} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: chatOpen ? NAVY : '#EEF3FF', color: chatOpen ? '#fff' : NAVY, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Chat
           </button>
+          <button onClick={copyInvite} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: copied ? '#EDF7F0' : '#F5F3EF', color: copied ? '#0F7B55' : '#6D665C', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {copied ? <polyline points="20 6 9 17 4 12"/> : <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>}
+            </svg>
+            {copied ? 'Copied!' : 'Invite'}
+          </button>
+          {isHost && (
+            <button onClick={handleCancel} disabled={cancelling} style={{ padding: '10px 14px', borderRadius: 10, border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: cancelling ? 'default' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: cancelling ? 0.6 : 1, transition: 'all 0.15s' }}>
+              {cancelling ? 'Ending…' : 'End'}
+            </button>
+          )}
         </div>
       ) : (
         <button
           onClick={() => onJoin(session.id)}
           disabled={joining === session.id}
-          style={{
-            width: '100%', padding: '10px', borderRadius: 10,
-            background: NAVY, color: '#fff', border: 'none',
-            fontSize: 14, fontWeight: 600, cursor: joining === session.id ? 'default' : 'pointer',
-            fontFamily: "'Outfit', sans-serif",
-            transition: 'background 0.15s',
-            opacity: joining === session.id ? 0.7 : 1,
-          }}
+          style={{ width: '100%', padding: '10px', borderRadius: 10, background: NAVY, color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: joining === session.id ? 'default' : 'pointer', fontFamily: "'Outfit', sans-serif", transition: 'background 0.15s', opacity: joining === session.id ? 0.7 : 1 }}
           onMouseEnter={e => { if (joining !== session.id) e.currentTarget.style.background = '#142D54'; }}
           onMouseLeave={e => { e.currentTarget.style.background = NAVY; }}
         >
@@ -805,6 +818,10 @@ export default function StudyHangouts() {
     setSessions(prev => [session, ...prev]);
   }
 
+  function handleCancel(sessionId) {
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+  }
+
   return (
     <div style={{ background: CREAM, minHeight: '100vh', paddingBottom: 80 }}>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
@@ -907,7 +924,7 @@ export default function StudyHangouts() {
             gap: 16,
           }}>
             {active.map(s => (
-              <SessionCard key={s.id} session={s} onJoin={handleJoin} joining={joining} currentUser={user} />
+              <SessionCard key={s.id} session={s} onJoin={handleJoin} joining={joining} onCancel={handleCancel} currentUser={user} />
             ))}
           </div>
         )}

@@ -11,7 +11,7 @@
 
 import db from './db.js';
 import { smsAppointmentReminder, smsReviewReminder } from './sms.js';
-import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification, sendNoAvailabilityReminderEmail } from './email.js';
+import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification, sendNoAvailabilityReminderEmail, sendHangoutHostReminder } from './email.js';
 
 // Returns "YYYY-MM-DD HH:MM" in Eastern time, offset by `mins` minutes from now
 function easternOffset(mins = 0) {
@@ -205,12 +205,41 @@ async function sendNoAvailabilityListingReminders() {
   }
 }
 
+async function sendHangoutHostReminders() {
+  const sessions = db.prepare(`
+    SELECT s.id, s.subject, s.location, s.attendee_count, s.expires_at,
+           u.email, u.name
+    FROM study_sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.expires_at > datetime('now')
+      AND (s.host_last_reminded_at IS NULL OR s.host_last_reminded_at < datetime('now', '-30 minutes'))
+      AND s.created_at < datetime('now', '-5 minutes')
+  `).all();
+
+  for (const s of sessions) {
+    try {
+      await sendHangoutHostReminder({
+        toEmail: s.email,
+        hostName: s.name,
+        subject: s.subject,
+        location: s.location,
+        attendeeCount: s.attendee_count,
+        expiresAt: s.expires_at,
+      });
+      db.prepare(`UPDATE study_sessions SET host_last_reminded_at = datetime('now') WHERE id = ?`).run(s.id);
+    } catch (e) {
+      console.error('[REMINDER] hangout host reminder error:', e.message);
+    }
+  }
+}
+
 export function startReminderJobs() {
   const run = () => {
     sendAppointmentReminders().catch(e => console.error('[REMINDER] before job error:', e.message));
     sendReviewReminders().catch(e => console.error('[REMINDER] review job error:', e.message));
     sendUnreadDmNudges().catch(e => console.error('[REMINDER] DM nudge error:', e.message));
     sendNoAvailabilityListingReminders().catch(e => console.error('[REMINDER] no-availability job error:', e.message));
+    sendHangoutHostReminders().catch(e => console.error('[REMINDER] hangout host reminder error:', e.message));
   };
 
   // Run once at startup, then every 15 minutes

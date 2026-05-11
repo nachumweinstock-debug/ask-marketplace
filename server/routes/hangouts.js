@@ -120,6 +120,29 @@ router.post('/:id/join', requireAuth, (req, res) => {
   res.json({ attendee_count: updated.attendee_count, joined: true });
 });
 
+// DELETE /api/hangouts/:id — host cancels their session
+router.delete('/:id', requireAuth, (req, res) => {
+  const session = db.prepare(`SELECT * FROM study_sessions WHERE id = ?`).get(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  if (session.user_id !== req.user.id) return res.status(403).json({ error: 'Only the host can cancel' });
+  db.prepare(`DELETE FROM study_sessions WHERE id = ?`).run(session.id);
+  res.json({ ok: true });
+});
+
+// GET /api/hangouts/:id/attendees
+router.get('/:id/attendees', optionalAuth, (req, res) => {
+  const session = db.prepare(`SELECT id FROM study_sessions WHERE id = ?`).get(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  const attendees = db.prepare(`
+    SELECT u.id, u.name, u.avatar_url, u.username
+    FROM session_attendees sa
+    JOIN users u ON u.id = sa.user_id
+    WHERE sa.session_id = ?
+    ORDER BY sa.joined_at ASC
+  `).all(session.id);
+  res.json(attendees);
+});
+
 // GET /api/hangouts/:id/messages
 router.get('/:id/messages', requireAuth, (req, res) => {
   const session = db.prepare(`SELECT id FROM study_sessions WHERE id = ? AND expires_at > datetime('now')`).get(req.params.id);

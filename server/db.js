@@ -363,6 +363,10 @@ if (!colsLatest.includes('apple_id'))               db.exec('ALTER TABLE users A
 if (!colsLatest.includes('token_version'))          db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1');
 if (!colsLatest.includes('last_hangout_notif_at'))  db.exec('ALTER TABLE users ADD COLUMN last_hangout_notif_at DATETIME');
 
+// Study session host reminder tracking
+const sessionCols = db.pragma("table_info(study_sessions)").map(c => c.name);
+if (!sessionCols.includes('host_last_reminded_at')) db.exec('ALTER TABLE study_sessions ADD COLUMN host_last_reminded_at DATETIME');
+
 // DM nudge tracking — prevents re-sending the same nudge level for a conversation
 const tablesLatest = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tablesLatest.includes('dm_nudge_log')) {
