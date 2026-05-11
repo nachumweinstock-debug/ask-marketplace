@@ -358,9 +358,10 @@ if (!bookingCols.includes('reschedule_status'))
 
 // OAuth identity columns + token versioning for session invalidation
 const colsLatest = db.pragma('table_info(users)').map(c => c.name);
-if (!colsLatest.includes('google_id'))     db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
-if (!colsLatest.includes('apple_id'))      db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
-if (!colsLatest.includes('token_version')) db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1');
+if (!colsLatest.includes('google_id'))              db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
+if (!colsLatest.includes('apple_id'))               db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
+if (!colsLatest.includes('token_version'))          db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1');
+if (!colsLatest.includes('last_hangout_notif_at'))  db.exec('ALTER TABLE users ADD COLUMN last_hangout_notif_at DATETIME');
 
 // DM nudge tracking — prevents re-sending the same nudge level for a conversation
 const tablesLatest = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);

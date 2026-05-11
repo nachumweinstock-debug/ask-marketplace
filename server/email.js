@@ -665,6 +665,27 @@ export async function sendNoAvailabilityReminderEmail({ toEmail, toName, listing
   });
 }
 
+export async function sendNewHangoutNotification({ toEmail, hostName, subject, location }) {
+  await send({
+    to: toEmail,
+    subject: `${hostName} just started a study session`,
+    html: shell(`Study session: ${subject}`, `
+      ${header('📚', `${hostName} is studying`, `A new session just opened on ASK Hangouts.`)}
+      ${body(`
+        ${infoTable(
+          infoRow('Subject', subject),
+          infoRow('Location', location),
+        )}
+        <p style="margin:0 0 16px;font-size:14px;color:${MUTED};line-height:1.6">
+          Join now to study together — sessions are live and expire automatically.
+        </p>
+        ${btn('https://uask.live/hangouts', 'Join the session')}
+        ${note('You get this because you have an ASK account. We only send one of these per 30 minutes.')}
+      `)}
+    `),
+  });
+}
+
 export async function sendHangoutJoinNotification({ hostEmail, hostName, joinerName, subject, location, sessionId }) {
   await send({
     to: hostEmail,

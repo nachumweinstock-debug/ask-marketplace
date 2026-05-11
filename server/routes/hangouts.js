@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
-import { sendHangoutJoinNotification, sendHangoutChatNotification } from '../email.js';
+import { sendNewHangoutNotification, sendHangoutJoinNotification, sendHangoutChatNotification } from '../email.js';
 
 const router = Router();
 
@@ -47,7 +47,30 @@ router.post('/', requireAuth, (req, res) => {
   // Host is auto-enrolled as first attendee
   db.prepare(`INSERT OR IGNORE INTO session_attendees (session_id, user_id) VALUES (?, ?)`).run(result.lastInsertRowid, req.user.id);
 
-  // TODO: notification hook — when a session starts, notify nearby users / followers (future upgrade)
+  // Notify all users who haven't been notified in the last 30 minutes (exclude the host)
+  const toNotify = db.prepare(`
+    SELECT id, email, name FROM users
+    WHERE id != ?
+      AND email_verified = 1
+      AND (last_hangout_notif_at IS NULL OR last_hangout_notif_at < datetime('now', '-30 minutes'))
+  `).all(req.user.id);
+
+  if (toNotify.length > 0) {
+    const ids = toNotify.map(u => u.id);
+    db.prepare(`
+      UPDATE users SET last_hangout_notif_at = datetime('now')
+      WHERE id IN (${ids.map(() => '?').join(',')})
+    `).run(...ids);
+
+    for (const u of toNotify) {
+      sendNewHangoutNotification({
+        toEmail: u.email,
+        hostName: req.user.name,
+        subject: subject.trim(),
+        location: location.trim(),
+      }).catch(() => {});
+    }
+  }
 
   const session = db.prepare(`
     SELECT s.*, u.name AS host_name, u.username AS host_username, u.avatar_url AS host_avatar,
