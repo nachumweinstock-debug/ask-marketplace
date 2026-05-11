@@ -148,10 +148,10 @@ export default function Navbar() {
 
   const navItems = [
     { to: '/browse', label: 'Browse', show: true },
+    { to: '/hangouts', label: 'Hangouts', show: true, live: true },
     { to: '/find-a-tutor', label: 'Find Instructor', show: true },
     { to: '/saved-tutors', label: 'Saved', show: !!user },
     { to: '/people', label: 'People', show: true },
-    { to: '/hangouts', label: 'Hangouts', show: true },
     { to: '/help-wanted', label: 'Help Wanted', show: true },
     { to: '/support', label: 'Support', show: true },
     { to: '/create-listing', label: 'Post', show: !!user },
@@ -204,7 +204,8 @@ export default function Navbar() {
             {/* Center: nav items */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {navItems.map(item => (
-                <NavLink key={item.to} to={item.to} active={isActive(item.to)} admin={item.admin}>
+                <NavLink key={item.to} to={item.to} active={isActive(item.to)} admin={item.admin} live={item.live}>
+                  {item.live && <LiveDot />}
                   {item.label}
                   {item.badge > 0 && <Badge n={item.badge} color={item.badgeColor} />}
                 </NavLink>
@@ -382,11 +383,11 @@ export default function Navbar() {
         }}>
           {[
             { to: '/browse', label: 'Browse', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
-            { to: '/people', label: 'People', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+            { to: '/hangouts', label: 'Hangouts', live: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 12h.01"/><path d="M12 12h.01"/><path d="M7 12h.01"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
             { to: '/messages', label: 'Messages', badge: unread, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
             { to: user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student', label: 'My Stuff', badge: notifCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
             { to: '/account', label: 'Profile', dot: profileNeedsWork, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-          ].map(({ to, label, icon, badge, dot }) => {
+          ].map(({ to, label, icon, badge, dot, live }) => {
             const active = to === '/messages' ? path.startsWith('/messages')
               : to.startsWith('/dashboard') ? path.startsWith('/dashboard')
               : to === '/account' ? path === '/account'
@@ -401,6 +402,12 @@ export default function Navbar() {
               }}>
                 <div style={{ position: 'relative' }}>
                   {icon}
+                  {live && <span style={{
+                    position: 'absolute', top: -3, right: -3,
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: '#4ADE80', border: '1.5px solid #fff',
+                    animation: 'ask-live-pulse 2s ease-in-out infinite',
+                  }} />}
                   {badge > 0 && (
                     <span style={{
                       position: 'absolute', top: -4, right: -5,
@@ -441,6 +448,28 @@ function ProfileDot({ inline = false }) {
         boxShadow: '0 0 0 1px rgba(225,29,72,0.22)',
       }}
     />
+  );
+}
+
+function LiveDot() {
+  return (
+    <>
+      <style>{`
+        @keyframes ask-live-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.55; transform: scale(1.35); }
+        }
+        .ask-live-dot {
+          display: inline-block;
+          width: 7px; height: 7px; border-radius: 50%;
+          background: #4ADE80;
+          margin-right: 5px; flex-shrink: 0;
+          animation: ask-live-pulse 2s ease-in-out infinite;
+          box-shadow: 0 0 0 2px rgba(74,222,128,0.22);
+        }
+      `}</style>
+      <span className="ask-live-dot" aria-hidden="true" />
+    </>
   );
 }
 

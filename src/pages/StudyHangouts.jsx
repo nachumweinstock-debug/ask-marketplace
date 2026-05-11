@@ -10,7 +10,7 @@ const YU_LOCATIONS = [
   { id: 'furst',   name: 'Furst Hall',   short: 'Furst',   floors: ['1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
   { id: 'library', name: 'Wilf Library', short: 'Library', floors: ['1st Floor', '2nd Floor', '3rd Floor — Quiet', '4th Floor', '5th Floor'] },
   { id: 'glueck',  name: 'Glueck',       short: 'Glueck',  floors: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor'] },
-  { id: 'morg',    name: 'Morg',         short: 'Morg',    floors: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
+  { id: 'morg',    name: 'Morg',         short: 'Morg',    floors: ['GF', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F', '10F', '11F', '12F'] },
   { id: 'belfer',  name: 'Belfer Hall',  short: 'Belfer',  floors: ['1st Floor', '2nd Floor', '3rd Floor', '4th Floor'] },
   { id: 'zysman',  name: 'Zysman Hall',  short: 'Zysman',  floors: ['1st Floor', '2nd Floor', '3rd Floor'] },
   { id: 'rubin',   name: 'Rubin Hall',   short: 'Rubin',   floors: ['Lobby', '1st Floor', '2nd Floor', '3rd Floor'] },
@@ -145,6 +145,92 @@ function LocationPicker({ value, onChange }) {
           maxLength={80}
         />
       )}
+    </div>
+  );
+}
+
+const SUBJECT_CATEGORIES = [
+  { id: 'stem', label: 'STEM', subjects: ['Calculus', 'Statistics', 'Biology', 'Chemistry', 'Organic Chemistry', 'Physics', 'Computer Science', 'Data Science', 'Engineering', 'Biochemistry', 'Anatomy'] },
+  { id: 'business', label: 'Business', subjects: ['Accounting', 'Finance', 'Corporate Finance', 'Economics', 'Marketing', 'Management', 'Excel / Spreadsheets', 'Financial Modeling'] },
+  { id: 'humanities', label: 'Humanities', subjects: ['Writing', 'Psychology', 'History', 'Political Science', 'Sociology', 'Philosophy', 'Literature', 'Communications'] },
+  { id: 'torah', label: 'Torah', subjects: ['Gemara', 'Halacha', 'Tanach', 'Machshava', 'Chumash', 'Mussar'] },
+  { id: 'languages', label: 'Languages', subjects: ['Hebrew', 'Spanish', 'French', 'Yiddish', 'Arabic'] },
+];
+
+function SubjectPicker({ value, onChange }) {
+  const [tab, setTab] = useState('stem');
+  const [query, setQuery] = useState('');
+
+  const currentSubjects = SUBJECT_CATEGORIES.find(c => c.id === tab)?.subjects || [];
+  const filtered = query.trim()
+    ? SUBJECT_CATEGORIES.flatMap(c => c.subjects).filter(s => s.toLowerCase().includes(query.toLowerCase()))
+    : currentSubjects;
+
+  function pick(s) {
+    onChange(s);
+    setQuery('');
+  }
+
+  return (
+    <div>
+      <input
+        style={{
+          width: '100%', padding: '11px 13px', borderRadius: 8, boxSizing: 'border-box',
+          border: `1.5px solid ${value ? NAVY : '#D9D2C3'}`, fontSize: 14,
+          fontFamily: "'Outfit', sans-serif", color: '#17130F',
+          background: '#fff', outline: 'none', transition: 'border-color 0.15s',
+          marginBottom: 10,
+        }}
+        placeholder="Type to search or pick below…"
+        value={query || value}
+        onChange={e => { setQuery(e.target.value); onChange(e.target.value); }}
+        onFocus={e => { e.currentTarget.style.borderColor = NAVY; if (value) setQuery(value); }}
+        onBlur={e => { e.currentTarget.style.borderColor = value ? NAVY : '#D9D2C3'; setQuery(''); }}
+        maxLength={80}
+        autoFocus
+      />
+      {!query && (
+        <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
+          {SUBJECT_CATEGORIES.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setTab(c.id)}
+              style={{
+                padding: '5px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+                border: `1.5px solid ${tab === c.id ? NAVY : '#D9D2C3'}`,
+                background: tab === c.id ? NAVY : '#fff',
+                color: tab === c.id ? '#fff' : '#6D665C',
+                cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                transition: 'all 0.1s',
+              }}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {filtered.map(s => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => pick(s)}
+            style={{
+              padding: '6px 13px', borderRadius: 7, fontSize: 12.5, fontWeight: 500,
+              border: `1.5px solid ${value === s ? NAVY : '#D9D2C3'}`,
+              background: value === s ? '#EEF3FF' : '#fff',
+              color: value === s ? NAVY : '#6D665C',
+              cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+              transition: 'all 0.1s',
+            }}
+            onMouseEnter={e => { if (value !== s) { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.color = NAVY; } }}
+            onMouseLeave={e => { if (value !== s) { e.currentTarget.style.borderColor = '#D9D2C3'; e.currentTarget.style.color = '#6D665C'; } }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -372,15 +458,9 @@ function StartSessionModal({ onClose, onCreate }) {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div>
             <label style={labelStyle}>Subject *</label>
-            <input
-              style={inputStyle}
-              placeholder="e.g. Corporate Finance, Organic Chemistry"
+            <SubjectPicker
               value={form.subject}
-              onChange={set('subject')}
-              onFocus={e => { e.currentTarget.style.borderColor = NAVY; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#D9D2C3'; }}
-              maxLength={80}
-              autoFocus
+              onChange={v => setForm(f => ({ ...f, subject: v }))}
             />
           </div>
 
