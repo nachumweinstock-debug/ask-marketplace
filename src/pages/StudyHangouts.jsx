@@ -454,7 +454,9 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [attendees, setAttendees] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState('');
 
   useEffect(() => {
     if (!isJoined) return;
@@ -464,22 +466,31 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
   }, [session.id, isJoined, session.attendee_count]);
 
   function copyInvite() {
-    navigator.clipboard.writeText(`${window.location.origin}/hangouts`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard.writeText(`${window.location.origin}/hangouts`)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+      .catch(() => {});
   }
 
-  async function handleCancel() {
-    if (!window.confirm('End your session? Everyone will be removed.')) return;
-    setCancelling(true);
+  async function handleEnd() {
+    setEnding(true);
+    setEndError('');
     try {
       await api.delete(`/hangouts/${session.id}`);
       onCancel(session.id);
-    } catch {
-      setCancelling(false);
+    } catch (err) {
+      setEndError(err.response?.data?.error || 'Could not end session. Try again.');
+      setEnding(false);
+      setConfirmEnd(false);
     }
   }
+
+  const btnBase = {
+    padding: '10px 14px', borderRadius: 10, border: 'none',
+    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    fontFamily: "'Outfit', sans-serif",
+    display: 'flex', alignItems: 'center', gap: 5,
+    transition: 'all 0.15s',
+  };
 
   return (
     <div style={{
@@ -494,7 +505,7 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 28px rgba(27,58,107,0.13)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = isHost ? '0 2px 12px rgba(27,58,107,0.10)' : '0 2px 12px rgba(27,58,107,0.06)'; e.currentTarget.style.transform = 'none'; }}
     >
-      {/* Subject + time remaining */}
+      {/* Header: subject + timer */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div>
           {isHost && (
@@ -525,7 +536,7 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
         {session.location}
       </div>
 
-      {/* Attendees row */}
+      {/* Attendees */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {attendees ? (
@@ -536,7 +547,7 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
                 </div>
               ))}
               {attendees.length > 6 && (
-                <span style={{ marginLeft: 4, fontSize: 11.5, color: '#8D8577', fontFamily: 'var(--font-ui)' }}>+{attendees.length - 6}</span>
+                <span style={{ marginLeft: 6, fontSize: 11.5, color: '#8D8577', fontFamily: 'var(--font-ui)' }}>+{attendees.length - 6}</span>
               )}
             </div>
           ) : (
@@ -550,7 +561,8 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
           {session.attendee_count}
         </span>
@@ -558,27 +570,76 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
 
       {/* Actions */}
       {isJoined ? (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 10, background: '#EDF7F0', color: '#0F7B55', fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            You're in
-          </div>
-          <button onClick={() => setChatOpen(o => !o)} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: chatOpen ? NAVY : '#EEF3FF', color: chatOpen ? '#fff' : NAVY, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Chat
-          </button>
-          <button onClick={copyInvite} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: copied ? '#EDF7F0' : '#F5F3EF', color: copied ? '#0F7B55' : '#6D665C', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              {copied ? <polyline points="20 6 9 17 4 12"/> : <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>}
-            </svg>
-            {copied ? 'Copied!' : 'Invite'}
-          </button>
-          {isHost && (
-            <button onClick={handleCancel} disabled={cancelling} style={{ padding: '10px 14px', borderRadius: 10, border: '1.5px solid #FCA5A5', background: '#FFF5F5', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: cancelling ? 'default' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: cancelling ? 0.6 : 1, transition: 'all 0.15s' }}>
-              {cancelling ? 'Ending…' : 'End'}
+        <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* You're in badge */}
+            <div style={{ ...btnBase, cursor: 'default', flex: 1, minWidth: 90, justifyContent: 'center', background: '#EDF7F0', color: '#0F7B55' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              You're in
+            </div>
+
+            {/* Chat */}
+            <button onClick={() => setChatOpen(o => !o)} style={{ ...btnBase, background: chatOpen ? NAVY : '#EEF3FF', color: chatOpen ? '#fff' : NAVY }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Chat
             </button>
+
+            {/* Invite */}
+            <button onClick={copyInvite} style={{ ...btnBase, background: copied ? '#EDF7F0' : '#F5F3EF', color: copied ? '#0F7B55' : '#6D665C' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {copied
+                  ? <polyline points="20 6 9 17 4 12"/>
+                  : <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>}
+              </svg>
+              {copied ? 'Copied!' : 'Invite'}
+            </button>
+
+            {/* End — host only, first click shows confirm row */}
+            {isHost && !confirmEnd && (
+              <button
+                onClick={() => { setConfirmEnd(true); setEndError(''); }}
+                style={{ ...btnBase, background: '#FFF5F5', color: '#DC2626', border: '1.5px solid #FCA5A5' }}
+              >
+                End
+              </button>
+            )}
+          </div>
+
+          {/* Inline confirm row */}
+          {isHost && confirmEnd && (
+            <div style={{
+              background: '#FFF5F5', border: '1.5px solid #FCA5A5',
+              borderRadius: 10, padding: '12px 14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            }}>
+              <span style={{ fontSize: 13, color: '#7F1D1D', fontFamily: "'Outfit', sans-serif", fontWeight: 500 }}>
+                End the session for everyone?
+              </span>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={() => { setConfirmEnd(false); setEndError(''); }}
+                  disabled={ending}
+                  style={{ padding: '7px 14px', borderRadius: 8, border: '1.5px solid #D9D2C3', background: '#fff', color: '#342F29', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                >
+                  Keep it
+                </button>
+                <button
+                  onClick={handleEnd}
+                  disabled={ending}
+                  style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: ending ? '#FCA5A5' : '#DC2626', color: '#fff', fontSize: 13, fontWeight: 700, cursor: ending ? 'default' : 'pointer', fontFamily: "'Outfit', sans-serif", minWidth: 60 }}
+                >
+                  {ending ? 'Ending…' : 'End it'}
+                </button>
+              </div>
+            </div>
           )}
-        </div>
+
+          {endError && (
+            <p style={{ fontSize: 12.5, color: '#DC2626', margin: 0, fontFamily: 'var(--font-ui)' }}>{endError}</p>
+          )}
+
+          {chatOpen && <SessionChat sessionId={session.id} currentUser={currentUser} />}
+        </>
       ) : (
         <button
           onClick={() => onJoin(session.id)}
@@ -589,10 +650,6 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
         >
           {joining === session.id ? 'Joining…' : 'Join'}
         </button>
-      )}
-
-      {isJoined && chatOpen && (
-        <SessionChat sessionId={session.id} currentUser={currentUser} />
       )}
     </div>
   );
