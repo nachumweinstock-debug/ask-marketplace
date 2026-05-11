@@ -150,11 +150,64 @@ function LocationPicker({ value, onChange }) {
 }
 
 const SUBJECT_CATEGORIES = [
-  { id: 'stem', label: 'STEM', subjects: ['Calculus', 'Statistics', 'Biology', 'Chemistry', 'Organic Chemistry', 'Physics', 'Computer Science', 'Data Science', 'Engineering', 'Biochemistry', 'Anatomy'] },
-  { id: 'business', label: 'Business', subjects: ['Accounting', 'Finance', 'Corporate Finance', 'Economics', 'Marketing', 'Management', 'Excel / Spreadsheets', 'Financial Modeling'] },
-  { id: 'humanities', label: 'Humanities', subjects: ['Writing', 'Psychology', 'History', 'Political Science', 'Sociology', 'Philosophy', 'Literature', 'Communications'] },
-  { id: 'torah', label: 'Torah', subjects: ['Gemara', 'Halacha', 'Tanach', 'Machshava', 'Chumash', 'Mussar'] },
-  { id: 'languages', label: 'Languages', subjects: ['Hebrew', 'Spanish', 'French', 'Yiddish', 'Arabic'] },
+  {
+    id: 'business',
+    label: 'Business',
+    subjects: [
+      // Accounting
+      'Accounting I', 'Accounting II', 'Intermediate Accounting I', 'Intermediate Accounting II',
+      'Cost Accounting', 'Auditing', 'Tax Accounting', 'Advanced Accounting',
+      // Finance
+      'Corporate Finance', 'Investments', 'Financial Modeling', 'Financial Statement Analysis',
+      'Portfolio Management', 'Derivatives', 'Real Estate Finance', 'International Finance',
+      // Quant / Math for Business
+      'Statistics for Business', 'Business Math', 'Regression Analysis', 'Econometrics',
+      'Operations Research', 'Quantitative Methods', 'Data Analytics',
+      // Other Business
+      'Economics', 'Microeconomics', 'Macroeconomics', 'Marketing', 'Management',
+      'Organizational Behavior', 'Business Law', 'Supply Chain', 'Excel / Spreadsheets',
+    ],
+  },
+  {
+    id: 'stem',
+    label: 'STEM',
+    subjects: [
+      // Math
+      'Calculus I', 'Calculus II', 'Calculus III', 'Multivariable Calculus',
+      'Linear Algebra', 'Differential Equations', 'Discrete Math', 'Real Analysis', 'Abstract Algebra',
+      'Statistics', 'Probability',
+      // Sciences
+      'Biology', 'Chemistry', 'Organic Chemistry I', 'Organic Chemistry II',
+      'Biochemistry', 'Physics I', 'Physics II', 'Anatomy & Physiology',
+      'Genetics', 'Cell Biology', 'Microbiology',
+      // CS / Engineering
+      'Computer Science', 'Data Structures', 'Algorithms', 'Programming', 'Python', 'Java',
+      'Data Science', 'Machine Learning', 'Engineering',
+    ],
+  },
+  {
+    id: 'humanities',
+    label: 'Humanities',
+    subjects: [
+      'English Writing', 'Essay Writing', 'Research Paper', 'Psychology', 'Abnormal Psychology',
+      'History', 'American History', 'World History', 'Political Science', 'Sociology',
+      'Philosophy', 'Ethics', 'Literature', 'Communications', 'Speech',
+      'Anthropology', 'Religious Studies',
+    ],
+  },
+  {
+    id: 'torah',
+    label: 'Torah',
+    subjects: [
+      'Gemara', 'Halacha', 'Tanach', 'Chumash', 'Machshava', 'Mussar',
+      'Mishna', 'Rishonim', 'Acharonim', 'Tefilla', 'Jewish History',
+    ],
+  },
+  {
+    id: 'languages',
+    label: 'Languages',
+    subjects: ['Hebrew', 'Spanish', 'French', 'Yiddish', 'Arabic', 'Greek', 'Latin'],
+  },
 ];
 
 function SubjectPicker({ value, onChange }) {
