@@ -183,38 +183,50 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
 
         {/* Price — bottom right */}
         <div className="card-price" style={{
-          position: 'absolute', bottom: 8, right: 10,
-          fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
-          fontSize: 20, fontWeight: 700,
-          color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)',
+          position: 'absolute', bottom: 10, right: 10,
           textAlign: 'right',
         }}>
-          {provider.price_per_session > 0 && discount > 0 && (
+          {provider.price_per_session > 0 && discount > 0 ? (
+            <>
+              {/* Top row: original crossed out + badge */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5, marginBottom: 4 }}>
+                <span style={{
+                  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
+                  color: '#fff', textDecoration: 'line-through',
+                  opacity: 0.55, lineHeight: 1,
+                }}>
+                  {money(provider.price_per_session)}
+                </span>
+                <span style={{
+                  fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 800,
+                  background: sitewideSale ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255,255,255,0.35)',
+                  color: '#fff', borderRadius: 5,
+                  padding: '2px 6px', lineHeight: 1.3,
+                  letterSpacing: '0.02em',
+                }}>
+                  −{discount}%
+                </span>
+              </div>
+              {/* Bottom row: big discounted price */}
+              <div style={{
+                fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+                fontSize: 24, fontWeight: 760, lineHeight: 1,
+                color: '#fff', textShadow: '0 2px 10px rgba(0,0,0,0.35)',
+              }}>
+                <span className={sitewideSale ? 'ibiza-price' : undefined}>
+                  {money(displayPrice)}
+                </span>
+              </div>
+            </>
+          ) : (
             <div style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 11,
-              fontWeight: 800,
-              textDecoration: 'line-through',
-              opacity: 0.7,
-              marginBottom: -2,
+              fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+              fontSize: 22, fontWeight: 700, lineHeight: 1,
+              color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)',
             }}>
-              {money(provider.price_per_session)}
-            </div>
-          )}
-          <span className={sitewideSale && discount > 0 ? 'ibiza-price' : undefined}>
-            {provider.price_per_session > 0 ? money(displayPrice) : 'Free'}
-          </span>
-          {discount > 0 && (
-            <div style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 10,
-              fontWeight: 950,
-              marginTop: 1,
-              opacity: 0.88,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}>
-              {firstTimeDiscountLabel(provider)}
+              {provider.price_per_session > 0 ? money(provider.price_per_session) : 'Free'}
             </div>
           )}
         </div>
