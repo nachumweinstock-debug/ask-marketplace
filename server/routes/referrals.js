@@ -12,6 +12,44 @@ function ensureCode(user) {
   return code;
 }
 
+router.get('/admin/all', requireAuth, (req, res) => {
+  const me = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  if (!me?.is_admin) return res.status(403).json({ error: 'Admin only' });
+
+  const referrers = db.prepare(`
+    SELECT u.id, u.name, u.email, u.referral_code, u.created_at,
+      COUNT(DISTINCT r.id) AS signups
+    FROM users u
+    LEFT JOIN users r ON r.referred_by = u.id
+    WHERE u.referral_code IS NOT NULL
+    GROUP BY u.id
+    ORDER BY signups DESC, u.created_at DESC
+  `).all();
+
+  const result = referrers.map(row => {
+    const referred = db.prepare(`
+      SELECT u.id, u.name, u.email, u.created_at,
+        (SELECT COUNT(*) FROM bookings b WHERE b.student_id = u.id) AS bookings
+      FROM users u WHERE u.referred_by = ?
+      ORDER BY u.created_at DESC
+    `).all(row.id);
+    return {
+      ...row,
+      signups: referred.length,
+      bookings: referred.reduce((s, u) => s + Number(u.bookings || 0), 0),
+      referred_users: referred,
+    };
+  });
+
+  const totals = {
+    total_referrers: result.filter(r => r.signups > 0).length,
+    total_signups: result.reduce((s, r) => s + r.signups, 0),
+    total_bookings: result.reduce((s, r) => s + r.bookings, 0),
+  };
+
+  res.json({ referrers: result, totals });
+});
+
 router.get('/mine', requireAuth, (req, res) => {
   const user = db.prepare('SELECT id, name, referral_code FROM users WHERE id = ?').get(req.user.id);
   const code = ensureCode(user);

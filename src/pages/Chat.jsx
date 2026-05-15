@@ -16,9 +16,16 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sendError, setSendError] = useState('');
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const pollRef = useRef(null);
+
+  useEffect(() => {
+    function onResize() { setWindowWidth(window.innerWidth); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const fetchMessages = useCallback(async (scroll = false) => {
     try {
@@ -84,24 +91,34 @@ export default function Chat() {
   const isStudent = user?.id === booking.student_id;
   const otherName = isStudent ? booking.provider_name : booking.student_name;
   const catLabel = booking.custom_category || CAT_LABELS[booking.category] || 'Other';
+  const isMobile = windowWidth < 700;
 
   return (
-    <div className="chat-container" style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 0', display: 'flex', flexDirection: 'column' }}>
+    <div className="chat-container" style={{
+      maxWidth: 760,
+      height: isMobile ? 'calc(100dvh - 132px)' : 'calc(100vh - 190px)',
+      minHeight: isMobile ? 520 : 560,
+      margin: '0 auto',
+      padding: isMobile ? '12px 12px 0' : '24px 20px 0',
+      display: 'flex',
+      flexDirection: 'column',
+      boxSizing: 'border-box',
+    }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 16, flexShrink: 0 }}>
+      <div style={{ marginBottom: isMobile ? 10 : 16, flexShrink: 0 }}>
         <Link
           to={isStudent ? '/dashboard/student' : '/dashboard/provider'}
-          style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none', display: 'inline-block', marginBottom: 14 }}
+          style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none', display: 'inline-block', marginBottom: isMobile ? 10 : 14 }}
           onMouseEnter={e => e.target.style.color = 'var(--text)'}
           onMouseLeave={e => e.target.style.color = 'var(--muted)'}
         >
           ← Back to dashboard
         </Link>
 
-        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="card" style={{ padding: isMobile ? '12px 14px' : '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+            width: isMobile ? 40 : 44, height: isMobile ? 40 : 44, borderRadius: '50%', flexShrink: 0,
             background: 'var(--accent)', color: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-ui)',
@@ -110,15 +127,15 @@ export default function Chat() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{otherName}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'nowrap' : 'normal' }}>
               {catLabel} · {fmtDay(booking.date)} · {fmtTime(booking.start_time)}–{fmtTime(booking.end_time)}
             </div>
           </div>
           <Link
             to={`/providers/${booking.provider_profile_id}`}
-            style={{ fontSize: 12, color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}
+            style={{ fontSize: 12, color: 'var(--primary)', textDecoration: 'none', fontWeight: 700, flexShrink: 0 }}
           >
-            View listing →
+            {isMobile ? 'View' : 'View listing →'}
           </Link>
         </div>
       </div>
@@ -130,7 +147,7 @@ export default function Chat() {
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        padding: '4px 0 16px',
+        padding: isMobile ? '6px 2px 14px' : '4px 0 16px',
         minHeight: 0,
       }}>
         {messages.length === 0 ? (
@@ -146,12 +163,13 @@ export default function Chat() {
                 justifyContent: isMine ? 'flex-end' : 'flex-start',
               }}>
                 <div style={{
-                  maxWidth: '72%',
+                  maxWidth: isMobile ? '84%' : '72%',
                   background: isMine ? 'var(--primary)' : 'var(--card)',
                   color: isMine ? '#fff' : 'var(--text)',
                   border: isMine ? 'none' : '1px solid var(--border)',
                   borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                   padding: '10px 14px',
+                  overflowWrap: 'anywhere',
                 }}>
                   {!isMine && (
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--primary)', marginBottom: 4, opacity: 0.8 }}>
@@ -179,7 +197,7 @@ export default function Chat() {
       {/* Input */}
       <div style={{
         flexShrink: 0,
-        padding: '12px 0 16px',
+        padding: isMobile ? '10px 0 calc(10px + env(safe-area-inset-bottom))' : '12px 0 16px',
         borderTop: '1px solid var(--border)',
         background: 'var(--bg)',
       }}>
@@ -194,22 +212,24 @@ export default function Chat() {
             value={body}
             onChange={e => setBody(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message… (Enter to send)"
+            placeholder={isMobile ? 'Type a message...' : 'Type a message... (Enter to send)'}
             rows={1}
             style={{
               flex: 1,
               resize: 'none',
               border: '1.5px solid var(--border)',
               borderRadius: 12,
-              padding: '10px 14px',
-              fontSize: 14,
+              padding: '11px 14px',
+              fontSize: 16,
               fontFamily: 'var(--font-ui)',
               outline: 'none',
               background: 'var(--card)',
               color: 'var(--text)',
               maxHeight: 120,
+              minHeight: 44,
+              boxSizing: 'border-box',
               overflowY: 'auto',
-              lineHeight: 1.5,
+              lineHeight: 1.35,
             }}
             onFocus={e => e.target.style.borderColor = 'var(--primary)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'}
@@ -223,7 +243,8 @@ export default function Chat() {
             color: '#fff',
             border: 'none',
             borderRadius: 12,
-            padding: '10px 20px',
+            padding: isMobile ? 0 : '10px 20px',
+            width: isMobile ? 52 : 'auto',
             fontSize: 14,
             fontWeight: 600,
             cursor: !body.trim() || sending ? 'not-allowed' : 'pointer',
@@ -231,7 +252,7 @@ export default function Chat() {
             flexShrink: 0,
             height: 44,
           }}>
-            {sending ? '...' : 'Send'}
+            {sending ? '...' : isMobile ? '→' : 'Send'}
           </button>
         </form>
       </div>

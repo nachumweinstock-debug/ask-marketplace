@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
+import { providerUrl } from '../lib/providerUrl';
+import { redactContactText } from '../lib/redact';
+import { discountedPrice, discountPercent, firstTimeDiscountLabel, money } from '../lib/pricing';
 
 const CATEGORIES = [
   { id: 'tutor', label: 'Instruction' },
@@ -27,6 +30,37 @@ const STATUS_COLORS = {
   provider: { bg: '#F0FDF4', color: '#166534' },
 };
 const DEVELOPER_ADMIN_EMAIL = 'nachumweinstock@gmail.com';
+
+function publicListingPath(listing, userRow) {
+  return providerUrl(userRow?.name, listing?.id, userRow?.username);
+}
+
+function publicListingUrl(listing, userRow) {
+  const origin = window.location.origin;
+  return `${origin}${publicListingPath(listing, userRow)}`;
+}
+
+function qrImageUrl(url, size = 220) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+}
+
+function safeDownloadName(title) {
+  const slug = String(title || 'provider')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50) || 'provider';
+  return `ask-${slug}-qr.png`;
+}
+
+function dmPairPath(message) {
+  const ids = [Number(message.sender_id), Number(message.receiver_id)].sort((a, b) => a - b);
+  return `/admin/dms?pair=${ids.join('-')}`;
+}
+
+function hasDmPairIds(message) {
+  return Number.isFinite(Number(message.sender_id)) && Number.isFinite(Number(message.receiver_id));
+}
 
 function TextSuggestion({ value, onApply }) {
   if (!value || !hasSuggestion(value)) return null;
@@ -66,7 +100,12 @@ export default function AdminDashboard() {
   const [editError, setEditError] = useState('');
   const [userModal, setUserModal] = useState(null); // user object
   const [userDetail, setUserDetail] = useState(null);
+  const [qrModal, setQrModal] = useState(null); // { title, url }
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrMessage, setQrMessage] = useState('');
   const [notice, setNotice] = useState('');
+  const [surgePercent, setSurgePercent] = useState(0);
+  const [salePercent, setSalePercent] = useState(0);
   const isDeveloperAdmin = user?.email?.toLowerCase() === DEVELOPER_ADMIN_EMAIL;
 
   useEffect(() => {
@@ -76,18 +115,22 @@ export default function AdminDashboard() {
 
   async function loadAdminData() {
     const params = { role: roleFilter, hidden: hiddenFilter };
-    const [u, s, d, a, e] = await Promise.all([
+    const [u, s, d, a, e, surge, sale] = await Promise.all([
       api.get('/admin/users', { params }),
       api.get('/admin/stats'),
       api.get('/admin/duplicates'),
       api.get('/admin/activity'),
       api.get('/admin/email-status'),
+      api.get('/admin/surge-pricing'),
+      api.get('/admin/site-sale'),
     ]);
     setUsers(u.data);
     setStats(s.data);
     setDuplicates(d.data);
     setActivity(a.data);
     setEmailStatus(e.data);
+    setSurgePercent(surge.data.surge_percent || 0);
+    setSalePercent(sale.data.first_time_discount_percent || 0);
   }
 
   async function refreshAdmin() {
@@ -95,6 +138,26 @@ export default function AdminDashboard() {
     await loadAdminData();
     setNotice('Admin data refreshed.');
     setTimeout(() => setNotice(''), 2000);
+  }
+
+  async function toggleSurge() {
+    try {
+      const next = surgePercent === 15 ? 0 : 15;
+      const { data } = await api.patch('/admin/surge-pricing', { surge_percent: next });
+      setSurgePercent(data.surge_percent);
+      setNotice(data.surge_percent ? 'Surge pricing ON — all listings +15%.' : 'Surge pricing OFF.');
+      setTimeout(() => setNotice(''), 3000);
+    } catch (err) { setNotice(err.response?.data?.error || 'Failed to toggle surge'); }
+  }
+
+  async function toggleSale() {
+    try {
+      const next = salePercent === 15 ? 0 : 15;
+      const { data } = await api.patch('/admin/site-sale', { first_time_discount_percent: next });
+      setSalePercent(data.first_time_discount_percent);
+      setNotice(data.first_time_discount_percent ? 'Finals Sale ON — all listings −15%.' : 'Finals Sale OFF.');
+      setTimeout(() => setNotice(''), 3000);
+    } catch (err) { setNotice(err.response?.data?.error || 'Failed to toggle sale'); }
   }
 
   async function cleanupTestUsers() {
@@ -166,6 +229,7 @@ export default function AdminDashboard() {
           subcategory: data.subcategory || '',
           bio: data.bio || '',
           price_per_session: data.price_per_session ?? '',
+          first_time_discount_percent: discountPercent(data),
           zelle: data.zelle || '',
           venmo: data.venmo || '',
           session_type: data.session_type || 'in-person',
@@ -185,6 +249,63 @@ export default function AdminDashboard() {
     }
   }
 
+  function normalizedAdminQr(title, url) {
+    const parsed = new URL(url, window.location.origin);
+    if (!['https:', 'http:'].includes(parsed.protocol)) {
+      throw new Error('Invalid QR link');
+    }
+    return {
+      title: String(title || 'Provider').slice(0, 120),
+      url: parsed.href,
+    };
+  }
+
+  function openQr(title, url) {
+    try {
+      setQrMessage('');
+      setQrModal(normalizedAdminQr(title, url));
+    } catch (err) {
+      setNotice(err.message || 'Could not create QR code.');
+    }
+  }
+
+  async function downloadQrCode(title, url) {
+    let safe;
+    try {
+      safe = normalizedAdminQr(title, url);
+      setQrBusy(true);
+      setQrMessage('');
+      const response = await fetch(qrImageUrl(safe.url, 900));
+      if (!response.ok) throw new Error('QR service did not return an image');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = safeDownloadName(safe.title);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setQrMessage('QR downloaded.');
+    } catch (err) {
+      if (safe?.url) window.open(qrImageUrl(safe.url, 900), '_blank', 'noopener,noreferrer');
+      setQrMessage(err.message ? `Download fallback opened: ${err.message}` : 'Download fallback opened.');
+    } finally {
+      setQrBusy(false);
+    }
+  }
+
+  async function copyQrLink(url) {
+    try {
+      const safe = normalizedAdminQr('Provider', url);
+      if (!navigator.clipboard) throw new Error('Clipboard unavailable');
+      await navigator.clipboard?.writeText(safe.url);
+      setQrMessage('Link copied.');
+    } catch {
+      setQrMessage('Could not copy link.');
+    }
+  }
+
   async function saveEdit(e) {
     e.preventDefault();
     setEditError(''); setEditLoading(true);
@@ -198,6 +319,7 @@ export default function AdminDashboard() {
         subcategory: ['tutor', 'fitness', 'torah', 'languages', 'music'].includes(form.category) ? form.subcategory : '',
         bio: form.bio,
         price_per_session: form.price_per_session === '' ? 0 : Number(form.price_per_session),
+        first_time_discount_percent: Number(form.first_time_discount_percent || 0),
         zelle: form.zelle,
         venmo: form.venmo,
         session_type: form.session_type,
@@ -236,10 +358,22 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isDeveloperAdmin && <button onClick={() => navigate('/admin/analytics')} className="admin-action-btn">Analytics</button>}
+          <button onClick={() => navigate('/admin/referrals')} className="admin-action-btn">Referrals</button>
+          <button onClick={() => navigate('/admin/dms')} className="admin-action-btn">View DMs</button>
           <button onClick={() => navigate('/admin/support')} className="admin-action-btn">Support inbox</button>
           <button onClick={refreshAdmin} className="admin-action-btn">Refresh</button>
           <button onClick={cleanupTestUsers} className="admin-action-btn danger-soft">Clean Codex users</button>
           <button onClick={sendPrankEmail} className="admin-action-btn">Send admin test email</button>
+          <button onClick={toggleSurge} className="admin-action-btn" style={surgePercent ? {
+            background: '#92400E', color: '#fff', borderColor: '#92400E', fontWeight: 700,
+          } : {}}>
+            {surgePercent ? 'Surge ON +15% — Turn Off' : 'Surge Pricing'}
+          </button>
+          <button onClick={toggleSale} className="admin-action-btn" style={salePercent ? {
+            background: '#166534', color: '#fff', borderColor: '#166534', fontWeight: 700,
+          } : {}}>
+            {salePercent ? 'Finals Sale ON −15% — Turn Off' : 'Finals Sale'}
+          </button>
         </div>
       </div>
 
@@ -470,7 +604,13 @@ export default function AdminDashboard() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 900,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
         }} onClick={e => { if (e.target === e.currentTarget) setUserModal(null); }}>
-          <div className="card" style={{ width: '100%', maxWidth: 440, padding: '28px 28px 24px' }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: 680,
+            maxHeight: '86vh',
+            overflowY: 'auto',
+            padding: '28px 28px 24px',
+          }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 22 }}>
               <div style={{
@@ -521,19 +661,99 @@ export default function AdminDashboard() {
                   <div>
                     <div className="section-label" style={{ marginBottom: 6 }}>Listings</div>
                     {userDetail.listings.map(l => (
-                      <div key={l.id} style={{ fontSize: 12.5, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}>
-                        <strong>{l.title || l.subcategory || l.custom_category || l.category}</strong>
-                        <span style={{ color: 'var(--muted)' }}> · ${l.price_per_session || 0} · {l.session_type}</span>
+                      <div key={l.id} style={{ fontSize: 12.5, padding: '10px', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <strong>{l.title || l.subcategory || l.custom_category || l.category}</strong>
+                            <span style={{ color: 'var(--muted)' }}> · {l.price_per_session > 0 ? money(discountedPrice(l)) : 'Free'} · {l.session_type}</span>
+                            {discountPercent(l) > 0 && (
+                              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#166534' }}>
+                                {firstTimeDiscountLabel(l)}
+                              </span>
+                            )}
+                            <div style={{ color: 'var(--muted)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {publicListingUrl(l, userModal)}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => window.open(publicListingPath(l, userModal), '_blank')}
+                              style={{
+                                border: '1px solid var(--border)', background: '#fff', color: 'var(--text)',
+                                borderRadius: 7, padding: '5px 8px', fontSize: 11, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                              }}
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => downloadQrCode(l.title || l.subcategory || l.custom_category || l.category, publicListingUrl(l, userModal))}
+                              disabled={qrBusy}
+                              style={{
+                                border: '1px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8',
+                                borderRadius: 7, padding: '5px 8px', fontSize: 11, fontWeight: 800,
+                                cursor: qrBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)', opacity: qrBusy ? 0.7 : 1,
+                              }}
+                            >
+                              Download QR
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
                 {userDetail.messages.length > 0 && (
                   <div>
-                    <div className="section-label" style={{ marginBottom: 6 }}>Latest messages</div>
-                    {userDetail.messages.slice(0, 4).map(m => (
-                      <div key={m.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                        <strong style={{ color: 'var(--text)' }}>{m.sender_name}</strong> → {m.receiver_name}: {m.body.slice(0, 90)}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                      <div className="section-label">Latest messages</div>
+                      <button
+                        type="button"
+                        onClick={() => window.open(`/admin/dms?user=${userModal.id}`, '_blank')}
+                        style={{
+                          border: '1px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8',
+                          borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 800,
+                          cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                        }}
+                      >
+                        Read all DMs
+                      </button>
+                    </div>
+                    {userDetail.messages.slice(0, 8).map(m => (
+                      <div key={m.id} style={{
+                        fontSize: 13,
+                        color: 'var(--text)',
+                        padding: '10px 0',
+                        borderBottom: '1px solid var(--border)',
+                        lineHeight: 1.45,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <strong>{m.sender_name}</strong>
+                            <span style={{ color: 'var(--muted)' }}> → {m.receiver_name}</span>
+                          </div>
+                          {hasDmPairIds(m) && (
+                            <button
+                              type="button"
+                              onClick={() => window.open(dmPairPath(m), '_blank')}
+                              style={{
+                                border: '1px solid var(--border)', background: '#fff', color: 'var(--text)',
+                                borderRadius: 7, padding: '4px 8px', fontSize: 11, fontWeight: 800,
+                                cursor: 'pointer', fontFamily: 'var(--font-ui)', flexShrink: 0,
+                              }}
+                            >
+                              Thread
+                            </button>
+                          )}
+                        </div>
+                        <div style={{ color: 'var(--ink-700)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                          {redactContactText(m.body)}
+                        </div>
+                        <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 5 }}>
+                          {new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -553,12 +773,12 @@ export default function AdminDashboard() {
                 }}>
                   Open profile
                 </button>
-                <button onClick={() => window.open(`/messages/${userModal.id}`, '_blank')} style={{
+                <button onClick={() => window.open(`/admin/dms?user=${userModal.id}`, '_blank')} style={{
                   padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
                   border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
                 }}>
-                  Open DM
+                  Read DMs
                 </button>
               </div>
               <select value={userModal.role} onChange={async e => {
@@ -583,6 +803,28 @@ export default function AdminDashboard() {
 
               {userModal.role === 'provider' && userModal.provider_profile_id && (
                 <>
+                  <button onClick={() => window.open(publicListingPath({ id: userModal.provider_profile_id }, userModal), '_blank')} style={{
+                    width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                    border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                  }}>
+                    Open public provider page
+                  </button>
+                  <button onClick={() => downloadQrCode(userModal.name, publicListingUrl({ id: userModal.provider_profile_id }, userModal))} disabled={qrBusy} style={{
+                    width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                    cursor: qrBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                    border: '1.5px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8',
+                    opacity: qrBusy ? 0.7 : 1,
+                  }}>
+                    Download provider QR code
+                  </button>
+                  <button onClick={() => openQr(userModal.name, publicListingUrl({ id: userModal.provider_profile_id }, userModal))} style={{
+                    width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
+                    border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                  }}>
+                    Preview QR code
+                  </button>
                   <button onClick={() => { openEdit(userModal.provider_profile_id); }} style={{
                     width: '100%', padding: '10px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'var(--font-ui)', textAlign: 'left',
@@ -614,6 +856,62 @@ export default function AdminDashboard() {
                 Delete user
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {qrModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.42)', zIndex: 1100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
+        }} onClick={e => { if (e.target === e.currentTarget) setQrModal(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 360, padding: 24, textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16, textAlign: 'left' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{qrModal.title}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, overflowWrap: 'anywhere' }}>{qrModal.url}</div>
+              </div>
+              <button onClick={() => setQrModal(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--muted)', padding: 2, flexShrink: 0 }}>✕</button>
+            </div>
+            <img
+              src={qrImageUrl(qrModal.url)}
+              alt={`QR code for ${qrModal.title}`}
+              style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px', border: '1px solid var(--border)', borderRadius: 8, padding: 8, background: '#fff' }}
+            />
+            <button
+              type="button"
+              onClick={() => downloadQrCode(qrModal.title, qrModal.url)}
+              disabled={qrBusy}
+              style={{
+                width: '100%', padding: '11px 12px', borderRadius: 9, fontSize: 13, fontWeight: 800,
+                cursor: qrBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)', marginBottom: 8,
+                border: '1.5px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8',
+                opacity: qrBusy ? 0.7 : 1,
+              }}
+            >
+              {qrBusy ? 'Downloading...' : 'Download QR code'}
+            </button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button type="button" onClick={() => copyQrLink(qrModal.url)} style={{
+                padding: '10px 12px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+              }}>
+                Copy link
+              </button>
+              <button type="button" onClick={() => window.open(qrImageUrl(qrModal.url, 900), '_blank', 'noopener,noreferrer')} style={{
+                padding: '10px 12px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+              }}>
+                Open image
+              </button>
+            </div>
+            {qrMessage && (
+              <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: qrMessage.includes('Could not') ? '#DC2626' : '#166534' }}>
+                {qrMessage}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -721,6 +1019,42 @@ export default function AdminDashboard() {
                     <option value="zoom">Zoom</option>
                     <option value="both">Both</option>
                   </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>First time discount</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {[0, 15, 20].map(percent => {
+                    const active = Number(editModal.form.first_time_discount_percent || 0) === percent;
+                    const base = Number(editModal.form.price_per_session || 0);
+                    const preview = percent > 0 && base > 0 ? money(Math.round(base * (100 - percent)) / 100) : '';
+                    return (
+                      <button
+                        key={percent}
+                        type="button"
+                        onClick={() => setEditModal(m => ({ ...m, form: { ...m.form, first_time_discount_percent: percent } }))}
+                        style={{
+                          border: `1.5px solid ${active ? '#16A34A' : 'var(--border)'}`,
+                          background: active ? '#F0FDF4' : '#fff',
+                          color: active ? '#166534' : 'var(--text)',
+                          borderRadius: 9,
+                          padding: '10px 8px',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-ui)',
+                          textAlign: 'center',
+                          fontWeight: 800,
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>{percent === 0 ? 'No discount' : `-${percent}%`}</div>
+                        {percent > 0 && (
+                          <div style={{ fontSize: 10.5, color: active ? '#166534' : 'var(--muted)', marginTop: 3 }}>
+                            First time discount {preview ? `· ${preview}` : ''}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

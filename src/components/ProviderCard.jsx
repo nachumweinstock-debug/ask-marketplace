@@ -186,7 +186,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           position: 'absolute', bottom: 10, right: 10,
           textAlign: 'right',
         }}>
-          {provider.price_per_session > 0 && discount > 0 ? (
+          {provider.price_per_session > 0 && discount > 0 && !provider.surge_percent ? (
             <>
               {/* Top row: original crossed out + badge */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5, marginBottom: 4 }}>

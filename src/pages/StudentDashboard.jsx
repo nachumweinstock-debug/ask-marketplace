@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { discountedPrice, discountPercent, firstTimeDiscountLabel, money } from '../lib/pricing';
 
 const CHECKLIST_KEY = 'ask_getting_started_v1';
 
@@ -12,7 +13,7 @@ function GettingStarted({ hasBookings }) {
 
   const items = [
     { key: 'browse', label: 'Browse listings', sub: 'Find a tutor, barber, or fitness coach', to: '/browse', autoDone: hasBookings },
-    { key: 'hangouts', label: 'Study Hangouts', sub: 'Join one or make one', to: '/hangouts' },
+    { key: 'hangouts', label: '🪩 StudyParty', sub: 'Join one or make one', to: '/studyparty' },
     { key: 'profile', label: 'Fill out your profile', sub: 'Add your major and classes', to: '/account' },
   ];
 
@@ -557,7 +558,8 @@ function BookingRow({ booking, onCancel, cancelLoading, onReview, onMarkDone, do
           </div>
           {booking.price_per_session > 0 && (
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.8 }}>
-              Pay ${booking.price_per_session} via Zelle/Venmo
+              Pay {money(discountedPrice(booking))} via Zelle/Venmo
+              {discountPercent(booking) > 0 && ` · ${firstTimeDiscountLabel(booking)}`}
             </div>
           )}
         </div>

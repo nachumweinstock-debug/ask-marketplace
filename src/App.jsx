@@ -25,15 +25,19 @@ import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
 import AdminSupportConversation from './pages/AdminSupportConversation';
 import FloatingSupportButton from './components/FloatingSupportButton';
+import QuickAccessDrawer from './components/QuickAccessDrawer';
+import WelcomeWalkthrough from './components/WelcomeWalkthrough';
 import { LegalDocument, LegalHub } from './pages/LegalPages';
 import SavedTutors from './pages/SavedTutors';
 import ProviderAnalytics from './pages/ProviderAnalytics';
 import AdminReviewModeration from './pages/AdminReviewModeration';
+import AdminReferrals from './pages/AdminReferrals';
 import FindTutor from './pages/FindTutor';
 import Referrals from './pages/Referrals';
 import SessionReminders from './components/SessionReminders';
 import StudyHangouts from './pages/StudyHangouts';
 import NotFound from './pages/NotFound';
+import Go from './pages/Go';
 
 function ProtectedRoute({ children, role, developerOnly = false }) {
   const { user, loading } = useAuth();
@@ -179,6 +183,7 @@ function AppRoutes() {
         <Route path="/refund-policy" element={<Layout><LegalDocument type="refunds" /></Layout>} />
         <Route path="/community-guidelines" element={<Layout><LegalDocument type="guidelines" /></Layout>} />
         <Route path="/people" element={<Layout><People /></Layout>} />
+        <Route path="/studyparty" element={<Layout><StudyHangouts /></Layout>} />
         <Route path="/hangouts" element={<Layout><StudyHangouts /></Layout>} />
         <Route path="/help-wanted" element={<Layout><HelpWanted /></Layout>} />
         <Route path="/people/:id" element={<Layout><UserProfile /></Layout>} />
@@ -228,6 +233,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute role="admin">
               <Layout><AdminReviewModeration /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/referrals"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><AdminReferrals /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/dms"
+          element={
+            <ProtectedRoute role="admin">
+              <Layout><DirectMessages adminMode /></Layout>
             </ProtectedRoute>
           }
         />
@@ -306,12 +327,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/go" element={<Go />} />
         <Route path="/faq" element={<Layout><FAQ /></Layout>} />
         <Route path="/u/:username" element={<Layout><UserProfile /></Layout>} />
         {/* Pretty URLs: /sacha-feit-7 → ProviderProfile (ID parsed from slug) */}
         <Route path="/:providerSlug" element={<Layout><ProviderProfile /></Layout>} />
         <Route path="*" element={<Layout><NotFound /></Layout>} />
       </Routes>
+      <QuickAccessDrawer />
+      <WelcomeWalkthrough />
       <FloatingSupportButton />
     </>
   );

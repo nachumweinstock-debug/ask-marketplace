@@ -9,7 +9,7 @@
 
 import { expect, test } from '@playwright/test';
 
-const API = 'http://localhost:3001';
+const API = process.env.E2E_API_URL || 'http://127.0.0.1:3001';
 const FRONT = process.env.VITE_PORT ? `http://localhost:${process.env.VITE_PORT}` : 'http://localhost:5175';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -304,16 +304,12 @@ test.describe('Reschedule lifecycle', () => {
 // ── UI smoke tests ────────────────────────────────────────────────────────────
 
 test.describe('UI — dashboards render without React crashes', () => {
-  const FATAL_PATTERNS = /We hit a loading problem|Cannot read|is not defined|Uncaught/i;
-  const NOISE = /favicon|ResizeObserver|ERR_BLOCKED|404 \(Not Found\)|posthog|analytics/i;
-
   test('student dashboard loads and shows My Bookings heading', async ({ page }) => {
     const fatalErrors = [];
     page.on('pageerror', e => fatalErrors.push(e.message));
 
     const { token } = await signup('UI Student Dash');
-    await page.goto(FRONT);
-    await page.evaluate(tok => localStorage.setItem('ask_token', tok), token);
+    await page.addInitScript(tok => localStorage.setItem('ask_token', tok), token);
     await page.goto(`${FRONT}/dashboard/student`, { waitUntil: 'domcontentloaded' });
 
     // Wait for content to appear
@@ -337,8 +333,7 @@ test.describe('UI — dashboards render without React crashes', () => {
     // Create a listing so the provider dashboard has data
     await post('/api/providers/become', {}, token);
 
-    await page.goto(FRONT);
-    await page.evaluate(tok => localStorage.setItem('ask_token', tok), token);
+    await page.addInitScript(tok => localStorage.setItem('ask_token', tok), token);
     await page.goto(`${FRONT}/dashboard/provider`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#root')).toBeVisible();
@@ -358,8 +353,7 @@ test.describe('UI — dashboards render without React crashes', () => {
     const student = await signup('UI Student Booker');
     await book(student.token, slot.id);
 
-    await page.goto(FRONT);
-    await page.evaluate(tok => localStorage.setItem('ask_token', tok), provider.token);
+    await page.addInitScript(tok => localStorage.setItem('ask_token', tok), provider.token);
     await page.goto(`${FRONT}/dashboard/provider`, { waitUntil: 'networkidle' });
 
     await expect(page.locator('#root')).toBeVisible();
@@ -384,8 +378,7 @@ test.describe('UI — dashboards render without React crashes', () => {
     // Confirm the booking
     await patch(`/api/bookings/${booking.id}`, { status: 'confirmed' }, provider.token);
 
-    await page.goto(FRONT);
-    await page.evaluate(tok => localStorage.setItem('ask_token', tok), provider.token);
+    await page.addInitScript(tok => localStorage.setItem('ask_token', tok), provider.token);
     await page.goto(`${FRONT}/dashboard/provider`, { waitUntil: 'networkidle' });
 
     await expect(page.locator('#root')).toBeVisible();

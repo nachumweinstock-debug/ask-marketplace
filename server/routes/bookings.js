@@ -13,6 +13,7 @@ import { sendBookingNotification, sendAdminBookingNotification, sendBookingConfi
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 import posthog from '../posthog.js';
+import { effectiveBookingDiscountPercent, getSitewideFirstTimeDiscountPercent } from '../pricing.js';
 
 const router = Router();
 
@@ -107,9 +108,12 @@ router.get('/mine', requireAuth, (req, res) => {
   }
 
   // Default: sessions I've booked (works for all users)
+  const firstBookingId = db.prepare(`
+    SELECT MIN(id) AS id FROM bookings WHERE student_id = ? AND status != 'cancelled'
+  `).get(req.user.id)?.id;
   const bookings = db.prepare(`
     SELECT b.*, a.date, a.start_time, a.end_time,
-           u.name as provider_name, pp.category, pp.price_per_session, pp.avatar_url,
+           u.name as provider_name, pp.category, pp.price_per_session, pp.first_time_discount_percent, pp.avatar_url,
            pp.id as provider_profile_id,
            r.id as review_id, r.rating as review_rating,
            pa.date as reschedule_date, pa.start_time as reschedule_start_time, pa.end_time as reschedule_end_time
@@ -121,7 +125,15 @@ router.get('/mine', requireAuth, (req, res) => {
     LEFT JOIN availability pa ON b.reschedule_proposed_availability_id = pa.id
     WHERE b.student_id = ?
     ORDER BY a.date DESC, a.start_time DESC
-  `).all(req.user.id);
+  `).all(req.user.id).map(booking => {
+    const percent = effectiveBookingDiscountPercent(booking, booking.id === firstBookingId);
+    const sitewideSale = getSitewideFirstTimeDiscountPercent();
+    return {
+      ...booking,
+      first_time_discount_percent: percent,
+      first_time_discount_scope: percent > 0 ? (sitewideSale ? 'sitewide' : 'first_time') : null,
+    };
+  });
   return res.json(bookings);
 });
 
@@ -188,14 +200,7 @@ router.post('/', requireAuth, async (req, res) => {
 
       if (providerInfo && providerInfo.user_id !== req.user.id) {
         const catLabel = providerInfo.custom_category || providerInfo.category || 'session';
-        // Include student contact info if they have a phone number saved
-        const studentContact = db.prepare('SELECT phone, contact_pref FROM users WHERE id = ?').get(req.user.id);
-        let contactLine = '';
-        if (studentContact?.phone) {
-          const app = studentContact.contact_pref === 'whatsapp' ? 'WhatsApp' : 'iMessage';
-          contactLine = ` You can reach me at ${studentContact.phone} on ${app}.`;
-        }
-        const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}.${contactLine} Looking forward to it!`;
+        const msg = `Hey ${providerInfo.name.split(' ')[0]}! I just booked your ${catLabel} slot for ${slot.date} at ${slot.start_time}–${slot.end_time}. Looking forward to it!`;
         db.prepare('INSERT INTO direct_messages (sender_id, receiver_id, body, is_system) VALUES (?, ?, ?, 1)')
           .run(req.user.id, providerInfo.user_id, msg);
         console.log('[BOOKING] auto-DM sent from', req.user.id, 'to', providerInfo.user_id);

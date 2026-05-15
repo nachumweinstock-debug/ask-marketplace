@@ -146,23 +146,15 @@ export default function Navbar() {
     await signOut(); navigate('/');
   }
 
+  // Top bar: only Browse, StudyParty, Messages + admin items for admins
   const navItems = [
-    { to: '/browse', label: 'Browse', show: true },
-    { to: '/hangouts', label: 'Hangouts', show: true, live: true },
-    { to: '/find-a-tutor', label: 'Find Instructor', show: true },
-    { to: '/saved-tutors', label: 'Saved', show: !!user },
-    { to: '/people', label: 'People', show: true },
-    { to: '/help-wanted', label: 'Help Wanted', show: true },
-    { to: '/support', label: 'Support', show: true },
-    { to: '/create-listing', label: 'Post', show: !!user },
-    { to: '/messages', label: 'Messages', show: !!user, badge: unread },
-    { to: '/dashboard/student', label: 'Bookings', show: !!user },
-    { to: '/dashboard/provider', label: 'Services', show: !!user && user.role === 'provider', badge: pendingBookings, badgeColor: '#F59E0B' },
-    { to: '/dashboard/analytics', label: 'Provider Analytics', show: !!user && user.role === 'provider' },
-    { to: '/admin', label: 'Admin', show: !!user && user.is_admin, admin: true },
-    { to: '/admin/support', label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
-    { to: '/admin/reviews', label: 'Reviews', show: !!user && user.is_admin, admin: true },
-    { to: '/admin/analytics', label: 'Analytics', show: !!user && user.is_admin, admin: true },
+    { to: '/browse',    label: 'Browse',                           show: true },
+    { to: '/studyparty',label: '🪩 StudyParty',                   show: true, live: true, party: true },
+    { to: '/messages',  label: 'Messages',    badge: unread,       show: !!user },
+    { to: '/admin',             label: 'Admin',         show: !!user && user.is_admin, admin: true },
+    { to: '/admin/support',     label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
+    { to: '/admin/reviews',     label: 'Reviews',       show: !!user && user.is_admin, admin: true },
+    { to: '/admin/analytics',   label: 'Analytics',     show: !!user && user.is_admin, admin: true },
   ].filter(i => i.show);
 
   function isActive(to) {
@@ -204,7 +196,7 @@ export default function Navbar() {
             {/* Center: nav items */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {navItems.map(item => (
-                <NavLink key={item.to} to={item.to} active={isActive(item.to)} admin={item.admin} live={item.live}>
+                <NavLink key={item.to} to={item.to} active={isActive(item.to)} admin={item.admin} live={item.live} party={item.party}>
                   {item.live && <LiveDot />}
                   {item.label}
                   {item.badge > 0 && <Badge n={item.badge} color={item.badgeColor} />}
@@ -261,11 +253,17 @@ export default function Navbar() {
                       minWidth: 168, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                       zIndex: 100, animation: 'slideDown 0.15s ease both',
                     }}>
+                      <DropItem to="/dashboard/student" onClick={() => setDropOpen(false)}>Bookings</DropItem>
+                      {user.role === 'provider' && <DropItem to="/dashboard/provider" onClick={() => setDropOpen(false)}>My Services {pendingBookings > 0 && <Badge n={pendingBookings} color="#F59E0B" />}</DropItem>}
                       <DropItem to="/account" onClick={() => setDropOpen(false)}>
-                        My Profile {profileNeedsWork && <ProfileDot inline />}
+                        Profile {profileNeedsWork && <ProfileDot inline />}
                       </DropItem>
-                      <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved Instructors</DropItem>
+                      <DropItem to="/saved-tutors" onClick={() => setDropOpen(false)}>Saved</DropItem>
+                      <DropItem to="/people" onClick={() => setDropOpen(false)}>People</DropItem>
                       <DropItem to="/referrals" onClick={() => setDropOpen(false)}>Referrals</DropItem>
+                      <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
+                      <DropItem to="/create-listing" onClick={() => setDropOpen(false)}>Post a listing</DropItem>
+                      <DropItem to="/help-wanted" onClick={() => setDropOpen(false)}>Help Wanted</DropItem>
                       <div style={{ height: 1, background: 'var(--gray-100)', margin: '4px 0' }}/>
                       <button onClick={handleSignOut} style={{
                         display: 'block', width: '100%', textAlign: 'left',
@@ -335,17 +333,24 @@ export default function Navbar() {
 
         {/* ── MOBILE DRAWER ── */}
         <div className={`nav-drawer${mobileOpen ? ' open' : ''}`}>
-          {navItems.map(item => (
-            <DrawerLink key={item.to} to={item.to} active={isActive(item.to)} onClick={() => setMobileOpen(false)} badge={item.badge}>
-              {item.label}
-            </DrawerLink>
-          ))}
+          <DrawerLink to="/browse" active={isActive('/browse')} onClick={() => setMobileOpen(false)}>Browse</DrawerLink>
+          <DrawerLink to="/studyparty" active={isActive('/studyparty')} onClick={() => setMobileOpen(false)}>🪩 StudyParty</DrawerLink>
+          {user && <DrawerLink to="/messages" active={isActive('/messages')} onClick={() => setMobileOpen(false)} badge={unread}>Messages</DrawerLink>}
+          {user && <DrawerLink to="/dashboard/student" active={path === '/dashboard/student'} onClick={() => setMobileOpen(false)} badge={notifCount}>Bookings</DrawerLink>}
+          {user && user.role === 'provider' && <DrawerLink to="/dashboard/provider" active={path === '/dashboard/provider'} onClick={() => setMobileOpen(false)} badge={pendingBookings}>My Services</DrawerLink>}
+          {user?.is_admin && <>
+            <DrawerLink to="/admin" active={isActive('/admin')} onClick={() => setMobileOpen(false)}>Admin</DrawerLink>
+            <DrawerLink to="/admin/support" active={isActive('/admin/support')} onClick={() => setMobileOpen(false)}>Support Inbox</DrawerLink>
+          </>}
           {user ? (
             <>
               <DrawerLink to="/account" active={path === '/account'} onClick={() => setMobileOpen(false)}>
-                My Profile {profileNeedsWork && <ProfileDot inline />}
+                Profile {profileNeedsWork && <ProfileDot inline />}
               </DrawerLink>
-              <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved Instructors</DrawerLink>
+              <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved</DrawerLink>
+              <DrawerLink to="/people" active={isActive('/people')} onClick={() => setMobileOpen(false)}>People</DrawerLink>
+              <DrawerLink to="/create-listing" active={path === '/create-listing'} onClick={() => setMobileOpen(false)}>Post a listing</DrawerLink>
+              <DrawerLink to="/help-wanted" active={path === '/help-wanted'} onClick={() => setMobileOpen(false)}>Help Wanted</DrawerLink>
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--cream-200)', marginTop: 4 }}>
                 <button onClick={handleSignOut} style={{
                   width: '100%', background: '#FEF2F2', border: '1px solid #FECACA',
@@ -383,15 +388,48 @@ export default function Navbar() {
         }}>
           {[
             { to: '/browse', label: 'Browse', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
-            { to: '/hangouts', label: 'Hangouts', live: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 12h.01"/><path d="M12 12h.01"/><path d="M7 12h.01"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+            { to: '/studyparty', label: '🪩 Party', live: true, party: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 12h.01"/><path d="M12 12h.01"/><path d="M7 12h.01"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
             { to: '/messages', label: 'Messages', badge: unread, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
             { to: user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student', label: 'My Stuff', badge: notifCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
             { to: '/account', label: 'Profile', dot: profileNeedsWork, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-          ].map(({ to, label, icon, badge, dot, live }) => {
+          ].map(({ to, label, icon, badge, dot, live, party }) => {
             const active = to === '/messages' ? path.startsWith('/messages')
               : to.startsWith('/dashboard') ? path.startsWith('/dashboard')
               : to === '/account' ? path === '/account'
+              : to === '/studyparty' ? (path === '/studyparty' || path === '/hangouts')
               : path.startsWith(to);
+            if (party) {
+              return (
+                <Link key={to} to={to} style={{
+                  flex: 1, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  padding: '5px 0 4px', textDecoration: 'none', gap: 1,
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 2, padding: '5px 10px 4px',
+                    borderRadius: 14,
+                    background: 'linear-gradient(135deg, #1a0a2e 0%, #2d0a3e 40%, #1a1040 100%)',
+                    backgroundSize: '200% 200%',
+                    animation: 'nav-party-glow 2.4s ease-in-out infinite, nav-party-bg 4s ease infinite',
+                    border: '1px solid rgba(192,38,211,0.35)',
+                  }}>
+                    <span style={{
+                      fontSize: 20, lineHeight: 1,
+                      display: 'inline-block',
+                      animation: 'nav-party-float 2s ease-in-out infinite',
+                    }}>🪩</span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 800, fontFamily: 'var(--font-ui)',
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                      animation: 'nav-party-rainbow 2s linear infinite',
+                    }}>Party</span>
+                  </div>
+                  {active && <span style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:2.5, background:'var(--accent)', borderRadius:2 }}/>}
+                </Link>
+              );
+            }
             return (
               <Link key={to} to={to} style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
@@ -402,13 +440,6 @@ export default function Navbar() {
               }}>
                 <div style={{ position: 'relative' }}>
                   {icon}
-                  {live && <span style={{
-                    position: 'absolute', top: -4, right: -5,
-                    width: 9, height: 9, borderRadius: '50%',
-                    background: '#16A34A', border: '1.5px solid #fff',
-                    animation: 'ask-live-pulse 1.6s ease-out infinite',
-                    boxShadow: '0 0 0 0 rgba(22,163,74,0.55)',
-                  }} />}
                   {badge > 0 && (
                     <span style={{
                       position: 'absolute', top: -4, right: -5,
@@ -422,7 +453,7 @@ export default function Navbar() {
                   )}
                   {dot && <ProfileDot />}
                 </div>
-                <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, fontFamily: 'var(--font-ui)', color: live && !active ? '#16A34A' : undefined }}>{label}</span>
+                <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, fontFamily: 'var(--font-ui)' }}>{label}</span>
                 {active && <span style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:2.5, background:'var(--accent)', borderRadius:2 }}/>}
               </Link>
             );
@@ -463,6 +494,28 @@ function LiveDot() {
         @keyframes ask-live-badge-shimmer {
           0% { background-position: -100% 0; }
           100% { background-position: 200% 0; }
+        }
+        @keyframes nav-party-rainbow {
+          0%   { color: #f43f5e; }
+          16%  { color: #f97316; }
+          33%  { color: #eab308; }
+          50%  { color: #22c55e; }
+          66%  { color: #3b82f6; }
+          83%  { color: #a855f7; }
+          100% { color: #f43f5e; }
+        }
+        @keyframes nav-party-float {
+          0%, 100% { transform: translateY(0px) rotate(-4deg); }
+          50%       { transform: translateY(-3px) rotate(4deg); }
+        }
+        @keyframes nav-party-glow {
+          0%, 100% { box-shadow: 0 0 8px 1px rgba(192,38,211,0.35), 0 0 16px 2px rgba(99,102,241,0.2); }
+          50%       { box-shadow: 0 0 12px 3px rgba(192,38,211,0.55), 0 0 24px 4px rgba(99,102,241,0.3); }
+        }
+        @keyframes nav-party-bg {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
         .ask-live-badge {
           display: inline-flex;
@@ -515,26 +568,26 @@ function Badge({ n, color = 'var(--accent)' }) {
   );
 }
 
-function NavLink({ to, active, admin, children }) {
+function NavLink({ to, active, admin, party, children }) {
+  const baseColor = admin ? '#7C2D12' : party ? '#C026D3' : active ? 'var(--text)' : 'var(--muted)';
   return (
     <Link to={to} style={{
       display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px',
       fontSize: 13, fontWeight: active ? 850 : 720, textDecoration: 'none',
       whiteSpace: 'nowrap', gap: 4,
-      color: active ? 'var(--text)' : 'var(--muted)',
+      color: baseColor,
       fontFamily: 'var(--font-ui)',
       position: 'relative',
       transition: 'color .12s',
-      ...(admin ? { color: '#7C2D12', fontWeight: 850 } : {}),
     }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text)'; }}
-      onMouseLeave={e => { if (!active && !admin) e.currentTarget.style.color = 'var(--muted)'; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = party ? '#A21CAF' : 'var(--text)'; }}
+      onMouseLeave={e => { e.currentTarget.style.color = baseColor; }}
     >
       {children}
       {active && (
         <span style={{
           position: 'absolute', bottom: 0, left: 12, right: 12,
-          height: 3, background: 'var(--orange)', borderRadius: 2,
+          height: 3, background: party ? '#C026D3' : 'var(--orange)', borderRadius: 2,
         }} />
       )}
     </Link>

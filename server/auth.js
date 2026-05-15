@@ -37,12 +37,22 @@ async function resolveSupabaseUser(token) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user?.email) return null;
   const email = user.email.toLowerCase();
-  let sqliteUser = db.prepare('SELECT id, email, name, role, is_admin, major, interests, university, classes_taking, gpa, user_bio, avatar_url FROM users WHERE email = ?').get(email);
+  let sqliteUser = db.prepare(`
+    SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
+           classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
+           referral_code, referred_by, created_at
+    FROM users WHERE email = ?
+  `).get(email);
   if (!sqliteUser) {
     const name = user.user_metadata?.full_name || email.split('@')[0];
     db.prepare('INSERT OR IGNORE INTO users (email, name, password, role, email_verified) VALUES (?, ?, ?, ?, 1)')
       .run(email, name, '', 'student');
-    sqliteUser = db.prepare('SELECT id, email, name, role, is_admin, major, interests, university, classes_taking, gpa, user_bio, avatar_url FROM users WHERE email = ?').get(email);
+    sqliteUser = db.prepare(`
+      SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
+             classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
+             referral_code, referred_by, created_at
+      FROM users WHERE email = ?
+    `).get(email);
   }
   if (SUPERADMINS.includes(email) && !sqliteUser.is_admin) {
     db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(sqliteUser.id);
@@ -59,7 +69,12 @@ export async function requireAuth(req, res, next) {
   const customUser = verifyToken(token);
   if (customUser) {
     // Refresh from DB so we always have up-to-date fields
-    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, interests, university, classes_taking, gpa, user_bio, avatar_url, token_version, phone, created_at, username FROM users WHERE id = ?').get(customUser.id);
+    const dbUser = db.prepare(`
+      SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
+             classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
+             referral_code, referred_by, created_at, token_version
+      FROM users WHERE id = ?
+    `).get(customUser.id);
     if (dbUser) {
       // Reject tokens issued before the current token_version (password reset invalidation)
       if (customUser.tv !== undefined && customUser.tv < (dbUser.token_version || 1)) {
@@ -97,7 +112,12 @@ export async function optionalAuth(req, res, next) {
   // Custom JWT first
   const customUser = verifyToken(token);
   if (customUser) {
-    const dbUser = db.prepare('SELECT id, email, name, role, is_admin, major, interests, university, classes_taking, gpa, user_bio, avatar_url, username FROM users WHERE id = ?').get(customUser.id);
+    const dbUser = db.prepare(`
+      SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
+             classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
+             referral_code, referred_by, created_at
+      FROM users WHERE id = ?
+    `).get(customUser.id);
     if (dbUser) { req.user = dbUser; return next(); }
   }
 

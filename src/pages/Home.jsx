@@ -80,7 +80,7 @@ function HangoutsStrip() {
             </span>
           </div>
           <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(24px,4vw,36px)', color: '#FAF7F2', fontWeight: 400, margin: 0, lineHeight: 1.15 }}>
-            Study Hangouts
+            🪩 StudyParty
           </h2>
           <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, color: '#93C5FD', marginTop: 6 }}>
             {count === null
@@ -91,7 +91,7 @@ function HangoutsStrip() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link to="/hangouts" style={{
+          <Link to="/studyparty" style={{
             padding: '11px 24px', borderRadius: 99,
             background: '#FAF7F2', color: '#1B3A6B',
             fontSize: 14, fontWeight: 700, textDecoration: 'none',
@@ -103,7 +103,7 @@ function HangoutsStrip() {
           >
             Join a session
           </Link>
-          <Link to="/hangouts" state={{ openModal: true }} style={{
+          <Link to="/studyparty" state={{ openModal: true }} style={{
             padding: '11px 24px', borderRadius: 99,
             background: 'transparent', color: '#FAF7F2',
             border: '1.5px solid rgba(250,247,242,0.35)',

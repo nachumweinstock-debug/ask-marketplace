@@ -226,7 +226,12 @@ router.post('/reset-password', async (req, res) => {
   // Increment token_version to invalidate all existing sessions on other devices
   db.prepare('UPDATE users SET password = ?, email_verified = 1, token_version = COALESCE(token_version, 1) + 1 WHERE id = ?').run(hashed, user.id);
 
-  const updatedUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+  const updatedUser = db.prepare(`
+    SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
+           classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
+           referral_code, referred_by, created_at, token_version
+    FROM users WHERE id = ?
+  `).get(user.id);
   const token = signToken({ id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role, token_version: updatedUser.token_version });
   res.json({ token, user: updatedUser });
 });

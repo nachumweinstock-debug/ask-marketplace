@@ -447,8 +447,6 @@ function SessionChat({ sessionId, currentUser }) {
 
 function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
   const expired = new Date(session.expires_at) <= Date.now();
-  if (expired) return null;
-
   const isJoined = !!session.joined;
   const isHost = currentUser?.id === session.user_id;
   const [chatOpen, setChatOpen] = useState(false);
@@ -465,8 +463,10 @@ function SessionCard({ session, onJoin, joining, onCancel, currentUser }) {
       .catch(() => {});
   }, [session.id, isJoined, session.attendee_count]);
 
+  if (expired) return null;
+
   function copyInvite() {
-    navigator.clipboard.writeText(`${window.location.origin}/hangouts`)
+    navigator.clipboard.writeText(`${window.location.origin}/studyparty`)
       .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
       .catch(() => {});
   }
@@ -881,35 +881,162 @@ export default function StudyHangouts() {
 
   return (
     <div style={{ background: CREAM, minHeight: '100vh', paddingBottom: 80 }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
+      {/* ── Party header banner ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #2D0A5E 0%, #5B1A9E 25%, #9B2FD4 50%, #C026D3 72%, #DB2777 100%)',
+        backgroundSize: '300% 300%',
+        padding: '52px 0 48px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <style>{`
+          @keyframes sp-bg-shift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          @keyframes sp-float  { 0%,100%{transform:translateY(0) rotate(0deg);}  50%{transform:translateY(-14px) rotate(10deg);} }
+          @keyframes sp-float2 { 0%,100%{transform:translateY(0) rotate(0deg);}  50%{transform:translateY(-10px) rotate(-8deg);} }
+          @keyframes sp-float3 { 0%,100%{transform:translateY(0) scale(1);}      50%{transform:translateY(-7px) scale(1.15);} }
+          @keyframes sp-beam   {
+            0%   { transform: rotate(-28deg); opacity: 0.1; }
+            50%  { transform: rotate(18deg);  opacity: 0.22; }
+            100% { transform: rotate(-28deg); opacity: 0.1; }
+          }
+          @keyframes sp-beam2  {
+            0%   { transform: rotate(20deg);  opacity: 0.08; }
+            50%  { transform: rotate(-15deg); opacity: 0.18; }
+            100% { transform: rotate(20deg);  opacity: 0.08; }
+          }
+          @keyframes sp-orb {
+            0%,100% { transform: scale(1);    opacity: 0.22; }
+            50%      { transform: scale(1.45); opacity: 0.38; }
+          }
+          @keyframes sp-orb2 {
+            0%,100% { transform: scale(1.1);  opacity: 0.18; }
+            50%      { transform: scale(0.75); opacity: 0.3; }
+          }
+          @keyframes sp-disco-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes sp-sparkle {
+            0%,100% { opacity:0; transform:scale(0.4) rotate(0deg); }
+            45%,55% { opacity:1; transform:scale(1.1) rotate(180deg); }
+          }
+          @keyframes sp-strobe {
+            0%,18%,22%,100% { opacity: 0; }
+            20%              { opacity: 0.06; }
+          }
+        `}</style>
 
-        {/* Page header */}
-        <div style={{ paddingTop: 52, paddingBottom: 40 }}>
+        {/* Animated color-shift overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          background: 'linear-gradient(135deg, #2D0A5E 0%, #5B1A9E 25%, #9B2FD4 50%, #C026D3 72%, #DB2777 100%)',
+          backgroundSize: '300% 300%',
+          animation: 'sp-bg-shift 8s ease-in-out infinite',
+        }} />
+
+        {/* Light beams from top */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div style={{
+            position: 'absolute', top: '-60%', left: '22%',
+            width: 4, height: '220%',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.6), rgba(255,180,255,0.15), transparent)',
+            transformOrigin: 'top center',
+            animation: 'sp-beam 5s ease-in-out infinite',
+            filter: 'blur(2px)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '-60%', left: '55%',
+            width: 3, height: '220%',
+            background: 'linear-gradient(to bottom, rgba(255,255,200,0.5), rgba(255,200,255,0.12), transparent)',
+            transformOrigin: 'top center',
+            animation: 'sp-beam2 4.2s ease-in-out infinite 1.1s',
+            filter: 'blur(1.5px)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '-60%', left: '78%',
+            width: 3, height: '220%',
+            background: 'linear-gradient(to bottom, rgba(180,255,255,0.45), rgba(100,200,255,0.1), transparent)',
+            transformOrigin: 'top center',
+            animation: 'sp-beam 6s ease-in-out infinite 2.3s',
+            filter: 'blur(1px)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '-60%', left: '38%',
+            width: 2, height: '220%',
+            background: 'linear-gradient(to bottom, rgba(255,100,200,0.4), rgba(255,50,150,0.1), transparent)',
+            transformOrigin: 'top center',
+            animation: 'sp-beam2 3.8s ease-in-out infinite 0.6s',
+            filter: 'blur(1px)',
+          }} />
+        </div>
+
+        {/* Colored light orbs */}
+        <div style={{ position: 'absolute', bottom: -40, left: '5%', width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,0,200,0.3)', filter: 'blur(45px)', animation: 'sp-orb 3.5s ease-in-out infinite', zIndex: 0, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -30, right: '8%', width: 120, height: 120, borderRadius: '50%', background: 'rgba(0,220,255,0.28)', filter: 'blur(40px)', animation: 'sp-orb2 4s ease-in-out infinite 0.8s', zIndex: 0, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: 5, right: '28%', width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,230,0,0.22)', filter: 'blur(32px)', animation: 'sp-orb 2.8s ease-in-out infinite 1.6s', zIndex: 0, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 10, left: '40%', width: 80, height: 80, borderRadius: '50%', background: 'rgba(120,255,100,0.18)', filter: 'blur(28px)', animation: 'sp-orb2 3.2s ease-in-out infinite 2.1s', zIndex: 0, pointerEvents: 'none' }} />
+
+        {/* Strobe flash overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: '#fff', animation: 'sp-strobe 7s linear infinite', zIndex: 0, pointerEvents: 'none' }} />
+
+        {/* Disco ball — spinning sparkle ring */}
+        <div style={{ position: 'absolute', top: 14, right: '10%', width: 56, height: 56, animation: 'sp-disco-spin 2.4s linear infinite', zIndex: 1, pointerEvents: 'none' }}>
+          {['#FFD700','#FF69B4','#00FFFF','#FF4500','#ADFF2F','#FF1493','#00CED1','#FFD700'].map((c, i) => {
+            const a = (i / 8) * 360, r = (a * Math.PI) / 180;
+            return (
+              <span key={i} style={{
+                position: 'absolute',
+                left: 28 + 22 * Math.cos(r) - 3,
+                top: 28 + 22 * Math.sin(r) - 3,
+                width: 6, height: 6, borderRadius: '50%',
+                background: c, boxShadow: `0 0 7px 3px ${c}`,
+                animation: `sp-sparkle ${1.4 + i * 0.18}s ease-in-out infinite ${i * 0.14}s`,
+              }} />
+            );
+          })}
+          {/* Center dot */}
+          <span style={{ position:'absolute',left:24,top:24,width:8,height:8,borderRadius:'50%',background:'#fff',boxShadow:'0 0 10px 4px rgba(255,255,255,0.8)' }} />
+        </div>
+
+        {/* Floating confetti + symbols */}
+        <span style={{ position:'absolute',top:16,right:'22%',fontSize:30,opacity:0.4,animation:'sp-float 4s ease-in-out infinite',zIndex:1,pointerEvents:'none' }}>🎊</span>
+        <span style={{ position:'absolute',top:38,right:'32%',fontSize:20,opacity:0.28,animation:'sp-float2 3.5s ease-in-out infinite 0.8s',zIndex:1,pointerEvents:'none' }}>✦</span>
+        <span style={{ position:'absolute',bottom:12,left:'5%',fontSize:22,opacity:0.3,animation:'sp-float 5.2s ease-in-out infinite 1.2s',zIndex:1,pointerEvents:'none' }}>🎶</span>
+        <span style={{ position:'absolute',top:10,left:'18%',fontSize:15,opacity:0.25,animation:'sp-float2 4.5s ease-in-out infinite 0.4s',zIndex:1,pointerEvents:'none' }}>✧</span>
+        <span style={{ position:'absolute',bottom:20,right:'42%',fontSize:18,opacity:0.22,animation:'sp-float3 3.8s ease-in-out infinite 1.8s',zIndex:1,pointerEvents:'none' }}>★</span>
+        <span style={{ position:'absolute',top:22,left:'48%',fontSize:24,opacity:0.28,animation:'sp-float 4.8s ease-in-out infinite 0.6s',zIndex:1,pointerEvents:'none' }}>🎉</span>
+        <span style={{ position:'absolute',bottom:8,left:'30%',fontSize:16,opacity:0.2,animation:'sp-float2 5.5s ease-in-out infinite 2.2s',zIndex:1,pointerEvents:'none' }}>◆</span>
+        <span style={{ position:'absolute',top:44,left:'62%',fontSize:13,opacity:0.22,animation:'sp-float3 4.1s ease-in-out infinite 1s',zIndex:1,pointerEvents:'none' }}>✦</span>
+
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', position: 'relative', zIndex: 2 }}>
           <h1 style={{
             fontFamily: "'DM Serif Display', Georgia, serif",
-            fontSize: 'clamp(34px, 5vw, 52px)',
-            fontWeight: 400, color: NAVY, margin: 0, lineHeight: 1.12,
+            fontSize: 'clamp(38px, 6vw, 62px)',
+            fontWeight: 400, color: '#fff', margin: 0, lineHeight: 1.08,
+            textShadow: '0 2px 24px rgba(0,0,0,0.35), 0 0 40px rgba(192,38,211,0.4)',
           }}>
-            Study Hangouts
+            🪩 StudyParty
           </h1>
           <p style={{
             fontFamily: "'Outfit', sans-serif",
-            fontSize: 16, color: '#6D665C', marginTop: 10, lineHeight: 1.5,
+            fontSize: 16, color: 'rgba(255,255,255,0.85)', marginTop: 10, lineHeight: 1.5,
           }}>
             See who's studying right now — show up and make it a party.
           </p>
           <button
             onClick={() => user ? setShowModal(true) : navigate('/login')}
             style={{
-              marginTop: 22, padding: '11px 26px', borderRadius: 99,
-              background: NAVY, color: '#fff', border: 'none',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              marginTop: 22, padding: '11px 28px', borderRadius: 99,
+              background: '#fff', color: '#C026D3', border: 'none',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
               fontFamily: "'Outfit', sans-serif",
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              transition: 'background 0.15s',
+              transition: 'opacity 0.15s, transform 0.15s, box-shadow 0.15s',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2), 0 0 0 0 rgba(192,38,211,0)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#142D54'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = NAVY; }}
+            onMouseEnter={e => { e.currentTarget.style.opacity='0.95'; e.currentTarget.style.transform='scale(1.03)'; e.currentTarget.style.boxShadow='0 8px 32px rgba(0,0,0,0.25), 0 0 20px rgba(192,38,211,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)'; }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -918,20 +1045,23 @@ export default function StudyHangouts() {
             Start a Session
           </button>
         </div>
+      </div>
 
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', paddingBottom: 40 }}>
         {/* Live count badge */}
         {!loading && active.length > 0 && (
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: '#fff', border: '1px solid #E8E3DA',
+            background: '#fff', border: '1px solid rgba(192,38,211,0.25)',
             borderRadius: 99, padding: '5px 14px',
-            marginBottom: 20,
-            fontFamily: "'Outfit', sans-serif", fontSize: 13, color: '#342F29',
+            margin: '20px 0 4px',
+            fontFamily: "'Outfit', sans-serif", fontSize: 13, color: '#86198F',
+            boxShadow: '0 1px 8px rgba(192,38,211,0.1)',
           }}>
             <span style={{
-              width: 7, height: 7, borderRadius: '50%', background: '#16A34A',
+              width: 7, height: 7, borderRadius: '50%', background: '#C026D3',
               display: 'inline-block', flexShrink: 0,
-              boxShadow: '0 0 0 3px rgba(22,163,74,0.18)',
+              boxShadow: '0 0 0 3px rgba(192,38,211,0.2)',
             }} />
             {active.length} session{active.length !== 1 ? 's' : ''} live now
           </div>
@@ -957,21 +1087,22 @@ export default function StudyHangouts() {
           <p style={{ color: '#DC2626', fontFamily: 'var(--font-ui)', fontSize: 14 }}>{fetchError}</p>
         ) : active.length === 0 ? (
           <div style={{
-            textAlign: 'center', padding: '64px 20px',
-            border: '2px dashed #D9D2C3', borderRadius: 20,
+            textAlign: 'center', padding: '64px 20px', marginTop: 20,
+            border: '2px dashed rgba(192,38,211,0.25)', borderRadius: 20,
+            background: 'rgba(192,38,211,0.03)',
           }}>
-            <div style={{ fontSize: 44, lineHeight: 1 }}>📚</div>
+            <div style={{ fontSize: 52, lineHeight: 1 }}>🪩</div>
             <h3 style={{
               fontFamily: "'DM Serif Display', Georgia, serif",
-              fontSize: 24, color: NAVY, marginTop: 14, fontWeight: 400,
+              fontSize: 24, color: '#86198F', marginTop: 14, fontWeight: 400,
             }}>
-              No active sessions
+              No sessions yet
             </h3>
             <p style={{
               fontFamily: "'Outfit', sans-serif",
               color: '#8D8577', marginTop: 8, fontSize: 15,
             }}>
-              Be the first one out. Start a session and watch your friends show up.
+              Be the first one out. Start a session and watch everyone show up.
             </p>
           </div>
         ) : (

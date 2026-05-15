@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
+import { redactContactText } from './redact.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..');
@@ -206,6 +207,20 @@ if (!tables.includes('direct_messages')) {
   if (!dmCols.includes('is_system')) db.exec('ALTER TABLE direct_messages ADD COLUMN is_system INTEGER DEFAULT 0');
 }
 
+try {
+  const rows = db.prepare('SELECT id, body FROM direct_messages').all();
+  const update = db.prepare('UPDATE direct_messages SET body = ? WHERE id = ?');
+  const redactExistingDirectMessages = db.transaction(messages => {
+    for (const message of messages) {
+      const redacted = redactContactText(message.body);
+      if (redacted !== message.body) update.run(redacted, message.id);
+    }
+  });
+  redactExistingDirectMessages(rows);
+} catch (err) {
+  console.error('[DB] direct message contact redaction skipped:', err.message);
+}
+
 // ── Multiple listings: drop UNIQUE constraint on provider_profiles.user_id ────
 // SQLite can't ALTER TABLE DROP CONSTRAINT, so we recreate the table.
 // This runs only if user_id is still UNIQUE (fresh or old single-listing installs).
@@ -254,6 +269,7 @@ if (!ppColsFinal.includes('max_group_size'))   db.exec('ALTER TABLE provider_pro
 if (!ppColsFinal.includes('intro_video_url'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN intro_video_url TEXT');
 if (!ppColsFinal.includes('portfolio_notes'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN portfolio_notes TEXT');
 if (!ppColsFinal.includes('school_verified'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN school_verified INTEGER DEFAULT 0');
+if (!ppColsFinal.includes('first_time_discount_percent')) db.exec('ALTER TABLE provider_profiles ADD COLUMN first_time_discount_percent INTEGER DEFAULT 0');
 if (!ppColsFinal.includes('created_at')) {
   db.exec('ALTER TABLE provider_profiles ADD COLUMN created_at DATETIME');
   db.prepare("UPDATE provider_profiles SET created_at = datetime('now', '-3 days') WHERE created_at IS NULL").run();
@@ -301,6 +317,31 @@ db.exec(`
 db.exec('CREATE INDEX IF NOT EXISTS idx_review_reports_status ON review_reports(status, created_at)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_provider_media_provider ON provider_media(provider_id, sort_order)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_session_reminders_user ON session_reminders(user_id, dismissed_at)');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+const PRICE_RESTORE_KEY = 'restore_prices_before_bulk_15_2026_05_14';
+if (!db.prepare('SELECT value FROM app_settings WHERE key = ?').get(PRICE_RESTORE_KEY)) {
+  const restorePrices = db.transaction(() => {
+    const result = db.prepare(`
+      UPDATE provider_profiles
+      SET price_per_session = ROUND(price_per_session / 1.15, 2)
+      WHERE COALESCE(price_per_session, 0) > 0
+    `).run();
+    db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `).run(PRICE_RESTORE_KEY, String(result.changes));
+    return result.changes;
+  });
+  console.log(`[DB] restored ${restorePrices()} listing prices after accidental 15% bulk increase`);
+}
 
 // ── Group booking invites ──────────────────────────────────────────────────────
 const tablesAll = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
@@ -362,10 +403,6 @@ if (!colsLatest.includes('google_id'))              db.exec('ALTER TABLE users A
 if (!colsLatest.includes('apple_id'))               db.exec('ALTER TABLE users ADD COLUMN apple_id TEXT');
 if (!colsLatest.includes('token_version'))          db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1');
 if (!colsLatest.includes('last_hangout_notif_at'))  db.exec('ALTER TABLE users ADD COLUMN last_hangout_notif_at DATETIME');
-
-// Study session host reminder tracking
-const sessionCols = db.pragma("table_info(study_sessions)").map(c => c.name);
-if (!sessionCols.includes('host_last_reminded_at')) db.exec('ALTER TABLE study_sessions ADD COLUMN host_last_reminded_at DATETIME');
 
 // DM nudge tracking — prevents re-sending the same nudge level for a conversation
 const tablesLatest = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
@@ -592,6 +629,10 @@ if (!tablesHangouts.includes('study_sessions')) {
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_study_sessions_expires ON study_sessions(expires_at)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_session_attendees_session ON session_attendees(session_id)');
+
+// Study session host reminder tracking
+const sessionCols = db.pragma("table_info(study_sessions)").map(c => c.name);
+if (!sessionCols.includes('host_last_reminded_at')) db.exec('ALTER TABLE study_sessions ADD COLUMN host_last_reminded_at DATETIME');
 
 // Session chat messages
 const tablesChat = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
