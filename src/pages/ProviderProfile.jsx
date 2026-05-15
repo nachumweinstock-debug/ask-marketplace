@@ -4,7 +4,7 @@ import api from '../api';
 import { copyText } from '../lib/clipboard';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
-import { fmtTime, fmtDay, DAYS } from '../lib/slots';
+import { fmtTime, DAYS } from '../lib/slots';
 import CategoryPill, { SessionTypePill } from '../components/CategoryPill';
 import MiniCalendar from '../components/MiniCalendar';
 import { providerUrl, parseProviderSlug, isUsernameSlug } from '../lib/providerUrl';
@@ -16,6 +16,8 @@ import { ProfileSkeleton } from '../components/Skeletons';
 import PoweredByAsk from '../components/PoweredByAsk';
 import TrustBadges from '../components/TrustBadges';
 import ProfileTrustPanel from '../components/ProfileTrustPanel';
+import NotFound from './NotFound';
+import { discountedPrice, discountPercent, firstTimeDiscountLabel, money } from '../lib/pricing';
 
 function ShareButton({ providerId, providerName, username }) {
   const [copied, setCopied] = useState(false);
@@ -225,8 +227,10 @@ export default function ProviderProfile() {
   const [mediaItems, setMediaItems] = useState([]);
   const [reportingReview, setReportingReview] = useState(null);
   const [reportForm, setReportForm] = useState({ reason: 'spam', details: '' });
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    setNotFound(false);
     setOtherListings([]);
     const fetch = usernameSlug
       ? api.get(`/providers/u/${usernameSlug}`).then(async ({ data }) => {
@@ -247,8 +251,8 @@ export default function ProviderProfile() {
             .catch(() => {});
         });
     fetch.catch(() => {
-      if (usernameSlug) navigate(`/u/${usernameSlug}`, { replace: true });
-      else navigate('/browse');
+      setProvider(null);
+      setNotFound(true);
     }).finally(() => setLoading(false));
   }, [numericId, usernameSlug]);
 
@@ -358,11 +362,15 @@ export default function ProviderProfile() {
   }
 
   if (loading) return <ProfileSkeleton />;
+  if (notFound) return <NotFound />;
   if (!provider) return null;
 
   const isOwner = user && user.id === provider.user_id;
   const availability = Array.isArray(provider.availability) ? provider.availability : [];
   const reviews = Array.isArray(provider.reviews) ? provider.reviews : [];
+  const discount = discountPercent(provider);
+  const displayPrice = discountedPrice(provider);
+  const sitewideSale = discount > 0 && provider.first_time_discount_scope === 'sitewide';
 
   // Separate real calendar dates from legacy day-name slots
   const realSlots    = availability.filter(s => /^\d{4}/.test(s.date));
@@ -485,14 +493,61 @@ export default function ProviderProfile() {
                   <TrustBadges trust={provider.trust} />
                 </div>
               </div>
-              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 {!isOwner && (
                   <SavedTutorButton tutorId={provider.id} initialSaved={saved} onChange={setSaved} />
                 )}
-                <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 32, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                  {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>per session</div>
+
+                {provider.price_per_session > 0 && discount > 0 ? (
+                  /* ── Sale / discount active ── */
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, marginTop: 4 }}>
+                    {/* Sale label */}
+                    <div style={{
+                      fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      padding: '5px 12px', borderRadius: 8,
+                      background: sitewideSale
+                        ? 'linear-gradient(135deg, #7C3AED, #EC4899)'
+                        : '#F0FDF4',
+                      color: sitewideSale ? '#fff' : '#166534',
+                      border: sitewideSale ? 'none' : '1px solid #BBF7D0',
+                    }}>
+                      {sitewideSale ? '✦ Campus Sale' : 'First-time discount'} · −{discount}%
+                    </div>
+
+                    {/* Crossed-out original */}
+                    <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--muted)', textDecoration: 'line-through', lineHeight: 1 }}>
+                      {money(provider.price_per_session)}
+                    </div>
+
+                    {/* Big final price */}
+                    <div style={{
+                      fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+                      fontSize: 40, fontWeight: 760, lineHeight: 1,
+                      color: 'var(--text)', letterSpacing: '-0.02em',
+                    }}>
+                      {money(displayPrice)}
+                    </div>
+
+                    {/* Savings line */}
+                    <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, lineHeight: 1 }}>
+                      <span style={{ color: '#16A34A', fontWeight: 700 }}>
+                        You save {money(Math.round((provider.price_per_session - displayPrice) * 100) / 100)}
+                      </span>
+                      {' '}· per session
+                    </div>
+                  </div>
+                ) : (
+                  /* ── No discount ── */
+                  <>
+                    <div style={{
+                      fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
+                      fontSize: 36, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1,
+                    }}>
+                      {provider.price_per_session > 0 ? money(provider.price_per_session) : 'Free'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>per session</div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -890,8 +945,13 @@ export default function ProviderProfile() {
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flexShrink: 0, marginLeft: 12 }}>
-                    {l.price_per_session > 0 ? `$${l.price_per_session}` : 'Free'}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flexShrink: 0, marginLeft: 12, textAlign: 'right' }}>
+                    {l.price_per_session > 0 ? money(discountedPrice(l)) : 'Free'}
+                    {discountPercent(l) > 0 && (
+                      <div style={{ fontSize: 10.5, color: '#166534', fontWeight: 800, marginTop: 2 }}>
+                        {firstTimeDiscountLabel(l)}
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}

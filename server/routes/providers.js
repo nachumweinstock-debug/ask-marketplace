@@ -4,6 +4,7 @@ import { requireAuth, optionalAuth } from '../auth.js';
 import { storeImage } from '../storage.js';
 import posthog from '../posthog.js';
 import { attachTrust } from '../trust.js';
+import { withEffectiveFirstTimeDiscount } from '../pricing.js';
 
 /**
  * Returns true if requesterId is allowed to see zelle/venmo for providerUserId.
@@ -242,12 +243,12 @@ router.get('/u/:username', optionalAuth, (req, res) => {
     WHERE pp.user_id = ?
     ORDER BY pp.id DESC
   `).all(user.id);
-  res.json({ user, listings: listings.map(row => attachTrust(redactPublicListing(row))) });
+  res.json({ user, listings: listings.map(row => attachTrust(withEffectiveFirstTimeDiscount(redactPublicListing(row), req.user?.id))) });
 });
 
 // GET /providers/by-user/:userId — all public listings for a given user
 // Payment info stripped — use the individual /:id endpoint for that after auth check
-router.get('/by-user/:userId', (req, res) => {
+router.get('/by-user/:userId', optionalAuth, (req, res) => {
   const listings = db.prepare(`
     SELECT pp.id, pp.user_id, pp.bio, pp.category, pp.custom_category, pp.subcategory,
            pp.price_per_session, pp.rating, pp.review_count, pp.listing_image,
@@ -259,7 +260,7 @@ router.get('/by-user/:userId', (req, res) => {
     WHERE pp.user_id = ?
     ORDER BY pp.id DESC
   `).all(req.params.userId);
-  res.json(listings.map(attachTrust));
+  res.json(listings.map(row => attachTrust(withEffectiveFirstTimeDiscount(row, req.user?.id))));
 });
 
 // GET /providers/me/profile — first/most recent profile (backwards compat)
@@ -270,7 +271,7 @@ router.get('/me/profile', requireAuth, (req, res) => {
 });
 
 // GET /providers — browse all
-router.get('/', (req, res) => {
+router.get('/', optionalAuth, (req, res) => {
   const { category, subcategory, search, sort, session_type, min_price, max_price, min_rating, availability } = req.query;
   let query = `
     SELECT pp.*, u.name, u.email, u.username,
@@ -327,7 +328,7 @@ router.get('/', (req, res) => {
   } else {
     query += ' ORDER BY pp.rating DESC, pp.review_count DESC';
   }
-  res.json(db.prepare(query).all(...params).map(row => attachTrust(redactPublicListing(row))));
+  res.json(db.prepare(query).all(...params).map(row => attachTrust(withEffectiveFirstTimeDiscount(redactPublicListing(row), req.user?.id))));
 });
 
 // POST /providers/become — create a new listing (always creates new, no longer a toggle)
@@ -410,7 +411,7 @@ router.get('/:id', optionalAuth, (req, res) => {
   const paymentUnlocked = canSeePayment(req.user?.id, provider.user_id);
   const safe = redactPayment(provider, req.user?.id);
 
-  res.json({ ...attachTrust(safe), availability, reviews, payment_unlocked: paymentUnlocked });
+  res.json({ ...attachTrust(withEffectiveFirstTimeDiscount(safe, req.user?.id)), availability, reviews, payment_unlocked: paymentUnlocked });
 });
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
