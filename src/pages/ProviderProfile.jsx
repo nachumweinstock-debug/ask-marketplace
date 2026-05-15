@@ -498,8 +498,8 @@ export default function ProviderProfile() {
                   <SavedTutorButton tutorId={provider.id} initialSaved={saved} onChange={setSaved} />
                 )}
 
-                {provider.price_per_session > 0 && discount > 0 && !provider.surge_percent ? (
-                  /* ── Sale / discount active (hidden during surge) ── */
+                {provider.price_per_session > 0 && discount > 0 && (!provider.surge_percent || sitewideSale) ? (
+                  /* ── Sale / discount active (hidden during surge-only) ── */
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, marginTop: 4 }}>
                     {/* Sale label */}
                     <div style={{
