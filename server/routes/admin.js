@@ -2,6 +2,8 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import { sendVerificationCode, emailConfigStatus, sendAdminPrankNotification } from '../email.js';
+import { redactContactText } from '../redact.js';
+import { getSitewideFirstTimeDiscountPercent, setSitewideFirstTimeDiscountPercent, getSurgePricingPercent, setSurgePricingPercent } from '../pricing.js';
 
 const router = Router();
 
@@ -34,6 +36,28 @@ router.post('/bootstrap', (req, res) => {
 
   db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(user.id);
   res.json({ ok: true, message: `${user.name} (${user.email}) is now an admin.` });
+});
+
+// GET/PATCH /api/admin/site-sale — site-wide first-time sale control
+router.get('/site-sale', requireAuth, requireAdmin, (req, res) => {
+  res.json({ first_time_discount_percent: getSitewideFirstTimeDiscountPercent() });
+});
+
+router.patch('/site-sale', requireAuth, requireAdmin, (req, res) => {
+  const percent = Number(req.body?.first_time_discount_percent || 0);
+  if (![0, 15].includes(percent)) return res.status(400).json({ error: 'Site-wide sale must be 0% or 15%' });
+  res.json({ first_time_discount_percent: setSitewideFirstTimeDiscountPercent(percent) });
+});
+
+// GET/PATCH /api/admin/surge-pricing — surge pricing control (+15%)
+router.get('/surge-pricing', requireAuth, requireAdmin, (req, res) => {
+  res.json({ surge_percent: getSurgePricingPercent() });
+});
+
+router.patch('/surge-pricing', requireAuth, requireAdmin, (req, res) => {
+  const percent = Number(req.body?.surge_percent ?? 0);
+  if (![0, 15].includes(percent)) return res.status(400).json({ error: 'Surge pricing must be 0% or 15%' });
+  res.json({ surge_percent: setSurgePricingPercent(percent) });
 });
 
 // GET /api/admin/users — list all users (one row per user, most recent listing only)
@@ -95,14 +119,17 @@ router.get('/users/:id', requireAuth, requireAdmin, (req, res) => {
     ORDER BY b.id DESC LIMIT 12
   `).all(req.params.id);
   const messages = db.prepare(`
-    SELECT dm.id, dm.body, dm.created_at, dm.is_system,
+    SELECT dm.id, dm.sender_id, dm.receiver_id, dm.body, dm.created_at, dm.is_system,
            s.name as sender_name, r.name as receiver_name
     FROM direct_messages dm
     JOIN users s ON s.id = dm.sender_id
     JOIN users r ON r.id = dm.receiver_id
     WHERE dm.sender_id = ? OR dm.receiver_id = ?
     ORDER BY dm.id DESC LIMIT 12
-  `).all(req.params.id, req.params.id);
+  `).all(req.params.id, req.params.id).map(message => ({
+    ...message,
+    body: redactContactText(message.body),
+  }));
   res.json({ user, listings, bookingsAsStudent, bookingsAsProvider, messages });
 });
 
@@ -171,7 +198,7 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(req.params.profileId);
   if (!profile) return res.status(404).json({ error: 'Listing not found' });
 
-  const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, session_type, title } = req.body;
+  const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, session_type, title, first_time_discount_percent } = req.body;
 
   if (price_per_session !== undefined && (isNaN(Number(price_per_session)) || Number(price_per_session) < 0 || Number(price_per_session) > 10000)) {
     return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
@@ -182,6 +209,10 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
     return res.status(400).json({ error: 'Invalid session type' });
   }
+  const discountPercent = first_time_discount_percent !== undefined ? Number(first_time_discount_percent) : profile.first_time_discount_percent;
+  if (![0, 15, 20].includes(Number(discountPercent || 0))) {
+    return res.status(400).json({ error: 'Discount must be 0%, 15%, or 20%' });
+  }
   const normalizedCustom = custom_category !== undefined
     ? (custom_category?.trim().replace(/\b\w/g, c => c.toUpperCase()) || null)
     : undefined;
@@ -189,7 +220,8 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   db.prepare(`
     UPDATE provider_profiles
     SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
-        custom_category = ?, subcategory = ?, session_type = ?, title = ?
+        custom_category = ?, subcategory = ?, session_type = ?, title = ?,
+        first_time_discount_percent = ?
     WHERE id = ?
   `).run(
     bio ?? profile.bio,
@@ -201,6 +233,7 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
     subcategory !== undefined ? subcategory : profile.subcategory,
     session_type ?? profile.session_type ?? 'in-person',
     title !== undefined ? title : profile.title,
+    Number(discountPercent || 0),
     profile.id
   );
 

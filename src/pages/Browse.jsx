@@ -81,12 +81,26 @@ export default function Browse() {
   const [editModal, setEditModal] = useState(null); // { profileId, isAdminEdit, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [siteSalePercent, setSiteSalePercent] = useState(0);
+  const [siteSaleBusy, setSiteSaleBusy] = useState(false);
+  const [surgePricingPercent, setSurgePricingPercent] = useState(0);
+  const [surgeBusy, setSurgeBusy] = useState(false);
 
   useEffect(() => {
     api.get('/providers/categories')
       .then(({ data }) => setCustomCats(data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    api.get('/admin/site-sale')
+      .then(({ data }) => setSiteSalePercent(Number(data.first_time_discount_percent || 0)))
+      .catch(() => {});
+    api.get('/admin/surge-pricing')
+      .then(({ data }) => setSurgePricingPercent(Number(data.surge_percent || 0)))
+      .catch(() => {});
+  }, [user?.is_admin]);
 
   useEffect(() => {
     if (!user) { setSavedIds(new Set()); return; }
@@ -169,6 +183,36 @@ export default function Browse() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function toggleSitewideSale() {
+    if (!user?.is_admin || siteSaleBusy) return;
+    setSiteSaleBusy(true);
+    try {
+      const next = siteSalePercent === 15 ? 0 : 15;
+      const { data } = await api.patch('/admin/site-sale', { first_time_discount_percent: next });
+      setSiteSalePercent(Number(data.first_time_discount_percent || 0));
+      fetchProviders();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not update site-wide sale');
+    } finally {
+      setSiteSaleBusy(false);
+    }
+  }
+
+  async function toggleSurgePricing() {
+    if (!user?.is_admin || surgeBusy) return;
+    setSurgeBusy(true);
+    try {
+      const next = surgePricingPercent === 15 ? 0 : 15;
+      const { data } = await api.patch('/admin/surge-pricing', { surge_percent: next });
+      setSurgePricingPercent(Number(data.surge_percent || 0));
+      fetchProviders();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not update surge pricing');
+    } finally {
+      setSurgeBusy(false);
     }
   }
 
@@ -300,6 +344,7 @@ export default function Browse() {
 
   const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
+  const sitewideSaleActive = siteSalePercent === 15 || providers.some(p => p.first_time_discount_scope === 'sitewide');
 
   return (
     <div className="page" style={{ paddingTop: 26 }}>
@@ -348,6 +393,143 @@ export default function Browse() {
           ))}
         </div>
       </div>
+
+      {user?.is_admin && (
+        <div style={{
+          marginBottom: 16, padding: '14px 16px',
+          border: '1px solid #E7E0D6',
+          borderRadius: 12,
+          background: '#fff',
+          boxShadow: '0 8px 24px rgba(23,19,15,0.05)',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.9px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 10 }}>
+            Pricing Controls
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {/* Sale control */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 10,
+              padding: '12px 14px', borderRadius: 10,
+              border: `1.5px solid ${siteSalePercent === 15 ? '#14B8A6' : 'var(--border)'}`,
+              background: siteSalePercent === 15
+                ? 'linear-gradient(135deg, #ECFEFF 0%, #F0FDFA 100%)'
+                : 'var(--bg)',
+              transition: 'all .2s',
+            }}>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 950, color: siteSalePercent === 15 ? '#0F766E' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {siteSalePercent === 15 ? '✦ Sale is LIVE' : 'Sale Mode'}
+                  {siteSalePercent === 15 && (
+                    <span className="pricing-dot-live" />
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                  {siteSalePercent === 15 ? '15% off applied sitewide.' : 'Launch a 15% discount for all students.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={toggleSitewideSale}
+                disabled={siteSaleBusy}
+                style={{
+                  border: 'none', borderRadius: 999, padding: '9px 14px',
+                  background: siteSalePercent === 15 ? '#17130F' : 'linear-gradient(135deg, #0891B2, #0F766E)',
+                  color: '#fff', fontSize: 12.5, fontWeight: 950,
+                  cursor: siteSaleBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)',
+                  boxShadow: siteSalePercent === 15 ? 'none' : '0 8px 20px rgba(15,118,110,0.28)',
+                  width: '100%', opacity: siteSaleBusy ? 0.7 : 1,
+                }}
+              >
+                {siteSaleBusy ? 'Saving...' : siteSalePercent === 15 ? 'End sale' : 'Launch 15% sale'}
+              </button>
+            </div>
+
+            {/* Surge control */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 10,
+              padding: '12px 14px', borderRadius: 10,
+              border: `1.5px solid ${surgePricingPercent === 15 ? '#F97316' : 'var(--border)'}`,
+              background: surgePricingPercent === 15
+                ? 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)'
+                : 'var(--bg)',
+              transition: 'all .2s',
+            }}>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 950, color: surgePricingPercent === 15 ? '#C2410C' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {surgePricingPercent === 15 ? '⚡ Surge is LIVE' : 'Surge Pricing'}
+                  {surgePricingPercent === 15 && (
+                    <span className="pricing-dot-surge" />
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                  {surgePricingPercent === 15 ? '+15% applied — tutors are in demand.' : 'Raise all prices +15% during busy periods.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={toggleSurgePricing}
+                disabled={surgeBusy}
+                style={{
+                  border: 'none', borderRadius: 999, padding: '9px 14px',
+                  background: surgePricingPercent === 15 ? '#17130F' : 'linear-gradient(135deg, #F97316, #DC2626)',
+                  color: '#fff', fontSize: 12.5, fontWeight: 950,
+                  cursor: surgeBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)',
+                  boxShadow: surgePricingPercent === 15 ? 'none' : '0 8px 20px rgba(249,115,22,0.28)',
+                  width: '100%', opacity: surgeBusy ? 0.7 : 1,
+                }}
+              >
+                {surgeBusy ? 'Saving...' : surgePricingPercent === 15 ? 'End surge' : 'Launch surge +15%'}
+              </button>
+            </div>
+          </div>
+          {siteSalePercent === 15 && surgePricingPercent === 15 && (
+            <div style={{ marginTop: 10, fontSize: 11, color: '#7C3AED', fontWeight: 700, padding: '6px 10px', background: '#F5F3FF', borderRadius: 7, border: '1px solid #DDD6FE' }}>
+              Both active — tutors earn surge premium, students still get the 15% sale discount from the surged price.
+            </div>
+          )}
+        </div>
+      )}
+
+      {sitewideSaleActive && (
+        <div className="sale-ribbon" style={{
+          position: 'relative',
+          marginBottom: 18,
+          borderRadius: 14,
+          padding: '20px 22px',
+          color: '#fff',
+          boxShadow: '0 24px 60px rgba(124,58,237,0.32), 0 0 0 1px rgba(255,255,255,0.08)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          flexWrap: 'wrap',
+          overflow: 'hidden',
+        }}>
+          <div className="sale-aurora-bg" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 950, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 4 }}>
+              Campus sale — live now
+            </div>
+            <div className="sale-headline" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 800, lineHeight: 1.0, letterSpacing: '-0.5px' }}>
+              15% off every listing
+            </div>
+          </div>
+          <div style={{
+            position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
+          }}>
+            <div className="sale-badge-pill" style={{
+              fontSize: 13, fontWeight: 900,
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 999, padding: '9px 16px',
+              letterSpacing: '0.02em',
+            }}>
+              Applied at booking
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Search bar ── */}
       <div style={{ marginBottom: 12 }}>
@@ -475,6 +657,72 @@ export default function Browse() {
       )}
 
       <style>{`
+        /* ── Aurora sale banner ─────────────────────────────── */
+        @keyframes auroraShift {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes auroraPulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.85; }
+        }
+        .sale-aurora-bg {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(270deg,
+            #7C3AED, #EC4899, #06B6D4, #10B981, #F59E0B, #EC4899, #7C3AED
+          );
+          background-size: 600% 600%;
+          animation: auroraShift 7s ease infinite, auroraPulse 3.5s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .sale-headline {
+          background: linear-gradient(135deg, #fff 0%, #FDE68A 50%, #fff 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: saleHeadlineShimmer 2.4s linear infinite;
+        }
+        @keyframes saleHeadlineShimmer {
+          from { background-position: 200% center; }
+          to   { background-position: -200% center; }
+        }
+        /* ── Pricing control dots ─── */
+        .pricing-dot-live {
+          display: inline-block;
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: #10B981;
+          box-shadow: 0 0 0 0 rgba(16,185,129,0.7);
+          animation: pricingPingGreen 1.4s ease-out infinite;
+          flex-shrink: 0;
+        }
+        .pricing-dot-surge {
+          display: inline-block;
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: #F97316;
+          box-shadow: 0 0 0 0 rgba(249,115,22,0.7);
+          animation: pricingPingOrange 1.4s ease-out infinite;
+          flex-shrink: 0;
+        }
+        @keyframes pricingPingGreen {
+          0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+          70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+          100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+        @keyframes pricingPingOrange {
+          0%   { box-shadow: 0 0 0 0 rgba(249,115,22,0.7); }
+          70%  { box-shadow: 0 0 0 7px rgba(249,115,22,0); }
+          100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sale-aurora-bg { animation: none; }
+          .sale-headline { animation: none; -webkit-text-fill-color: #fff; }
+          .pricing-dot-live, .pricing-dot-surge { animation: none; }
+        }
         @media (max-width: 560px) {
           .browse-header { align-items: flex-start; flex-direction: column; gap: 10px; }
           .browse-header > div:last-child { align-self: flex-start; }

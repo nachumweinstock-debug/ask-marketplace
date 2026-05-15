@@ -5,6 +5,7 @@ import { providerUrl } from '../lib/providerUrl';
 import { trackEvent } from '../lib/analytics';
 import SavedTutorButton from './SavedTutorButton';
 import TrustBadges from './TrustBadges';
+import { discountedPrice, discountPercent, firstTimeDiscountLabel, money } from '../lib/pricing';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -69,6 +70,14 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
   const mode = formatMode(provider.session_type);
   const label = listingLabel(provider);
   const catLabel = categoryLabel(provider);
+  const discount = discountPercent(provider);
+  const displayPrice = discountedPrice(provider);
+  const sitewideSale = discount > 0 && provider.first_time_discount_scope === 'sitewide';
+  const showTrustStats = Boolean(
+    provider.trust?.response_rate > 0 ||
+    provider.trust?.completed_sessions > 0 ||
+    provider.trust?.saved_count > 0
+  );
   function openProvider(target = provider) {
     trackEvent('tutor_card_clicked', {
       provider_id: target.id,
@@ -139,6 +148,26 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           </div>
         )}
 
+        {/* Sale badge */}
+        {sitewideSale && (
+          <div className="ibiza-badge" style={{
+            position: 'absolute', top: 10, left: isAdmin && !isOwn ? 68 : 10, zIndex: 4,
+            background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.5)',
+            boxShadow: '0 6px 18px rgba(124,58,237,0.5)',
+            borderRadius: 999,
+            padding: '5px 10px',
+            fontSize: 11,
+            fontWeight: 950,
+            fontFamily: 'var(--font-ui)',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+          }}>
+            15% OFF
+          </div>
+        )}
+
         {/* Mode pill — bottom left */}
         <div className="card-mode-pill" style={{
           position: 'absolute', bottom: 10, left: 10,
@@ -158,8 +187,36 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto',
           fontSize: 20, fontWeight: 700,
           color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)',
+          textAlign: 'right',
         }}>
-          {provider.price_per_session > 0 ? `$${provider.price_per_session}` : 'Free'}
+          {provider.price_per_session > 0 && discount > 0 && (
+            <div style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 11,
+              fontWeight: 800,
+              textDecoration: 'line-through',
+              opacity: 0.7,
+              marginBottom: -2,
+            }}>
+              {money(provider.price_per_session)}
+            </div>
+          )}
+          <span className={sitewideSale && discount > 0 ? 'ibiza-price' : undefined}>
+            {provider.price_per_session > 0 ? money(displayPrice) : 'Free'}
+          </span>
+          {discount > 0 && (
+            <div style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 10,
+              fontWeight: 950,
+              marginTop: 1,
+              opacity: 0.88,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}>
+              {firstTimeDiscountLabel(provider)}
+            </div>
+          )}
         </div>
 
         {isOwn && <OwnMenu menuRef={menuRef} menuOpen={menuOpen} setMenuOpen={setMenuOpen} navigate={navigate} onDelete={onDelete} onEdit={onEdit} />}
@@ -217,7 +274,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
 
         <TrustBadges trust={provider.trust} compact />
 
-        {(provider.trust?.response_rate || provider.trust?.completed_sessions || provider.trust?.saved_count) && (
+        {showTrustStats && (
           <div style={{
             display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8,
             fontSize: 10.5, color: 'var(--muted)', fontWeight: 700,
