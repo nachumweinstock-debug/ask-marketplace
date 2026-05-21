@@ -252,12 +252,11 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <div>
+            <div className="home-press-mark" aria-hidden="true">YU</div>
+            <div className="home-press-copy">
               <div className="section-label">Featured in The YU Commentator</div>
-              <h2>Finals week, organized.</h2>
-              <p>
-                The Commentator featured Ask as a way for students to find help organizing studying before exams.
-              </p>
+              <h2>Ask was featured for helping students organize finals week.</h2>
+              <p>Read the Commentator piece on finding study help before exams.</p>
             </div>
             <span>Read the article -&gt;</span>
           </a>
