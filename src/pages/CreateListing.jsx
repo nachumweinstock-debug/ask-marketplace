@@ -151,8 +151,8 @@ function LivePreview({ category, customCategory, subcategory, bio, price, listin
   const eyebrow = (customCategory || { tutor: 'INSTRUCTION', barber: 'BARBER', fitness: 'FITNESS', languages: 'LANGUAGES', music: 'MUSIC', torah: 'TORAH STUDIES', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
   const campusLabel = campus || 'WILF';
   const fmt = sessionType === 'zoom' ? { color: '#7C3AED', label: 'ZOOM' }
-    : sessionType === 'both' ? { color: '#7C3AED', label: `ZOOM & IN-PERSON · ${campusLabel}` }
-    : { color: '#0E8345', label: `IN-PERSON · ${campusLabel}` };
+    : sessionType === 'both' ? { color: '#7C3AED', label: `ONLINE + IN PERSON · ${campusLabel}` }
+    : { color: '#0E8345', label: `IN PERSON · ${campusLabel}` };
 
   const isEmpty = !category && !bio && !price;
 

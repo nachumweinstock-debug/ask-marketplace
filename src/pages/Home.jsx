@@ -139,10 +139,10 @@ export default function Home() {
         <div className="fade-up">
           <div className="home-eyebrow">Live campus marketplace</div>
           <h1 className="home-title">
-            Book the person who knows <span>the thing.</span>
+            Find trusted help <span>on campus.</span>
           </h1>
           <p className="home-copy">
-            Ask is the fast way to find instructors, barbers, coaches, and student services without asking five different chats.
+            Tutors, barbers, coaches, and student services from people in your own school community.
           </p>
 
           <div className="home-actions">

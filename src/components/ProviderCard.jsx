@@ -45,9 +45,9 @@ function cardGradient(category, customCategory) {
 }
 
 function formatMode(sessionType) {
-  if (!sessionType || sessionType === 'in-person') return 'In-person';
+  if (!sessionType || sessionType === 'in-person') return 'In person';
   if (sessionType === 'zoom') return 'Online';
-  return 'Both';
+  return 'Online + in person';
 }
 
 function campusLabel(provider) {
@@ -174,17 +174,35 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           </div>
         )}
 
-        {/* Mode pill — bottom left */}
+        {/* Format and campus pills — bottom left */}
         <div className="card-mode-pill" style={{
           position: 'absolute', bottom: 10, left: 10,
-          fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
-          color: '#fff', letterSpacing: '0.04em',
-          background: 'rgba(23,19,15,0.68)',
-          backdropFilter: 'blur(6px)',
-          borderRadius: 6, padding: '4px 9px',
-          maxWidth: 'calc(100% - 70px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 6,
+          maxWidth: 'calc(100% - 86px)',
         }}>
-          {campus ? `${mode} · ${campus}` : mode}
+          <span style={{
+            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 800,
+            color: '#fff', letterSpacing: '0.01em',
+            background: 'rgba(23,19,15,0.72)',
+            backdropFilter: 'blur(6px)',
+            borderRadius: 6, padding: '5px 9px',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {mode}
+          </span>
+          {campus && (
+            <span style={{
+              fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 900,
+              color: '#17130F',
+              background: 'rgba(255,255,255,0.9)',
+              border: '1px solid rgba(255,255,255,0.65)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: 6, padding: '4px 8px',
+              whiteSpace: 'nowrap',
+            }}>
+              {campus}
+            </span>
+          )}
         </div>
 
         {/* Price — bottom right */}

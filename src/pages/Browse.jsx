@@ -361,6 +361,13 @@ export default function Browse() {
   const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
   const sitewideSaleActive = siteSalePercent === 15 || providers.some(p => p.first_time_discount_scope === 'sitewide');
+  const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
+  const emptyTitle = campusName
+    ? `No ${campusName} listings yet.`
+    : 'No listings match those filters.';
+  const emptyCopy = campusName
+    ? `Try WILF, online, or any campus while ${campusName} listings start coming in.`
+    : 'Try a broader category, a wider price range, or a different format.';
 
   return (
     <div className="page" style={{ paddingTop: 26 }}>
@@ -776,12 +783,67 @@ export default function Browse() {
           ))}
         </div>
       ) : providers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-            No instructors found for this filter combination.
+        <div style={{
+          textAlign: 'center',
+          padding: '64px 20px',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          background: '#fff',
+          boxShadow: '0 16px 45px rgba(23,19,15,0.06)',
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 999,
+            margin: '0 auto 14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#FFF7ED',
+            color: '#C2410C',
+            fontSize: 20,
+            fontWeight: 900,
+          }}>
+            ?
           </div>
-          <div style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-ui)' }}>
-            Clear a filter, widen the price range, or try another subject.
+          <div style={{ fontFamily: 'var(--font-display)', fontOpticalSizing: 'auto', fontSize: 30, fontWeight: 760, color: 'var(--text)', marginBottom: 8 }}>
+            {emptyTitle}
+          </div>
+          <div style={{ fontSize: 15, color: 'var(--muted)', fontFamily: 'var(--font-ui)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.5 }}>
+            {emptyCopy}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {campus !== 'all' && (
+              <button type="button" onClick={() => handleCampus('all')} style={emptyActionButton}>
+                Any campus
+              </button>
+            )}
+            {campus !== 'WILF' && sessionType !== 'zoom' && (
+              <button type="button" onClick={() => handleCampus('WILF')} style={emptyActionButton}>
+                WILF
+              </button>
+            )}
+            {sessionType !== 'zoom' && (
+              <button type="button" onClick={() => handleSessionType('zoom')} style={emptyActionButton}>
+                Online
+              </button>
+            )}
+            <button type="button" onClick={() => {
+              setCategory('all');
+              setSubcategory('all');
+              setMinPrice('');
+              setMaxPrice('');
+              setMinRating('');
+              setAvailability('all');
+              setCampus('all');
+              syncParams({
+                category: 'all',
+                subcategory: 'all',
+                min_price: '',
+                max_price: '',
+                min_rating: '',
+                availability: 'all',
+                campus: 'all',
+              });
+            }} style={{ ...emptyActionButton, background: 'var(--text)', color: '#fff', borderColor: 'var(--text)' }}>
+              Reset filters
+            </button>
           </div>
         </div>
       ) : (
@@ -1012,4 +1074,16 @@ const filterInput = {
   textTransform: 'none',
   letterSpacing: 0,
   fontWeight: 600,
+};
+
+const emptyActionButton = {
+  border: '1px solid var(--border)',
+  background: '#fff',
+  color: 'var(--text)',
+  borderRadius: 999,
+  padding: '9px 14px',
+  fontSize: 13,
+  fontWeight: 850,
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
 };
