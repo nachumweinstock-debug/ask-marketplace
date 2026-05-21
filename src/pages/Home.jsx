@@ -13,13 +13,6 @@ const FILTERS = [
   { id: 'other', label: 'Other' },
 ];
 
-const FEATURED_LISTINGS = [
-  { mark: 'C', title: 'Calc I exam rescue', meta: 'Tonight or tomorrow, online', price: '$35', color: '#2558D8' },
-  { mark: 'F', title: 'Finance model walkthrough', meta: 'Excel, valuation, homework', price: '$45', color: '#0F7B55' },
-  { mark: 'B', title: 'Fresh cut before Shabbos', meta: 'Clean fade, 30 minute slot', price: '$20', color: '#F15A24' },
-  { mark: 'H', title: 'Hebrew conversation practice', meta: 'Patient, casual, repeat weekly', price: '$18', color: '#17130F' },
-];
-
 const COMMENTATOR_ARTICLE_URL =
   'https://yucommentator.org/2026/05/final-exams-begin-next-week-need-help-organizing-your-studying/';
 
@@ -180,30 +173,19 @@ export default function Home() {
           </div>
         </div>
 
-        <aside className="home-board fade-up-delay" aria-label="Featured marketplace listings">
-          <div className="home-board-head">
-            <div>
-              <strong>Open right now</strong>
-              <p>Live student services from the YU community.</p>
-            </div>
-            <span style={{ color: '#F3C74F', fontWeight: 900 }}>ASK</span>
+        <aside className="home-campus-panel fade-up-delay" aria-label="Browse campus options">
+          <div>
+            <div className="section-label">Campus marketplace</div>
+            <h2>Pick the right place first.</h2>
+            <p>
+              Browse students by campus, online availability, or category without digging through unrelated posts.
+            </p>
           </div>
-          <div className="home-board-list">
-            {FEATURED_LISTINGS.map((item) => (
-              <button
-                key={item.title}
-                onClick={() => navigate(`/browse?search=${encodeURIComponent(item.title.split(' ')[0])}`)}
-                className="home-listing-row"
-                style={{ borderLeft: `4px solid ${item.color}`, background: '#fff', textAlign: 'left', cursor: 'pointer' }}
-              >
-                <span className="home-listing-mark" style={{ background: item.color }}>{item.mark}</span>
-                <span>
-                  <h3>{item.title}</h3>
-                  <p>{item.meta}</p>
-                </span>
-                <span className="home-price">{item.price}</span>
-              </button>
-            ))}
+          <div className="home-campus-actions">
+            <button onClick={() => navigate('/browse?campus=WILF')}>WILF listings</button>
+            <button onClick={() => navigate('/browse?campus=BEREN')}>BEREN listings</button>
+            <button onClick={() => navigate('/browse?session_type=zoom')}>Online help</button>
+            <button onClick={() => navigate(user ? '/create-listing' : '/signup')}>Post a service</button>
           </div>
         </aside>
       </section>

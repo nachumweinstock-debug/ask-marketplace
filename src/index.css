@@ -679,68 +679,54 @@ body {
   font-size: 12px;
   font-weight: 700;
 }
-.home-board {
+.home-campus-panel {
   width: 100%;
-  max-width: 520px;
+  max-width: 470px;
   justify-self: end;
   border: 1px solid rgba(23,19,15,0.13);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(23,19,15,0.12);
-  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(241,90,36,0.10), transparent 42%),
+    #fff;
+  box-shadow: 0 22px 62px rgba(23,19,15,0.10);
+  padding: clamp(22px, 3.5vw, 34px);
 }
-.home-board-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  background: #17130F;
-  color: #fff;
-}
-.home-board-head p {
-  color: rgba(255,255,255,0.64);
-  font-size: 12px;
-  margin-top: 2px;
-}
-.home-board-list {
-  display: grid;
-  gap: 0;
-}
-.home-listing-row {
-  display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.home-listing-row:last-child {
-  border-bottom: 0;
-}
-.home-listing-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 900;
-}
-.home-listing-row h3 {
-  font-size: 16px;
-  line-height: 1.15;
-}
-.home-listing-row p {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-}
-.home-price {
+.home-campus-panel h2 {
+  margin-top: 10px;
   font-family: var(--font-display);
-  font-size: 23px;
-  font-weight: 760;
+  font-size: clamp(34px, 4.4vw, 54px);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+.home-campus-panel p {
+  max-width: 360px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.52;
+}
+.home-campus-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+.home-campus-actions button {
+  min-height: 52px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.86);
+  color: var(--text);
+  padding: 0 15px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 850;
+  text-align: left;
+  cursor: pointer;
+}
+.home-campus-actions button:hover {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
 }
 .home-section {
   border-top: 1px solid var(--border);
@@ -854,7 +840,7 @@ body {
     padding-left: 20px;
     padding-right: 20px;
   }
-  .home-board {
+  .home-campus-panel {
     justify-self: stretch;
     max-width: none;
   }
@@ -867,9 +853,7 @@ body {
   .home-title { font-size: clamp(42px, 13vw, 58px); }
   .home-search-panel form { grid-template-columns: 1fr; }
   .home-proof-row { grid-template-columns: 1fr; }
-  .home-board { margin-top: 6px; }
-  .home-listing-row { grid-template-columns: 38px 1fr; }
-  .home-price { grid-column: 2; font-size: 20px; }
+  .home-campus-panel { margin-top: 6px; }
   .home-section { padding: 42px 20px; }
 }
 
