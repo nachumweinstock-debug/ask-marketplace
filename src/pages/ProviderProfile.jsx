@@ -478,7 +478,7 @@ export default function ProviderProfile() {
                 </h1>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <CategoryPill category={provider.category} customCategory={provider.custom_category} size="md" />
-                  <SessionTypePill sessionType={provider.session_type} />
+                  <SessionTypePill sessionType={provider.session_type} campus={provider.campus} />
                   {provider.allow_group && (
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,

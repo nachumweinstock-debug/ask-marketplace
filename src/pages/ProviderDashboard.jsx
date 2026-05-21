@@ -384,6 +384,7 @@ export default function ProviderDashboard() {
         zelle: profile.zelle || '',
         venmo: profile.venmo || '',
         session_type: profile.session_type || 'in-person',
+        campus: profile.campus || 'WILF',
       },
     });
   }
@@ -404,6 +405,7 @@ export default function ProviderDashboard() {
         zelle: form.zelle,
         venmo: form.venmo,
         session_type: form.session_type,
+        campus: form.session_type === 'zoom' ? null : form.campus,
       });
       setProfile(p => ({ ...p, ...data }));
       setEditModal(null);
@@ -944,8 +946,9 @@ export default function ProviderDashboard() {
                   <button key={id} type="button"
                     onClick={async () => {
                       try {
-                        await api.put(`/providers/${profile.id}`, { session_type: id });
-                        setProfile(p => ({ ...p, session_type: id }));
+                        const campus = id === 'zoom' ? null : (profile.campus || 'WILF');
+                        await api.put(`/providers/${profile.id}`, { session_type: id, campus });
+                        setProfile(p => ({ ...p, session_type: id, campus }));
                       } catch { alert('Failed to update'); }
                     }}
                     style={{
@@ -961,6 +964,34 @@ export default function ProviderDashboard() {
                 );
               })}
             </div>
+            {(profile.session_type || 'in-person') !== 'zoom' && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {[
+                  { id: 'WILF', label: 'WILF' },
+                  { id: 'BEREN', label: 'BEREN' },
+                ].map(({ id, label }) => {
+                  const active = (profile.campus || 'WILF') === id;
+                  return (
+                    <button key={id} type="button"
+                      onClick={async () => {
+                        try {
+                          await api.put(`/providers/${profile.id}`, { campus: id });
+                          setProfile(p => ({ ...p, campus: id }));
+                        } catch { alert('Failed to update'); }
+                      }}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 10, fontSize: 12.5, fontWeight: 500,
+                        border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                        background: active ? 'var(--primary)' : 'var(--card)',
+                        color: active ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
+                      }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1167,7 +1198,7 @@ export default function ProviderDashboard() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Session type</label>
                   <select value={editModal.form.session_type}
-                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value } }))}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value, campus: e.target.value === 'zoom' ? 'WILF' : (m.form.campus || 'WILF') } }))}
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
                     <option value="in-person">In-person</option>
                     <option value="zoom">Zoom</option>
@@ -1175,6 +1206,18 @@ export default function ProviderDashboard() {
                   </select>
                 </div>
               </div>
+
+              {editModal.form.session_type !== 'zoom' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Campus</label>
+                  <select value={editModal.form.campus || 'WILF'}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, campus: e.target.value } }))}
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
+                    <option value="WILF">WILF</option>
+                    <option value="BEREN">BEREN</option>
+                  </select>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>

@@ -7,6 +7,15 @@ import { getSitewideFirstTimeDiscountPercent, setSitewideFirstTimeDiscountPercen
 
 const router = Router();
 
+function normalizeCampus(value) {
+  if (value === undefined) return undefined;
+  const clean = String(value || '').trim().toUpperCase();
+  if (!clean) return null;
+  if (clean === 'WILF') return 'WILF';
+  if (clean === 'BEREN' || clean === 'BEREAN') return 'BEREN';
+  return null;
+}
+
 const HIDDEN_TEST_USER_WHERE = `
   (
     LOWER(email) LIKE 'codex-%@example.com'
@@ -198,7 +207,7 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   const profile = db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(req.params.profileId);
   if (!profile) return res.status(404).json({ error: 'Listing not found' });
 
-  const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, session_type, title, first_time_discount_percent } = req.body;
+  const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, session_type, campus, title, first_time_discount_percent } = req.body;
 
   if (price_per_session !== undefined && (isNaN(Number(price_per_session)) || Number(price_per_session) < 0 || Number(price_per_session) > 10000)) {
     return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
@@ -209,6 +218,14 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
     return res.status(400).json({ error: 'Invalid session type' });
   }
+  const nextSessionType = session_type ?? profile.session_type ?? 'in-person';
+  const normalizedCampus = normalizeCampus(campus);
+  if (campus !== undefined && !normalizedCampus && nextSessionType !== 'zoom') {
+    return res.status(400).json({ error: 'Choose WILF or BEREN campus' });
+  }
+  const nextCampus = nextSessionType === 'zoom'
+    ? null
+    : (normalizedCampus ?? profile.campus ?? 'WILF');
   const discountPercent = first_time_discount_percent !== undefined ? Number(first_time_discount_percent) : profile.first_time_discount_percent;
   if (![0, 15, 20].includes(Number(discountPercent || 0))) {
     return res.status(400).json({ error: 'Discount must be 0%, 15%, or 20%' });
@@ -220,7 +237,7 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
   db.prepare(`
     UPDATE provider_profiles
     SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
-        custom_category = ?, subcategory = ?, session_type = ?, title = ?,
+        custom_category = ?, subcategory = ?, session_type = ?, campus = ?, title = ?,
         first_time_discount_percent = ?
     WHERE id = ?
   `).run(
@@ -231,7 +248,8 @@ router.put('/listings/:profileId', requireAuth, requireAdmin, (req, res) => {
     venmo !== undefined ? venmo : profile.venmo,
     normalizedCustom !== undefined ? normalizedCustom : profile.custom_category,
     subcategory !== undefined ? subcategory : profile.subcategory,
-    session_type ?? profile.session_type ?? 'in-person',
+    nextSessionType,
+    nextCampus,
     title !== undefined ? title : profile.title,
     Number(discountPercent || 0),
     profile.id

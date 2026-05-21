@@ -233,6 +233,7 @@ export default function AdminDashboard() {
           zelle: data.zelle || '',
           venmo: data.venmo || '',
           session_type: data.session_type || 'in-person',
+          campus: data.campus || 'WILF',
         },
       });
     } catch { alert('Failed to load listing'); }
@@ -323,6 +324,7 @@ export default function AdminDashboard() {
         zelle: form.zelle,
         venmo: form.venmo,
         session_type: form.session_type,
+        campus: form.session_type === 'zoom' ? null : form.campus,
       });
       setEditModal(null);
     } catch (err) {
@@ -665,7 +667,9 @@ export default function AdminDashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
                           <div style={{ minWidth: 0 }}>
                             <strong>{l.title || l.subcategory || l.custom_category || l.category}</strong>
-                            <span style={{ color: 'var(--muted)' }}> · {l.price_per_session > 0 ? money(discountedPrice(l)) : 'Free'} · {l.session_type}</span>
+                            <span style={{ color: 'var(--muted)' }}>
+                              {' '}· {l.price_per_session > 0 ? money(discountedPrice(l)) : 'Free'} · {l.session_type}{l.session_type !== 'zoom' ? ` · ${l.campus || 'WILF'}` : ''}
+                            </span>
                             {discountPercent(l) > 0 && (
                               <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#166534' }}>
                                 {firstTimeDiscountLabel(l)}
@@ -1013,7 +1017,7 @@ export default function AdminDashboard() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Session type</label>
                   <select value={editModal.form.session_type}
-                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value } }))}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value, campus: e.target.value === 'zoom' ? 'WILF' : (m.form.campus || 'WILF') } }))}
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
                     <option value="in-person">In-person</option>
                     <option value="zoom">Zoom</option>
@@ -1021,6 +1025,18 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
+
+              {editModal.form.session_type !== 'zoom' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Campus</label>
+                  <select value={editModal.form.campus || 'WILF'}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, campus: e.target.value } }))}
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
+                    <option value="WILF">WILF</option>
+                    <option value="BEREN">BEREN</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>First time discount</label>

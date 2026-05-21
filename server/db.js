@@ -117,6 +117,7 @@ const ppCols = db.pragma('table_info(provider_profiles)').map(c => c.name);
 if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles ADD COLUMN custom_category TEXT');
 if (!ppCols.includes('listing_image'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN listing_image TEXT');
 if (!ppCols.includes('session_type'))    db.exec("ALTER TABLE provider_profiles ADD COLUMN session_type TEXT NOT NULL DEFAULT 'in-person'");
+if (!ppCols.includes('campus'))          db.exec("ALTER TABLE provider_profiles ADD COLUMN campus TEXT");
 
 if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
 if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
@@ -243,11 +244,12 @@ if (ppSchema && /user_id\s+INTEGER\s+UNIQUE/i.test(ppSchema.sql)) {
       custom_category   TEXT,
       listing_image     TEXT,
       session_type      TEXT NOT NULL DEFAULT 'in-person',
+      campus            TEXT,
       title             TEXT
     );
     INSERT INTO provider_profiles_new
       SELECT id, user_id, bio, category, price_per_session, rating, review_count,
-             zelle, venmo, avatar_url, custom_category, listing_image, session_type, NULL
+             zelle, venmo, avatar_url, custom_category, listing_image, session_type, NULL, NULL
       FROM provider_profiles;
     DROP TABLE provider_profiles;
     ALTER TABLE provider_profiles_new RENAME TO provider_profiles;
@@ -264,6 +266,7 @@ if (ppSchema && /user_id\s+INTEGER\s+UNIQUE/i.test(ppSchema.sql)) {
 const ppColsFinal = db.pragma('table_info(provider_profiles)').map(c => c.name);
 if (!ppColsFinal.includes('subcategory'))      db.exec('ALTER TABLE provider_profiles ADD COLUMN subcategory TEXT');
 if (!ppColsFinal.includes('college'))          db.exec('ALTER TABLE provider_profiles ADD COLUMN college TEXT');
+if (!ppColsFinal.includes('campus'))           db.exec('ALTER TABLE provider_profiles ADD COLUMN campus TEXT');
 if (!ppColsFinal.includes('allow_group'))      db.exec('ALTER TABLE provider_profiles ADD COLUMN allow_group INTEGER DEFAULT 0');
 if (!ppColsFinal.includes('max_group_size'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN max_group_size INTEGER DEFAULT 6');
 if (!ppColsFinal.includes('intro_video_url'))  db.exec('ALTER TABLE provider_profiles ADD COLUMN intro_video_url TEXT');
@@ -362,6 +365,14 @@ if (!tablesAll.includes('booking_group_invites')) {
 
 // Rename legacy 'tennis' category to 'fitness'
 db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
+
+// Existing in-person-capable listings predate campus selection; default them to Wilf.
+db.prepare(`
+  UPDATE provider_profiles
+  SET campus = 'WILF'
+  WHERE COALESCE(session_type, 'in-person') IN ('in-person', 'both')
+    AND (campus IS NULL OR TRIM(campus) = '')
+`).run();
 
 // Normalize custom categories: trim whitespace + title-case
 db.prepare(`

@@ -25,6 +25,10 @@ const EDIT_SUBCATS = {
   torah:     ['Gemara', 'Halacha', 'Chumash', 'Mishna', 'Tefilla', 'Parsha', 'Tanach', 'Jewish History', 'Mussar', 'Chassidus'],
 };
 const CUSTOM_CAT_MAP = { torah: 'Torah Studies', languages: 'Languages', music: 'Music' };
+const CAMPUS_OPTIONS = [
+  { id: 'WILF', label: 'WILF' },
+  { id: 'BEREN', label: 'BEREN' },
+];
 
 const BASE_FILTERS = [
   { id: 'all',          label: 'All'           },
@@ -69,6 +73,7 @@ export default function Browse() {
   const [subcategory, setSubcategory] = useState(searchParams.get('subcategory') || 'all');
   const [sort, setSort] = useState(searchParams.get('sort') || 'rating');
   const [sessionType, setSessionType] = useState(searchParams.get('session_type') || 'all');
+  const [campus, setCampus] = useState(searchParams.get('campus') || 'all');
   const [minPrice, setMinPrice] = useState(searchParams.get('min_price') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') || '');
   const [minRating, setMinRating] = useState(searchParams.get('min_rating') || '');
@@ -127,7 +132,7 @@ export default function Browse() {
       .catch(() => setSubcats([]));
   }, [category]);
 
-  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType, minPrice, maxPrice, minRating, availability]);
+  useEffect(() => { fetchProviders(); }, [category, subcategory, sort, sessionType, campus, minPrice, maxPrice, minRating, availability]);
 
   function syncParams(next = {}) {
     const state = {
@@ -136,6 +141,7 @@ export default function Browse() {
       subcategory,
       sort,
       session_type: sessionType,
+      campus,
       min_price: minPrice,
       max_price: maxPrice,
       min_rating: minRating,
@@ -170,6 +176,7 @@ export default function Browse() {
       if (category !== 'all') params.category = category;
       if (subcategory !== 'all') params.subcategory = subcategory;
       if (sessionType !== 'all') params.session_type = sessionType;
+      if (campus !== 'all') params.campus = campus;
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
       if (minRating) params.min_rating = minRating;
@@ -245,6 +252,7 @@ export default function Browse() {
           zelle: data.zelle || '',
           venmo: data.venmo || '',
           session_type: data.session_type || 'in-person',
+          campus: data.campus || 'WILF',
         },
       });
     } catch { alert('Failed to load listing'); }
@@ -264,6 +272,7 @@ export default function Browse() {
       zelle: form.zelle,
       venmo: form.venmo,
       session_type: form.session_type,
+      campus: form.session_type === 'zoom' ? null : form.campus,
     };
     try {
       const { data } = await api[isAdminEdit ? 'put' : 'put'](
@@ -325,7 +334,14 @@ export default function Browse() {
 
   function handleSessionType(st) {
     setSessionType(st);
-    syncParams({ session_type: st });
+    const nextCampus = st === 'zoom' ? 'all' : campus;
+    if (st === 'zoom') setCampus('all');
+    syncParams({ session_type: st, campus: nextCampus });
+  }
+
+  function handleCampus(nextCampus) {
+    setCampus(nextCampus);
+    syncParams({ campus: nextCampus });
   }
 
   function handleSort(s) {
@@ -584,6 +600,29 @@ export default function Browse() {
           );
         })}
       </div>
+
+      {sessionType !== 'zoom' && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--font-ui)', marginRight: 2 }}>
+            Campus
+          </span>
+          {[{ id: 'all', label: 'Any campus' }, ...CAMPUS_OPTIONS].map(({ id, label }) => {
+            const active = campus === id;
+            return (
+              <button key={id} onClick={() => handleCampus(id)} style={{
+                padding: '8px 13px', borderRadius: 8, fontSize: 13, fontWeight: active ? 800 : 700,
+                border: `1px solid ${active ? 'var(--text)' : 'var(--gray-200)'}`,
+                background: active ? 'var(--text)' : '#fff',
+                color: active ? '#fff' : 'var(--text-secondary)',
+                cursor: 'pointer', transition: 'all .12s', fontFamily: 'var(--font-ui)',
+                whiteSpace: 'nowrap',
+              }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Advanced filters ── */}
       <div className="card" style={{ padding: 14, marginBottom: 18, borderRadius: 8 }}>
@@ -879,7 +918,7 @@ export default function Browse() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Session type</label>
                   <select value={editModal.form.session_type}
-                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value } }))}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, session_type: e.target.value, campus: e.target.value === 'zoom' ? 'WILF' : (m.form.campus || 'WILF') } }))}
                     style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
                     <option value="in-person">In-person</option>
                     <option value="zoom">Zoom</option>
@@ -887,6 +926,19 @@ export default function Browse() {
                   </select>
                 </div>
               </div>
+
+              {editModal.form.session_type !== 'zoom' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Campus</label>
+                  <select value={editModal.form.campus || 'WILF'}
+                    onChange={e => setEditModal(m => ({ ...m, form: { ...m.form, campus: e.target.value } }))}
+                    style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', background: '#fff', boxSizing: 'border-box' }}>
+                    {CAMPUS_OPTIONS.map(({ id, label }) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>

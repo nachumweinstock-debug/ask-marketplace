@@ -56,7 +56,7 @@ function ProtectedRoute({ children, role, developerOnly = false }) {
 }
 
 const IG_URL = 'https://www.instagram.com/uasklive?igsh=d2Y1eXM4NTltbDd4';
-
+const COMMENTATOR_ARTICLE_URL = 'https://yucommentator.org/2026/05/final-exams-begin-next-week-need-help-organizing-your-studying/';
 
 function Footer() {
   const footerLink = {
@@ -113,6 +113,12 @@ function Footer() {
         onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
         Request a service
       </Link>
+      <a href={COMMENTATOR_ARTICLE_URL} target="_blank" rel="noopener noreferrer"
+        style={footerLink}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+        Featured in The YU Commentator
+      </a>
       <a href={IG_URL} target="_blank" rel="noopener noreferrer"
         style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
         onMouseEnter={e => e.currentTarget.style.color = '#bc1888'}

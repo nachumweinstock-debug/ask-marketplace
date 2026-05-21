@@ -16,6 +16,11 @@ const CATEGORIES = [
   { id: 'other',     label: 'Other'      },
 ];
 
+const CAMPUS_OPTIONS = [
+  { id: 'WILF', label: 'WILF' },
+  { id: 'BEREN', label: 'BEREN' },
+];
+
 const BIO_PLACEHOLDERS = {
   tutor:     'e.g. I teach Calc 1 & 2 and Orgo. 3 years experience, patient.',
   barber:    'e.g. Fades, lineups, beard trims. Clean cuts by appointment.',
@@ -140,13 +145,14 @@ function TextSuggestion({ value, onApply }) {
 }
 
 // ── Live Preview Card ─────────────────────────────────────────────────────────
-function LivePreview({ category, customCategory, subcategory, bio, price, listingImage, sessionType }) {
+function LivePreview({ category, customCategory, subcategory, bio, price, listingImage, sessionType, campus }) {
   const label = subcategory || customCategory ||
     { tutor: 'Instruction', barber: 'Haircuts', fitness: 'Fitness', languages: 'Languages', music: 'Music', torah: 'Torah Studies', other: 'Service' }[category] || '';
   const eyebrow = (customCategory || { tutor: 'INSTRUCTION', barber: 'BARBER', fitness: 'FITNESS', languages: 'LANGUAGES', music: 'MUSIC', torah: 'TORAH STUDIES', other: 'SERVICE' }[category] || 'SERVICE').toUpperCase();
+  const campusLabel = campus || 'WILF';
   const fmt = sessionType === 'zoom' ? { color: '#7C3AED', label: 'ZOOM' }
-    : sessionType === 'both' ? { color: '#7C3AED', label: 'ZOOM & IN-PERSON' }
-    : { color: '#0E8345', label: 'IN-PERSON' };
+    : sessionType === 'both' ? { color: '#7C3AED', label: `ZOOM & IN-PERSON · ${campusLabel}` }
+    : { color: '#0E8345', label: `IN-PERSON · ${campusLabel}` };
 
   const isEmpty = !category && !bio && !price;
 
@@ -240,6 +246,7 @@ export default function CreateListing() {
   const [subcategory, setSubcategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [sessionType, setSessionType] = useState('in-person');
+  const [campus, setCampus] = useState('WILF');
   const [bio, setBio] = useState('');
   const [price, setPrice] = useState('');
   const [zelle, setZelle] = useState('');
@@ -308,6 +315,7 @@ export default function CreateListing() {
         custom_category: isCustom ? CUSTOM_CAT_MAP[category] : (category === 'other' ? customCategory : ''),
         subcategory: ['tutor', 'fitness', 'torah', 'languages', 'music'].includes(category) ? subcategory : '',
         session_type: sessionType,
+        campus: sessionType === 'zoom' ? null : campus,
         bio,
         price_per_session: price || 0,
         zelle,
@@ -467,6 +475,31 @@ export default function CreateListing() {
                 })}
               </div>
             </div>
+
+            {sessionType !== 'zoom' && (
+              <div style={{ marginBottom: 28 }}>
+                <label className="section-label" style={{ display: 'block', marginBottom: 10 }}>CAMPUS</label>
+                <div style={{
+                  display: 'inline-flex', background: 'var(--cream-50)',
+                  border: '1px solid var(--cream-300)', borderRadius: 12, padding: 3, gap: 2,
+                }}>
+                  {CAMPUS_OPTIONS.map(({ id, label }) => {
+                    const active = campus === id;
+                    return (
+                      <button key={id} type="button" onClick={() => setCampus(id)} style={{
+                        padding: '9px 20px', borderRadius: 10, border: 'none',
+                        background: active ? 'var(--blue-600)' : 'transparent',
+                        color: active ? '#fff' : 'var(--ink-500)',
+                        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                        fontFamily: 'var(--font-ui)', transition: 'all .2s',
+                      }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── Group bookings ── */}
             <div style={{ marginBottom: 28 }}>
@@ -710,6 +743,7 @@ export default function CreateListing() {
             price={price}
             listingImage={listingImage}
             sessionType={sessionType}
+            campus={campus}
           />
         </div>
       </div>

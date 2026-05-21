@@ -45,6 +45,15 @@ function redactPublicListing(provider) {
 const router = Router();
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'fitness', 'tennis', 'other'];
 
+function normalizeCampus(value) {
+  if (value === undefined) return undefined;
+  const clean = String(value || '').trim().toUpperCase();
+  if (!clean) return null;
+  if (clean === 'WILF') return 'WILF';
+  if (clean === 'BEREN' || clean === 'BEREAN') return 'BEREN';
+  return null;
+}
+
 // ── Named routes (must come before /:id) ──────────────────────────────────────
 
 // GET /providers/price-stats?category=tutor&subcategory=Excel
@@ -272,7 +281,7 @@ router.get('/me/profile', requireAuth, (req, res) => {
 
 // GET /providers — browse all
 router.get('/', optionalAuth, (req, res) => {
-  const { category, subcategory, search, sort, session_type, min_price, max_price, min_rating, availability } = req.query;
+  const { category, subcategory, search, sort, session_type, campus, min_price, max_price, min_rating, availability } = req.query;
   let query = `
     SELECT pp.*, u.name, u.email, u.username,
       (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = pp.id AND b.status = 'completed') as completed_sessions
@@ -301,6 +310,11 @@ router.get('/', optionalAuth, (req, res) => {
   if (session_type && session_type !== 'all') {
     query += " AND (pp.session_type = ? OR pp.session_type = 'both')";
     params.push(session_type);
+  }
+  const normalizedCampus = normalizeCampus(campus);
+  if (normalizedCampus) {
+    query += " AND COALESCE(pp.session_type, 'in-person') IN ('in-person', 'both') AND pp.campus = ?";
+    params.push(normalizedCampus);
   }
   if (min_price !== undefined && min_price !== '') {
     query += ' AND COALESCE(pp.price_per_session, 0) >= ?';
@@ -418,7 +432,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 
 async function updateProfile(req, res, profile) {
   try {
-    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, title, college, allow_group, max_group_size, intro_video_url, portfolio_notes } = req.body;
+    const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, campus, title, college, allow_group, max_group_size, intro_video_url, portfolio_notes } = req.body;
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
@@ -433,6 +447,14 @@ async function updateProfile(req, res, profile) {
     if (session_type && !['zoom', 'in-person', 'both'].includes(session_type)) {
       return res.status(400).json({ error: 'Invalid session type' });
     }
+    const nextSessionType = session_type ?? profile.session_type ?? 'in-person';
+    const normalizedCampus = normalizeCampus(campus);
+    if (campus !== undefined && !normalizedCampus && nextSessionType !== 'zoom') {
+      return res.status(400).json({ error: 'Choose WILF or BEREN campus' });
+    }
+    const nextCampus = nextSessionType === 'zoom'
+      ? null
+      : (normalizedCampus ?? profile.campus ?? 'WILF');
 
     // Normalize category: 'tennis' legacy → 'fitness'
     const normalizedCategory = (category === 'tennis' ? 'fitness' : category) ?? profile.category;
@@ -451,7 +473,7 @@ async function updateProfile(req, res, profile) {
     db.prepare(`
       UPDATE provider_profiles
       SET bio = ?, category = ?, price_per_session = ?, zelle = ?, venmo = ?,
-          custom_category = ?, subcategory = ?, listing_image = ?, session_type = ?, title = ?,
+          custom_category = ?, subcategory = ?, listing_image = ?, session_type = ?, campus = ?, title = ?,
           college = ?, allow_group = ?, max_group_size = ?, intro_video_url = ?, portfolio_notes = ?
       WHERE id = ?
     `).run(
@@ -463,7 +485,8 @@ async function updateProfile(req, res, profile) {
       normalizedCustom !== undefined ? normalizedCustom : profile.custom_category,
       subcategory !== undefined ? subcategory : profile.subcategory,
       listing_image,
-      session_type ?? profile.session_type ?? 'in-person',
+      nextSessionType,
+      nextCampus,
       title !== undefined ? title : profile.title,
       college !== undefined ? (college?.trim() || null) : profile.college,
       allow_group !== undefined ? (allow_group ? 1 : 0) : profile.allow_group,
@@ -484,6 +507,7 @@ async function updateProfile(req, res, profile) {
         custom_category: updated.custom_category,
         price_per_session: updated.price_per_session,
         session_type: updated.session_type,
+        campus: updated.campus,
       },
     });
 

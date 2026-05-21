@@ -25,9 +25,20 @@ export default function CategoryPill({ category, customCategory, subcategory, si
   );
 }
 
-/** Only renders for zoom or both — in-person is the default and needs no badge */
-export function SessionTypePill({ sessionType }) {
-  if (!sessionType || sessionType === 'in-person') return null;
+export function SessionTypePill({ sessionType, campus }) {
+  const campusLabel = campus || 'WILF';
+  if (!sessionType || sessionType === 'in-person') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 3,
+        background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+        fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+        whiteSpace: 'nowrap',
+      }}>
+        📍 In-person · {campusLabel}
+      </span>
+    );
+  }
   if (sessionType === 'zoom') {
     return (
       <span style={{
@@ -49,6 +60,7 @@ export function SessionTypePill({ sessionType }) {
       whiteSpace: 'nowrap',
     }}>
       🔀 Zoom & in-person
+      {campusLabel ? ` · ${campusLabel}` : ''}
     </span>
   );
 }

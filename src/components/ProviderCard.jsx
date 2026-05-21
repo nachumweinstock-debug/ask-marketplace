@@ -5,7 +5,7 @@ import { providerUrl } from '../lib/providerUrl';
 import { trackEvent } from '../lib/analytics';
 import SavedTutorButton from './SavedTutorButton';
 import TrustBadges from './TrustBadges';
-import { discountedPrice, discountPercent, firstTimeDiscountLabel, money } from '../lib/pricing';
+import { discountedPrice, discountPercent, money } from '../lib/pricing';
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -50,6 +50,11 @@ function formatMode(sessionType) {
   return 'Both';
 }
 
+function campusLabel(provider) {
+  if (provider.session_type === 'zoom') return null;
+  return provider.campus || 'WILF';
+}
+
 export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmin, saved = false, onSavedChange, onTagClick }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -68,6 +73,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
 
   const gradient = cardGradient(provider.category, provider.custom_category);
   const mode = formatMode(provider.session_type);
+  const campus = campusLabel(provider);
   const label = listingLabel(provider);
   const catLabel = categoryLabel(provider);
   const discount = discountPercent(provider);
@@ -178,7 +184,7 @@ export default function ProviderCard({ provider, isOwn, onDelete, onEdit, isAdmi
           borderRadius: 6, padding: '4px 9px',
           maxWidth: 'calc(100% - 70px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
-          {mode}
+          {campus ? `${mode} · ${campus}` : mode}
         </div>
 
         {/* Price — bottom right */}
