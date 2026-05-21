@@ -20,6 +20,9 @@ const FEATURED_LISTINGS = [
   { mark: 'H', title: 'Hebrew conversation practice', meta: 'Patient, casual, repeat weekly', price: '$18', color: '#17130F' },
 ];
 
+const COMMENTATOR_ARTICLE_URL =
+  'https://yucommentator.org/2026/05/final-exams-begin-next-week-need-help-organizing-your-studying/';
+
 const ACADEMIC_CATEGORIES = [
   {
     title: 'STEM instruction',
@@ -139,10 +142,10 @@ export default function Home() {
         <div className="fade-up">
           <div className="home-eyebrow">Live campus marketplace</div>
           <h1 className="home-title">
-            Find trusted help <span>on campus.</span>
+            Find tutors and services <span>on campus.</span>
           </h1>
           <p className="home-copy">
-            Tutors, barbers, coaches, and student services from people in your own school community.
+            Browse YU students offering tutoring, haircuts, fitness, Hebrew, and more. Filter by campus, format, price, and availability.
           </p>
 
           <div className="home-actions">
@@ -181,7 +184,7 @@ export default function Home() {
           <div className="home-board-head">
             <div>
               <strong>Open right now</strong>
-              <p>Real marketplace rhythm, not a directory page.</p>
+              <p>Live student services from the YU community.</p>
             </div>
             <span style={{ color: '#F3C74F', fontWeight: 900 }}>ASK</span>
           </div>
@@ -256,6 +259,26 @@ export default function Home() {
       <section className="home-section">
         <div className="home-section-inner" style={{ maxWidth: 920 }}>
           <FAQAccordion title="Ask Marketplace FAQ" schemaId="home-faq-schema" />
+        </div>
+      </section>
+
+      <section className="home-section home-press-section">
+        <div className="home-section-inner">
+          <a
+            className="home-press-link"
+            href={COMMENTATOR_ARTICLE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div>
+              <div className="section-label">Featured in The YU Commentator</div>
+              <h2>Finals week, organized.</h2>
+              <p>
+                The Commentator featured Ask as a way for students to find help organizing studying before exams.
+              </p>
+            </div>
+            <span>Read the article -&gt;</span>
+          </a>
         </div>
       </section>
 
