@@ -192,7 +192,15 @@ export default function StudentDashboard() {
   useEffect(() => { fetchBookings(); fetchGroupInvites(); }, []);
 
   async function fetchBookings() {
-    try { const { data } = await api.get('/bookings/mine'); setBookings(data); }
+    try {
+      const { data } = await api.get('/bookings/mine');
+      setBookings(data);
+      // Request notification permission after the user has made at least one booking
+      // (Apple requires this to not happen immediately on app load)
+      if (data.length > 0 && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
     catch (err) { console.error(err); }
     finally { setLoading(false); }
   }

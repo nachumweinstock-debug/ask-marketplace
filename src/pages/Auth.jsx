@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Camera, Eye, EyeOff } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { SignInWithApple } from '@capacitor-community/apple-sign-in';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { trackEvent } from '../lib/analytics';
@@ -45,29 +47,130 @@ function SocialDivider() {
   );
 }
 
+const APPLE_LOGO = (
+  <svg width="15" height="18" viewBox="0 0 814 1000" aria-hidden="true">
+    <path fill="currentColor" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 405.8 0 295.9 0 190.8c0-131.3 85.5-200.9 169.2-200.9 53.3 0 97.9 35.2 131.9 35.2 32.6 0 81.9-37.7 143.3-37.7 23.6 0 143.3 2.7 219.5 104.7zm-105-125.4c31.3-37 51.9-89 51.9-140.6 0-7.1-.6-14.3-1.9-20.1-49.5 1.9-107.9 33.2-143.3 75.7-28.1 31.8-55.5 83.3-55.5 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 43.5 0 99.3-29.4 133.3-69.9z"/>
+  </svg>
+);
+
 function SocialButtons({ redirect }) {
   const params = redirect ? `?redirect=${encodeURIComponent(redirect)}` : '';
   const googleUrl = `${API_ORIGIN}/auth/google${params}`;
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleError, setAppleError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState('');
+  const { loginWithToken } = useAuth();
+  const navigate = useNavigate();
+
+  const isNative = Capacitor.isNativePlatform();
+
+  async function handleAppleNative() {
+    setAppleError('');
+    setAppleLoading(true);
+    try {
+      const result = await SignInWithApple.authorize({
+        clientId: 'live.uask.app',
+        redirectURI: `${API_ORIGIN}/auth/apple/callback`,
+        scopes: 'email name',
+      });
+      const { data } = await api.post('/auth/apple/native', {
+        identityToken: result.response.identityToken,
+        user: {
+          name: [result.response.givenName, result.response.familyName].filter(Boolean).join(' '),
+          email: result.response.email,
+        },
+      });
+      await loginWithToken(data.token, data.user);
+      navigate(redirect || '/');
+    } catch (err) {
+      if (err?.code !== 'USER_CANCELLED') {
+        setAppleError('Apple Sign In failed — please try again.');
+      }
+    } finally {
+      setAppleLoading(false);
+    }
+  }
+
+  function handleGoogleClick(e) {
+    e.preventDefault();
+    setGoogleError('');
+    setGoogleLoading(true);
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    // Use Google Identity Services (GIS) with FedCM — works in Chrome Desktop PWA
+    // because it's a JS callback, not a navigation or popup.
+    if (clientId && window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          try {
+            const { data } = await api.post('/auth/google/id-token', { credential, redirect });
+            await loginWithToken(data.token, data.user);
+            navigate(redirect || (data.user?.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'), { replace: true });
+          } catch (err) {
+            setGoogleError(err.response?.data?.error || 'Google sign-in failed — please try again.');
+            setGoogleLoading(false);
+          }
+        },
+        use_fedcm_for_prompt: true,
+      });
+
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed()) {
+          // FedCM unavailable — fall back to redirect OAuth
+          setGoogleLoading(false);
+          window.location.href = googleUrl;
+        } else if (notification.isSkippedMoment() || notification.isDismissedMoment()) {
+          setGoogleLoading(false);
+        }
+      });
+      return;
+    }
+
+    // Fallback: redirect-based OAuth (GIS not loaded yet)
+    window.location.href = googleUrl;
+  }
+
+  const btnBase = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+    borderRadius: 9, padding: '10px 14px',
+    fontSize: 13.5, fontWeight: 600, fontFamily: 'var(--font-ui)',
+    textDecoration: 'none', cursor: 'pointer', border: 'none', width: '100%',
+    transition: 'opacity .15s',
+  };
 
   return (
-    <a href={googleUrl} style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-      border: '1.5px solid var(--border)', borderRadius: 9, padding: '10px 14px',
-      background: '#fff', color: 'var(--text)', textDecoration: 'none',
-      fontSize: 13.5, fontWeight: 600, fontFamily: 'var(--font-ui)',
-      transition: 'border-color .15s, box-shadow .15s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#4285F4'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.08)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      </svg>
-      Continue with Google
-    </a>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <button onClick={handleGoogleClick} disabled={googleLoading} style={{
+        ...btnBase,
+        border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)',
+        opacity: googleLoading ? 0.7 : 1,
+      }}
+        onMouseEnter={e => { if (!googleLoading) { e.currentTarget.style.borderColor = '#4285F4'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.08)'; }}}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        {googleLoading ? 'Opening…' : 'Continue with Google'}
+      </button>
+
+      {isNative && (
+        <button onClick={handleAppleNative} disabled={appleLoading}
+          style={{ ...btnBase, background: '#000', color: '#fff', opacity: appleLoading ? 0.7 : 1 }}>
+          {APPLE_LOGO}
+          {appleLoading ? 'Signing in…' : 'Continue with Apple'}
+        </button>
+      )}
+
+      {googleError && <p style={{ color: '#DC2626', fontSize: 12, textAlign: 'center', margin: 0 }}>{googleError}</p>}
+      {appleError && <p style={{ color: '#DC2626', fontSize: 12, textAlign: 'center', margin: 0 }}>{appleError}</p>}
+    </div>
   );
 }
 

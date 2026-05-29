@@ -3,6 +3,7 @@ import db from '../db.js';
 import { requireAuth } from '../auth.js';
 import posthog from '../posthog.js';
 import { sendNewReviewNotification, sendAdminReviewNotification } from '../email.js';
+import { pushNewReview, pushToAdmins } from '../push.js';
 
 const router = Router();
 
@@ -56,11 +57,18 @@ router.post('/', requireAuth, (req, res) => {
         providerEmail: providerUser.email, providerName: providerUser.name,
         studentName: student.name, rating: Number(rating), comment: comment || null,
       }).catch(() => {});
+      const providerUserId = db.prepare('SELECT user_id FROM provider_profiles WHERE id = ?').get(booking.provider_id)?.user_id;
+      if (providerUserId) pushNewReview(providerUserId, { studentName: student.name, rating: Number(rating) }).catch(() => {});
       sendAdminReviewNotification({
         providerName: providerUser.name, providerEmail: providerUser.email,
         studentName: student.name, rating: Number(rating), comment: comment || null,
         bookingId: booking_id,
       }).catch(() => {});
+      pushToAdmins(
+        `New ${rating}-star review`,
+        `${student.name} reviewed ${providerUser.name}${comment ? ': ' + comment.slice(0, 60) : ''}`,
+        { screen: 'admin' }
+      ).catch(() => {});
     }
   } catch { /* non-fatal */ }
 
@@ -82,6 +90,11 @@ router.post('/:id/report', requireAuth, (req, res) => {
     event: 'review_reported',
     properties: { review_id: review.id, provider_id: review.provider_id, reason },
   });
+  pushToAdmins(
+    'Review reported',
+    `Review #${review.id} flagged for "${reason}"${details ? ': ' + String(details).slice(0, 60) : ''}`,
+    { screen: 'admin' }
+  ).catch(() => {});
   res.json({ ok: true });
 });
 

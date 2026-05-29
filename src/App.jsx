@@ -154,7 +154,7 @@ function Layout({ children }) {
       <IgBar />
       <Navbar />
       <SessionReminders />
-      <main style={{ flex: 1 }}>{children}</main>
+      <main style={{ flex: 1, paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
       <Footer />
     </div>
   );

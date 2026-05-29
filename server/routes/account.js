@@ -157,4 +157,21 @@ router.put('/', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/account — permanently delete the authenticated user's account
+// Required by Apple App Store guidelines (users must be able to delete from within the app).
+router.delete('/', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  // Delete in order that respects FK constraints (reviews, messages, bookings, then user)
+  db.prepare('DELETE FROM device_tokens WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM review_reports WHERE reporter_id = ? OR review_id IN (SELECT id FROM reviews WHERE student_id = ? OR provider_id IN (SELECT id FROM provider_profiles WHERE user_id = ?))').run(userId, userId, userId);
+  db.prepare('DELETE FROM reviews WHERE student_id = ? OR provider_id IN (SELECT id FROM provider_profiles WHERE user_id = ?)').run(userId, userId);
+  db.prepare('DELETE FROM messages WHERE sender_id = ? OR booking_id IN (SELECT id FROM bookings WHERE student_id = ? OR provider_id IN (SELECT id FROM provider_profiles WHERE user_id = ?))').run(userId, userId, userId);
+  db.prepare('DELETE FROM bookings WHERE student_id = ? OR provider_id IN (SELECT id FROM provider_profiles WHERE user_id = ?)').run(userId, userId);
+  db.prepare('DELETE FROM availability WHERE provider_id IN (SELECT id FROM provider_profiles WHERE user_id = ?)').run(userId);
+  db.prepare('DELETE FROM provider_profiles WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM connections WHERE requester_id = ? OR receiver_id = ?').run(userId, userId);
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+  res.json({ ok: true });
+});
+
 export default router;

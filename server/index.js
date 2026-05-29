@@ -46,6 +46,8 @@ const allowedOrigins = [
   'http://localhost:5175',
   'https://uask.live',
   'https://www.uask.live',
+  'capacitor://localhost',  // Capacitor iOS app
+  'http://localhost',       // Capacitor Android / local WebView
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 

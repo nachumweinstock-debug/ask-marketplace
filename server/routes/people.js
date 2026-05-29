@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, optionalAuth } from '../auth.js';
 import { sendConnectionRequestEmail, sendConnectionAcceptedEmail } from '../email.js';
+import { pushConnectionRequest, pushConnectionAccepted } from '../push.js';
 
 function canSeePayment(requesterId, targetUserId) {
   if (!requesterId) return false;
@@ -251,6 +252,7 @@ router.post('/connections', requireAuth, (req, res) => {
         sendConnectionAcceptedEmail({
           toEmail: requesterUser.email, toName: requesterUser.name, fromName: req.user.name,
         }).catch(() => {});
+        pushConnectionAccepted(receiver_id, { fromName: req.user.name }).catch(() => {});
       }
       return res.json({ ...existing, status: 'accepted' });
     }
@@ -267,6 +269,7 @@ router.post('/connections', requireAuth, (req, res) => {
     sendConnectionRequestEmail({
       toEmail: receiverUser.email, toName: receiverUser.name, fromName: req.user.name,
     }).catch(() => {});
+    pushConnectionRequest(receiver_id, { fromName: req.user.name }).catch(() => {});
   }
 
   res.json(db.prepare('SELECT * FROM connections WHERE id = ?').get(result.lastInsertRowid));
@@ -287,6 +290,7 @@ router.patch('/connections/:id', requireAuth, (req, res) => {
     sendConnectionAcceptedEmail({
       toEmail: requesterUser.email, toName: requesterUser.name, fromName: req.user.name,
     }).catch(() => {});
+    pushConnectionAccepted(conn.requester_id, { fromName: req.user.name }).catch(() => {});
   }
 
   res.json({ ...conn, status: 'accepted' });

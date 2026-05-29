@@ -10,6 +10,7 @@ function icsToken(bookingId) {
   return createHmac('sha256', secret).update(`ics-${bookingId}`).digest('hex').slice(0, 24);
 }
 import { sendBookingNotification, sendAdminBookingNotification, sendBookingConfirmation, sendProviderConfirmationCopy, sendCancellationNotification, sendBookingDeclinedNotification, sendRescheduleProposalEmail, sendRescheduleResponseEmail, sendStudentRescheduleProposalEmail, sendStudentRescheduleResponseEmail } from '../email.js';
+import { pushBookingRequest, pushBookingConfirmed, pushBookingDeclined, pushBookingCancelled, pushRescheduleProposal, pushRescheduleResponse, pushToAdmins } from '../push.js';
 import { buildICS, googleCalendarUrl } from '../calendar.js';
 import { smsBookingRequest, smsBookingConfirmed } from '../sms.js';
 import posthog from '../posthog.js';
@@ -64,6 +65,21 @@ async function sendBookingEmails(booking, slot, student) {
     date: slot.date,
     startTime: slot.start_time,
   }).catch(() => {});
+
+  // Push to provider + admins
+  const providerUser = db.prepare('SELECT id FROM users WHERE email = ?').get(providerInfo.email);
+  if (providerUser) {
+    pushBookingRequest(providerUser.id, {
+      studentName: student.name,
+      date: slot.date,
+      startTime: slot.start_time,
+    }).catch(() => {});
+  }
+  pushToAdmins(
+    'New booking',
+    `${student.name} → ${providerInfo.provider_name} on ${slot.date} at ${slot.start_time}`,
+    { screen: 'admin' }
+  ).catch(() => {});
 }
 
 // GET /bookings/notifications — unread counts for the navbar badge
@@ -349,6 +365,7 @@ router.patch('/:id', requireAuth, (req, res) => {
       `).get(booking.provider_id);
 
       if (slot && student && providerInfo) {
+        const providerUser = db.prepare('SELECT id FROM users WHERE email = ?').get(providerInfo.email);
         if (cancelledByStudent) {
           sendCancellationNotification({
             toEmail: providerInfo.email, toName: providerInfo.name,
@@ -356,6 +373,7 @@ router.patch('/:id', requireAuth, (req, res) => {
             date: slot.date, startTime: slot.start_time, endTime: slot.end_time,
             role: 'provider',
           }).catch(() => {});
+          if (providerUser) pushBookingCancelled(providerUser.id, { otherName: student.name, date: slot.date }).catch(() => {});
         } else if (wasStillPending) {
           // Provider declined a pending request — send declined email with rebook CTA
           sendBookingDeclinedNotification({
@@ -364,6 +382,7 @@ router.patch('/:id', requireAuth, (req, res) => {
             date: slot.date, startTime: slot.start_time, endTime: slot.end_time,
             category: providerInfo.custom_category || providerInfo.category,
           }).catch(() => {});
+          pushBookingDeclined(booking.student_id, { providerName: providerInfo.name }).catch(() => {});
         } else {
           // Provider cancelled a confirmed booking
           sendCancellationNotification({
@@ -373,6 +392,7 @@ router.patch('/:id', requireAuth, (req, res) => {
             role: 'student',
             rebookUrl: 'https://uask.live/browse',
           }).catch(() => {});
+          pushBookingCancelled(booking.student_id, { otherName: providerInfo.name, date: slot.date }).catch(() => {});
         }
       }
     } catch { /* non-fatal */ }
@@ -401,9 +421,14 @@ router.patch('/:id', requireAuth, (req, res) => {
           venmoHandle: provider.venmo || null,
         }).catch(err => console.error('[BOOKING CONFIRM] student email error:', err.message));
 
-        // SMS to student
+        // SMS + push to student
         smsBookingConfirmed({
           phone: student.phone,
+          providerName: provider.provider_name,
+          date: slot.date,
+          startTime: slot.start_time,
+        }).catch(() => {});
+        pushBookingConfirmed(booking.student_id, {
           providerName: provider.provider_name,
           date: slot.date,
           startTime: slot.start_time,
@@ -579,10 +604,11 @@ router.post('/:id/reschedule', requireAuth, async (req, res) => {
           originalDate: originalSlot.date, originalStart: originalSlot.start_time, originalEnd: originalSlot.end_time,
           newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
         }).catch(() => {});
+        pushRescheduleProposal(booking.student_id, { fromName: providerUser.name, newDate: newSlot.date, newStart: newSlot.start_time }).catch(() => {});
       }
     } else {
       const providerUser = db.prepare(`
-        SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+        SELECT u.email, u.name, u.id as provider_user_id FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
       `).get(booking.provider_id);
       const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
       if (providerUser && student && originalSlot) {
@@ -592,6 +618,7 @@ router.post('/:id/reschedule', requireAuth, async (req, res) => {
           originalDate: originalSlot.date, originalStart: originalSlot.start_time, originalEnd: originalSlot.end_time,
           newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
         }).catch(() => {});
+        pushRescheduleProposal(providerUser.provider_user_id, { fromName: student.name, newDate: newSlot.date, newStart: newSlot.start_time }).catch(() => {});
       }
     }
 
@@ -632,7 +659,7 @@ router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
 
     if (isStudentAccepting) {
       const providerUser = db.prepare(`
-        SELECT u.email, u.name FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
+        SELECT u.email, u.name, u.id as uid FROM provider_profiles pp JOIN users u ON pp.user_id = u.id WHERE pp.id = ?
       `).get(booking.provider_id);
       const student = db.prepare('SELECT name FROM users WHERE id = ?').get(booking.student_id);
       if (providerUser && student) {
@@ -641,6 +668,7 @@ router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
           studentName: student.name, accepted: true,
           newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
         }).catch(() => {});
+        pushRescheduleResponse(providerUser.uid, { fromName: student.name, accepted: true, newDate: newSlot.date }).catch(() => {});
       }
     } else {
       const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(booking.student_id);
@@ -653,6 +681,7 @@ router.post('/:id/reschedule/accept', requireAuth, async (req, res) => {
           providerName: providerUser.name, accepted: true,
           newDate: newSlot.date, newStart: newSlot.start_time, newEnd: newSlot.end_time,
         }).catch(() => {});
+        pushRescheduleResponse(booking.student_id, { fromName: providerUser.name, accepted: true, newDate: newSlot.date }).catch(() => {});
       }
     }
 

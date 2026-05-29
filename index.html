@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Primary SEO -->
     <title>Ask Marketplace | College Tutoring Made Simple</title>
@@ -45,7 +48,13 @@
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"WebSite","name":"Ask Marketplace","url":"https://www.uask.live","potentialAction":{"@type":"SearchAction","target":"https://www.uask.live/tutors?search={search_term_string}","query-input":"required name=search_term_string"}}
     </script>
-    <div id="root"></div>
+    <div id="root">
+      <div id="root-loader" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FAF7F2;">
+        <div style="width:28px;height:28px;border:2.5px solid #17130F;border-top-color:transparent;border-radius:50%;animation:root-spin 0.7s linear infinite;"></div>
+      </div>
+    </div>
+    <style>@keyframes root-spin{to{transform:rotate(360deg)}}</style>
+    <script src="https://accounts.google.com/gsi/client" async></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

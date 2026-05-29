@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AtSign, BookOpenCheck, Camera, Check, Copy, ExternalLink, GraduationCap, Heart, ImagePlus, QrCode, Share2, UserRound } from 'lucide-react';
 import { copyText } from '../lib/clipboard';
+import { openUrl, APP_ORIGIN } from '../lib/browser';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
@@ -240,7 +241,11 @@ function ProfileProgress({ items, percent }) {
 }
 
 export default function AccountProfile() {
-  const { user: authUser, refreshUser } = useAuth();
+  const { user: authUser, refreshUser, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteWorking, setDeleteWorking] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -394,7 +399,7 @@ export default function AccountProfile() {
   const displayCategory = profile?.custom_category || profile?.category || null;
   const username = form.username || profile?.username || '';
   const publicPath = username ? `/${username}` : `/people/${profile?.id}`;
-  const profileUrl = `${window.location.origin}${publicPath}`;
+  const profileUrl = `${APP_ORIGIN}${publicPath}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(profileUrl)}`;
   function markInstagramFollowed() {
     localStorage.setItem('ask_followed_instagram', '1');
@@ -676,10 +681,10 @@ export default function AccountProfile() {
               <QrCode size={16} />
               <span>QR</span>
             </button>
-            <a className="profile-icon-button" href={profileUrl} target="_blank" rel="noopener noreferrer" title="Open public profile">
+            <button type="button" className="profile-icon-button" onClick={() => openUrl(profileUrl)} title="Open public profile">
               <ExternalLink size={16} />
               <span>Open</span>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -922,46 +927,34 @@ export default function AccountProfile() {
         {!editMode ? (
           <div className="profile-card" style={{ padding: '24px 28px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>
-              Contact Preferences
+              Contact
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {form.phone ? (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
+                display: 'inline-flex', alignItems: 'center', gap: 10,
                 background: 'var(--bg)', border: '1.5px solid var(--border)',
                 borderRadius: 10, padding: '10px 16px',
               }}>
-                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preferred</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                  {form.contact_pref === 'imessage' ? '💬 iMessage' : '💬 WhatsApp'}
-                </span>
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{form.phone}</span>
               </div>
-              {form.phone ? (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: 'var(--bg)', border: '1.5px solid var(--border)',
-                  borderRadius: 10, padding: '10px 16px',
-                }}>
-                  <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{form.phone}</span>
-                </div>
-              ) : (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: 'var(--bg)', border: '1.5px dashed var(--border)',
-                  borderRadius: 10, padding: '10px 16px',
-                }}>
-                  <span style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}>No phone number added</span>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'var(--bg)', border: '1.5px dashed var(--border)',
+                borderRadius: 10, padding: '10px 16px',
+              }}>
+                <span style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}>No phone number added</span>
+              </div>
+            )}
             <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '12px 0 0', lineHeight: 1.5 }}>
-              Phone is only used for ASK notifications and is not shared in direct messages.
+              Phone is only used for ASK notifications and is not shared publicly.
             </p>
           </div>
         ) : (
-          <Section title="Contact Preferences">
+          <Section title="Contact">
             <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-              Add a phone number for ASK text notifications. It is not shared in direct messages.
+              Add a phone number for ASK text notifications. It is not shared publicly.
             </p>
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Phone number <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
@@ -971,50 +964,6 @@ export default function AccountProfile() {
                 onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border)'}
               />
-            </div>
-            <div>
-              <label style={labelStyle}>Preferred contact app</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  {
-                    id: 'imessage',
-                    label: 'iMessage',
-                    icon: (
-                      <svg width="20" height="20" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="60" height="60" rx="13" fill="#1B8EF2"/>
-                        <path d="M38 10H22C16.477 10 12 14.477 12 20v10c0 5.523 4.477 10 10 10h2v7l7-7h7c5.523 0 10-4.477 10-10V20c0-5.523-4.477-10-10-10z" fill="rgba(255,255,255,0.35)"/>
-                        <path d="M42 16H26c-4.418 0-8 3.582-8 8v9c0 4.418 3.582 8 8 8h2v6l6-6h8c4.418 0 8-3.582 8-8v-9c0-4.418-3.582-8-8-8z" fill="white"/>
-                      </svg>
-                    ),
-                  },
-                  {
-                    id: 'whatsapp',
-                    label: 'WhatsApp',
-                    icon: (
-                      <svg width="20" height="20" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="60" height="60" rx="13" fill="#25D366"/>
-                        <path d="M30 8C17.85 8 8 17.85 8 30c0 3.9 1.05 7.55 2.88 10.68L8 52l11.65-2.85A21.87 21.87 0 0 0 30 52c12.15 0 22-9.85 22-22S42.15 8 30 8z" fill="rgba(255,255,255,0.2)"/>
-                        <path d="M43.8 36.23c-.74-.37-4.38-2.16-5.06-2.41-.68-.25-1.17-.37-1.67.37-.49.74-1.91 2.41-2.34 2.9-.43.49-.86.55-1.6.18-4.32-2.16-7.16-3.86-10.02-8.78-.75-1.3.75-1.2 2.15-4 .24-.49.12-.92-.06-1.3-.19-.37-1.67-4.02-2.28-5.5-.6-1.44-1.22-1.24-1.67-1.27-.43-.02-.92-.02-1.42-.02-.49 0-1.3.18-1.98.92-.68.74-2.6 2.54-2.6 6.2 0 3.65 2.66 7.17 3.03 7.67.37.49 5.21 7.95 12.63 11.16 4.69 2.02 6.53 2.19 8.87 1.84 1.42-.21 4.38-1.79 5-3.52.62-1.72.62-3.2.43-3.52-.18-.31-.68-.49-1.42-.86z" fill="white"/>
-                      </svg>
-                    ),
-                  },
-                ].map(({ id, label, icon }) => {
-                  const active = form.contact_pref === id;
-                  return (
-                    <button key={id} type="button" onClick={() => set('contact_pref')(id)}
-                      style={{
-                        flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                        border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                        background: active ? 'var(--primary)' : 'var(--card)',
-                        color: active ? '#fff' : 'var(--muted)',
-                        cursor: 'pointer', transition: 'all .15s', fontFamily: 'var(--font-ui)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                      }}>
-                      {icon}{label}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </Section>
         )}
@@ -1181,6 +1130,105 @@ export default function AccountProfile() {
                 opacity: deleteLoading ? 0.6 : 1, whiteSpace: 'nowrap',
               }}>
                 {deleteLoading ? 'Deleting...' : deleteConfirm ? 'Yes, delete' : 'Delete listing'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Danger zone ─────────────────────────────────────── */}
+      <div style={{ marginTop: 32, border: '1.5px solid #FECACA', borderRadius: 12, padding: '20px 24px', background: '#FFF5F5' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#DC2626', marginBottom: 10 }}>
+          Danger Zone
+        </div>
+        <p style={{ fontSize: 13, color: '#7F1D1D', marginBottom: 16, lineHeight: 1.5 }}>
+          Permanently delete your account and all associated data. This cannot be undone.
+        </p>
+        <button
+          type="button"
+          onClick={() => { setDeleteInput(''); setShowDeleteModal(true); }}
+          style={{
+            background: 'none', border: '1.5px solid #DC2626', borderRadius: 8,
+            padding: '8px 18px', fontSize: 13, fontWeight: 700, color: '#DC2626',
+            cursor: 'pointer', fontFamily: 'var(--font-ui)',
+          }}
+        >
+          Delete my account
+        </button>
+      </div>
+
+      {/* ── Delete confirmation modal ────────────────────────── */}
+      {showDeleteModal && (
+        <div
+          onClick={() => setShowDeleteModal(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(17,13,10,0.6)',
+            zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 400, background: '#fff',
+              borderRadius: 16, padding: '28px 24px',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
+            }}
+          >
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#DC2626', marginBottom: 10 }}>
+              Delete account
+            </h2>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 20 }}>
+              This will permanently delete your account, bookings, reviews, and messages. Type <strong>DELETE</strong> to confirm.
+            </p>
+            <input
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              placeholder="Type DELETE"
+              style={{
+                width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+                padding: '10px 14px', fontSize: 15, fontFamily: 'var(--font-ui)',
+                marginBottom: 16, outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => e.target.style.borderColor = '#DC2626'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  flex: 1, background: 'var(--gray-50)', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: '10px', fontSize: 13.5, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteInput !== 'DELETE' || deleteWorking}
+                onClick={async () => {
+                  setDeleteWorking(true);
+                  try {
+                    await api.delete('/account');
+                    await signOut();
+                    navigate('/');
+                  } catch {
+                    setDeleteWorking(false);
+                    setShowDeleteModal(false);
+                    setMsg('Failed to delete account. Please try again.');
+                  }
+                }}
+                style={{
+                  flex: 1, background: deleteInput === 'DELETE' ? '#DC2626' : '#FECACA',
+                  border: 'none', borderRadius: 8, padding: '10px',
+                  fontSize: 13.5, fontWeight: 700, color: '#fff',
+                  cursor: deleteInput === 'DELETE' ? 'pointer' : 'not-allowed',
+                  fontFamily: 'var(--font-ui)', opacity: deleteWorking ? 0.6 : 1,
+                }}
+              >
+                {deleteWorking ? 'Deleting…' : 'Delete forever'}
               </button>
             </div>
           </div>

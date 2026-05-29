@@ -21,34 +21,34 @@ const ACADEMIC_CATEGORIES = [
     title: 'STEM instruction',
     copy: 'Pre-health, engineering, CS, data, math, and lab-heavy classes without the endless group chat scramble.',
     subjects: [
-      ['Biology', '/subjects/biology-tutors'],
-      ['Chemistry', '/subjects/chemistry-tutors'],
-      ['Organic Chemistry', '/subjects/organic-chemistry-tutors'],
-      ['Physics', '/subjects/physics-tutors'],
-      ['Calculus', '/subjects/calculus-tutors'],
-      ['Statistics', '/subjects/statistics-tutors'],
-      ['Computer Science', '/subjects/computer-science-tutors'],
-      ['Engineering', '/subjects/engineering-tutors'],
-      ['Data Science', '/subjects/data-science-tutors'],
+      ['Biology', '/browse?search=biology'],
+      ['Chemistry', '/browse?search=chemistry'],
+      ['Organic Chemistry', '/browse?search=organic+chemistry'],
+      ['Physics', '/browse?search=physics'],
+      ['Calculus', '/browse?search=calculus'],
+      ['Statistics', '/browse?search=statistics'],
+      ['Computer Science', '/browse?search=computer+science'],
+      ['Engineering', '/browse?search=engineering'],
+      ['Data Science', '/browse?search=data+science'],
     ],
   },
   {
     title: 'Business instruction',
     copy: 'Accounting, finance, economics, spreadsheets, test prep, and the classes where one missed concept wrecks the set.',
     subjects: [
-      ['Accounting', '/subjects/accounting-tutors'],
-      ['Finance', '/subjects/finance-tutors'],
-      ['Economics', '/subjects/economics-tutors'],
+      ['Accounting', '/browse?search=accounting'],
+      ['Finance', '/browse?search=finance'],
+      ['Economics', '/browse?search=economics'],
     ],
   },
   {
     title: 'Humanities instruction',
     copy: 'Writing, research, reading-heavy courses, and social science help with people who can actually explain the assignment.',
     subjects: [
-      ['Psychology', '/subjects/psychology-tutors'],
-      ['Writing', '/subjects/writing-tutors'],
-      ['History', '/subjects/history-tutors'],
-      ['Political Science', '/subjects/political-science-tutors'],
+      ['Psychology', '/browse?search=psychology'],
+      ['Writing', '/browse?search=writing'],
+      ['History', '/browse?search=history'],
+      ['Political Science', '/browse?search=political+science'],
     ],
   },
 ];
@@ -228,8 +228,8 @@ export default function Home() {
                   <p>{category.copy}</p>
                 </div>
                 <div className="home-subject-links">
-                  {category.subjects.map(([label, href]) => (
-                    <a key={href} href={href}>{label}</a>
+                  {category.subjects.map(([label, to]) => (
+                    <Link key={to} to={to} className="home-category-pill">{label}</Link>
                   ))}
                 </div>
               </section>

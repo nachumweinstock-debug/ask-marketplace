@@ -15,6 +15,28 @@ const inputStyle = {
   boxSizing: 'border-box', transition: 'border-color .15s',
 };
 
+function finishOAuth(token, dest, navigate) {
+  // Broadcast to any same-origin PWA windows (works across PWA + browser contexts).
+  try {
+    const ch = new BroadcastChannel('ask_oauth');
+    ch.postMessage({ type: 'ask_oauth_success', token, dest });
+    ch.close();
+  } catch {}
+
+  // Belt-and-suspenders: also postMessage to opener if Chrome preserved it.
+  if (window.opener && !window.opener.closed) {
+    try { window.opener.postMessage({ type: 'ask_oauth_success', token, dest }, window.location.origin); } catch {}
+    window.close();
+    return;
+  }
+
+  // Try to close this window/tab (succeeds when opened via window.open).
+  window.close();
+
+  // If close didn't work (this IS the main window), navigate directly.
+  setTimeout(() => navigate(dest, { replace: true }), 50);
+}
+
 export default function AuthCallback() {
   const [params] = useSearchParams();
   const { loginWithToken } = useAuth();
@@ -22,6 +44,7 @@ export default function AuthCallback() {
 
   const [step, setStep]       = useState('loading'); // 'loading' | 'tos' | 'phone' | 'done'
   const [dest, setDest]       = useState('/dashboard/student');
+  const [token, setToken]     = useState('');
   const [phone, setPhone]     = useState('');
   const [saving, setSaving]   = useState(false);
   const [tosChecked, setTosChecked] = useState(false);
@@ -30,17 +53,29 @@ export default function AuthCallback() {
 
   useEffect(() => {
     async function handle() {
-      const token = params.get('token');
+      const rawToken = params.get('token');
       const next  = params.get('next') || '';
       const error = params.get('error');
 
-      if (error || !token) {
-        navigate(`/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`, { replace: true });
+      if (error || !rawToken) {
+        try {
+          const ch = new BroadcastChannel('ask_oauth');
+          ch.postMessage({ type: 'ask_oauth_success', token: null, dest: null });
+          ch.close();
+        } catch {}
+        if (window.opener && !window.opener.closed) {
+          try { window.opener.postMessage({ type: 'ask_oauth_success', token: null, dest: null }, window.location.origin); } catch {}
+          window.close();
+          return;
+        }
+        window.close();
+        setTimeout(() => navigate(`/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`, { replace: true }), 50);
         return;
       }
 
-      const decoded = parseJwt(token);
-      await loginWithToken(token, decoded ? { ...decoded } : null, { skipMe: true });
+      const decoded = parseJwt(rawToken);
+      await loginWithToken(rawToken, decoded ? { ...decoded } : null, { skipMe: true });
+      setToken(rawToken);
 
       // Fetch full user — only prompt phone for brand-new accounts (created <60s ago)
       try {
@@ -52,10 +87,10 @@ export default function AuthCallback() {
           setNeedsPhone(!user.phone);
           setStep('tos');
         } else {
-          navigate(destination, { replace: true });
+          finishOAuth(rawToken, destination, navigate);
         }
       } catch {
-        navigate(next || '/dashboard/student', { replace: true });
+        finishOAuth(rawToken, next || '/dashboard/student', navigate);
       }
     }
     handle();
@@ -66,7 +101,7 @@ export default function AuthCallback() {
     if (!tosChecked) { setTosError(true); return; }
     setTosError(false);
     if (needsPhone) setStep('phone');
-    else navigate(dest, { replace: true });
+    else finishOAuth(token, dest, navigate);
   }
 
   async function handlePhoneSubmit(e) {
@@ -75,7 +110,7 @@ export default function AuthCallback() {
       setSaving(true);
       try { await api.put('/account', { phone: phone.trim() }); } catch {}
     }
-    navigate(dest, { replace: true });
+    finishOAuth(token, dest, navigate);
   }
 
   if (step === 'tos') return (

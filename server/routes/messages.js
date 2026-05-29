@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { pushNewMessage } from '../push.js';
 
 const router = Router();
 
@@ -79,6 +80,14 @@ router.post('/booking/:bookingId', requireAuth, (req, res) => {
     FROM messages m JOIN users u ON m.sender_id = u.id
     WHERE m.id = ?
   `).get(result.lastInsertRowid);
+
+  // Push to the other party
+  const recipientId = booking.student_id === req.user.id ? booking.provider_user_id : booking.student_id;
+  pushNewMessage(recipientId, {
+    senderName: req.user.name,
+    preview: body.trim(),
+    bookingId: req.params.bookingId,
+  }).catch(() => {});
 
   res.json(msg);
 });

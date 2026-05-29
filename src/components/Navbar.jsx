@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../lib/media';
 import api from '../api';
 
+const MORE_ICON = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
+    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+    <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>
+  </svg>
+);
+
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -61,6 +69,8 @@ export default function Navbar() {
   const location = useLocation();
   const [dropOpen, setDropOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
   const [unread, setUnread] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [bookingNotifCount, setBookingNotifCount] = useState(0);
@@ -74,17 +84,18 @@ export default function Navbar() {
   const path = location.pathname;
   const profileNeedsWork = !!user && (!user.avatar_url || !user.major || !user.interests || !igFollowed);
 
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-  }, []);
+  // Notification permission is requested from StudentDashboard after first booking, not here.
 
   useEffect(() => {
-    function handle(e) { if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false); }
+    function handle(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
+      if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false);
+    }
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
-  useEffect(() => { setMobileOpen(false); setDropOpen(false); }, [location.pathname]);
+  useEffect(() => { setMobileOpen(false); setDropOpen(false); setMoreOpen(false); }, [location.pathname]);
 
   useEffect(() => {
     function syncIgFollowed() {
@@ -146,15 +157,18 @@ export default function Navbar() {
     await signOut(); navigate('/');
   }
 
-  // Top bar: only Browse, StudyParty, Messages + admin items for admins
-  const navItems = [
-    { to: '/browse',    label: 'Browse',                           show: true },
-    { to: '/studyparty',label: '🪩 StudyParty',                   show: true, live: true, party: true },
-    { to: '/messages',  label: 'Messages',    badge: unread,       show: !!user },
-    { to: '/admin',             label: 'Admin',         show: !!user && user.is_admin, admin: true },
-    { to: '/admin/support',     label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
-    { to: '/admin/reviews',     label: 'Reviews',       show: !!user && user.is_admin, admin: true },
-    { to: '/admin/analytics',   label: 'Analytics',     show: !!user && user.is_admin, admin: true },
+  // "More" dropdown items — everything that isn't Browse / Post / Messages
+  const moreItems = [
+    { to: '/studyparty',          label: '🪩 StudyParty', show: true },
+    { to: '/find-a-tutor',        label: 'Find a Tutor',  show: true },
+    { to: '/people',              label: 'People',        show: true },
+    { to: '/help-wanted',         label: 'Help Wanted',   show: true },
+    { to: '/saved-tutors',        label: 'Saved',         show: !!user },
+    { to: '/referrals',           label: 'Referrals',     show: !!user },
+    { to: '/dashboard/student',   label: 'Bookings',      show: !!user },
+    { to: '/dashboard/provider',  label: 'My Services',   show: !!user && user.role === 'provider', badge: pendingBookings },
+    { to: '/admin',               label: 'Admin',         show: !!user && user.is_admin, admin: true },
+    { to: '/admin/support',       label: 'Support Inbox', show: !!user && user.is_admin, admin: true },
   ].filter(i => i.show);
 
   function isActive(to) {
@@ -195,13 +209,55 @@ export default function Navbar() {
           <div className="nav-desktop" style={{ flex: 1, alignItems: 'stretch', gap: 0 }}>
             {/* Center: nav items */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {navItems.map(item => (
-                <NavLink key={item.to} to={item.to} active={isActive(item.to)} admin={item.admin} live={item.live} party={item.party}>
-                  {item.live && <LiveDot />}
-                  {item.label}
-                  {item.badge > 0 && <Badge n={item.badge} color={item.badgeColor} />}
+              <NavLink to="/browse" active={isActive('/browse')}>Browse</NavLink>
+              <NavLink to="/create-listing" active={path === '/create-listing'}>Post a listing</NavLink>
+              {user && (
+                <NavLink to="/messages" active={isActive('/messages')}>
+                  Messages
+                  {unread > 0 && <Badge n={unread} />}
                 </NavLink>
-              ))}
+              )}
+              {/* More dropdown */}
+              <div ref={moreRef} style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}>
+                <button
+                  onClick={() => setMoreOpen(o => !o)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    height: '100%', padding: '0 10px',
+                    fontSize: 13, fontWeight: moreOpen ? 850 : 720, textDecoration: 'none',
+                    color: moreOpen ? 'var(--text)' : 'var(--muted)',
+                    fontFamily: 'var(--font-ui)', background: 'none', border: 'none', cursor: 'pointer',
+                    whiteSpace: 'nowrap', position: 'relative',
+                    transition: 'color .12s',
+                  }}
+                  onMouseEnter={e => { if (!moreOpen) e.currentTarget.style.color = 'var(--text)'; }}
+                  onMouseLeave={e => { if (!moreOpen) e.currentTarget.style.color = 'var(--muted)'; }}
+                >
+                  More
+                  <svg width="10" height="6" viewBox="0 0 10 6" style={{ transition: 'transform .15s', transform: moreOpen ? 'rotate(180deg)' : 'none', color: 'var(--muted)' }}>
+                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  </svg>
+                </button>
+                {moreOpen && (
+                  <div style={{
+                    position: 'absolute', left: 0, top: 52,
+                    background: '#fff', border: '1px solid var(--gray-200)',
+                    borderRadius: 14, padding: '6px 0',
+                    minWidth: 178, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    zIndex: 100, animation: 'slideDown 0.15s ease both',
+                  }}>
+                    {moreItems.map(item => (
+                      <DropItem key={item.to} to={item.to} onClick={() => setMoreOpen(false)} admin={item.admin}>
+                        {item.label}
+                        {item.badge > 0 && <Badge n={item.badge} color="#F59E0B" />}
+                      </DropItem>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {user?.is_admin && (
+                <NavLink to="/admin" active={isActive('/admin')} admin>Admin</NavLink>
+              )}
             </div>
 
             <div style={{ flex: 1 }} />
@@ -387,49 +443,44 @@ export default function Navbar() {
           paddingBottom: 'env(safe-area-inset-bottom,0px)',
         }}>
           {[
-            { to: '/browse', label: 'Browse', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
-            { to: '/studyparty', label: '🪩 Party', live: true, party: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 12h.01"/><path d="M12 12h.01"/><path d="M7 12h.01"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-            { to: '/messages', label: 'Messages', badge: unread, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-            { to: user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student', label: 'My Stuff', badge: notifCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
-            { to: '/account', label: 'Profile', dot: profileNeedsWork, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-          ].map(({ to, label, icon, badge, dot, live, party }) => {
-            const active = to === '/messages' ? path.startsWith('/messages')
-              : to.startsWith('/dashboard') ? path.startsWith('/dashboard')
-              : to === '/account' ? path === '/account'
-              : to === '/studyparty' ? (path === '/studyparty' || path === '/hangouts')
-              : path.startsWith(to);
-            if (party) {
+            { to: '/browse',         label: 'Browse',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
+            { to: '/create-listing', label: 'Post',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> },
+            { to: '/messages',       label: 'Messages', badge: unread, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+            { label: 'More', isMore: true, badge: notifCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg> },
+            { to: '/account',        label: 'Profile',  dot: profileNeedsWork, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+          ].map(({ to, label, icon, badge, dot, isMore }) => {
+            if (isMore) {
+              const active = mobileOpen;
               return (
-                <Link key={to} to={to} style={{
+                <button key="more" onClick={() => setMobileOpen(o => !o)} style={{
                   flex: 1, display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center',
-                  padding: '5px 0 4px', textDecoration: 'none', gap: 1,
+                  padding: '7px 0 5px', gap: 2,
+                  color: active ? 'var(--ink-900)' : 'var(--ink-500)',
+                  background: 'none', border: 'none', cursor: 'pointer',
                   position: 'relative',
                 }}>
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: 2, padding: '5px 10px 4px',
-                    borderRadius: 14,
-                    background: 'linear-gradient(135deg, #1a0a2e 0%, #2d0a3e 40%, #1a1040 100%)',
-                    backgroundSize: '200% 200%',
-                    animation: 'nav-party-glow 2.4s ease-in-out infinite, nav-party-bg 4s ease infinite',
-                    border: '1px solid rgba(192,38,211,0.35)',
-                  }}>
-                    <span style={{
-                      fontSize: 20, lineHeight: 1,
-                      display: 'inline-block',
-                      animation: 'nav-party-float 2s ease-in-out infinite',
-                    }}>🪩</span>
-                    <span style={{
-                      fontSize: 9, fontWeight: 800, fontFamily: 'var(--font-ui)',
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                      animation: 'nav-party-rainbow 2s linear infinite',
-                    }}>Party</span>
+                  <div style={{ position: 'relative' }}>
+                    {icon}
+                    {badge > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -4, right: -5,
+                        background: 'var(--accent)', color: '#fff', fontSize: 8, fontWeight: 700,
+                        minWidth: 13, height: 13, borderRadius: 999,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '0 2px', border: '1.5px solid var(--cream-50)',
+                      }}>{badge > 9 ? '9+' : badge}</span>
+                    )}
                   </div>
+                  <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, fontFamily: 'var(--font-ui)' }}>{label}</span>
                   {active && <span style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:2.5, background:'var(--accent)', borderRadius:2 }}/>}
-                </Link>
+                </button>
               );
             }
+            const active = to === '/messages' ? path.startsWith('/messages')
+              : to === '/account' ? path === '/account'
+              : to === '/create-listing' ? path === '/create-listing'
+              : path.startsWith(to);
             return (
               <Link key={to} to={to} style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
@@ -447,9 +498,7 @@ export default function Navbar() {
                       minWidth: 13, height: 13, borderRadius: 999,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       padding: '0 2px', border: '1.5px solid var(--cream-50)',
-                    }}>
-                      {badge > 9 ? '9+' : badge}
-                    </span>
+                    }}>{badge > 9 ? '9+' : badge}</span>
                   )}
                   {dot && <ProfileDot />}
                 </div>
@@ -594,11 +643,12 @@ function NavLink({ to, active, admin, party, children }) {
   );
 }
 
-function DropItem({ to, onClick, children }) {
+function DropItem({ to, onClick, admin, children }) {
   return (
     <Link to={to} onClick={onClick} style={{
-      display: 'block', padding: '9px 16px', fontSize: 13,
-      color: 'var(--ink-900)', textDecoration: 'none', fontWeight: 500,
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '9px 16px', fontSize: 13,
+      color: admin ? '#7C2D12' : 'var(--ink-900)', textDecoration: 'none', fontWeight: admin ? 700 : 500,
       fontFamily: 'var(--font-ui)',
     }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--cream-100)'}

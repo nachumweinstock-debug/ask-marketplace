@@ -660,4 +660,20 @@ if (!tablesChat.includes('session_messages')) {
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_session_messages_session ON session_messages(session_id, created_at)');
 
+// Push notification device tokens
+const allTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+if (!allTables.includes('device_tokens')) {
+  db.exec(`
+    CREATE TABLE device_tokens (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token      TEXT NOT NULL,
+      platform   TEXT NOT NULL DEFAULT 'ios',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, token)
+    )
+  `);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens(user_id)');
+}
+
 export default db;

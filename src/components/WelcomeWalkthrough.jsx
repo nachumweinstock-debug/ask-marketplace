@@ -200,16 +200,19 @@ export default function WelcomeWalkthrough() {
             overflow: 'hidden',
           }}>
             {/* Skip button */}
-            <button onClick={dismiss} style={{
-              position: 'absolute', top: 14, right: 14,
-              background: 'rgba(255,255,255,0.18)', border: 'none',
-              borderRadius: 99, padding: '5px 12px',
-              fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,0.85)',
-              cursor: 'pointer', fontFamily: 'var(--font-ui)',
-              transition: 'background 0.15s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+            <button
+              onClick={dismiss}
+              onTouchEnd={e => { e.preventDefault(); dismiss(); }}
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                background: 'rgba(255,255,255,0.18)', border: 'none',
+                borderRadius: 99, padding: '8px 16px',
+                minHeight: 44, minWidth: 44,
+                fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.9)',
+                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                touchAction: 'manipulation',
+                WebkitUserSelect: 'none',
+              }}
             >
               Skip
             </button>
@@ -268,15 +271,17 @@ export default function WelcomeWalkthrough() {
               {/* Back button or dots spacer */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {step > 0 && (
-                  <button onClick={back} style={{
-                    background: 'none', border: '1px solid var(--border)',
-                    borderRadius: 99, padding: '8px 16px',
-                    fontSize: 13, fontWeight: 600, color: 'var(--muted)',
-                    cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                    transition: 'border-color 0.15s, color 0.15s',
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  <button
+                    onClick={back}
+                    onTouchEnd={e => { e.preventDefault(); back(); }}
+                    style={{
+                      background: 'none', border: '1px solid var(--border)',
+                      borderRadius: 99, padding: '8px 16px',
+                      minHeight: 44,
+                      fontSize: 13, fontWeight: 600, color: 'var(--muted)',
+                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                      touchAction: 'manipulation',
+                    }}
                   >
                     ← Back
                   </button>
@@ -297,17 +302,19 @@ export default function WelcomeWalkthrough() {
               </div>
 
               {/* CTA */}
-              <button onClick={next} style={{
-                background: 'var(--text)', color: '#fff',
-                border: 'none', borderRadius: 99,
-                padding: '10px 20px', fontSize: 13.5,
-                fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'var(--font-ui)',
-                transition: 'opacity 0.15s, transform 0.15s',
-                boxShadow: '0 4px 16px rgba(23,19,15,0.22)',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)'; }}
+              <button
+                onClick={next}
+                onTouchEnd={e => { e.preventDefault(); next(); }}
+                style={{
+                  background: 'var(--text)', color: '#fff',
+                  border: 'none', borderRadius: 99,
+                  padding: '10px 20px', fontSize: 13.5,
+                  minHeight: 44,
+                  fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                  boxShadow: '0 4px 16px rgba(23,19,15,0.22)',
+                  touchAction: 'manipulation',
+                }}
               >
                 {s.cta}
               </button>

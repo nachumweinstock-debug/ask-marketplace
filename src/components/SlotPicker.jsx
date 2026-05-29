@@ -2,6 +2,93 @@ import { useState } from 'react';
 import { TIMES, fmtTime, fmtDay, autoEndTime, sortSlots } from '../lib/slots';
 import MiniCalendar from './MiniCalendar';
 
+// ── Natural-language schedule parser ─────────────────────────────────────────
+const DAY_MAP = {
+  sunday:0, sun:0, sundays:0,
+  monday:1, mon:1, mondays:1,
+  tuesday:2, tue:2, tues:2, tuesdays:2,
+  wednesday:3, wed:3, wednesdays:3,
+  thursday:4, thu:4, thur:4, thurs:4, thursdays:4,
+  friday:5, fri:5, fridays:5,
+  saturday:6, sat:6, saturdays:6,
+};
+const WEEKDAYS = [1,2,3,4,5];
+const WEEKNIGHTS = [1,2,3,4];
+const WEEKENDS = [0,6];
+
+const MONTH_IDX = { jan:0,january:0, feb:1,february:1, mar:2,march:2, apr:3,april:3, may:4,
+  jun:5,june:5, jul:6,july:6, aug:7,august:7, sep:8,september:8, oct:9,october:9,
+  nov:10,november:10, dec:11,december:11 };
+
+function parseHHMM(str, ampm) {
+  const [hStr, mStr = '00'] = str.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr.padStart(2, '0');
+  if (ampm === 'pm' && h !== 12) h += 12;
+  if (ampm === 'am' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${m}`;
+}
+
+function parseScheduleText(text) {
+  const lower = text.toLowerCase();
+
+  // Days
+  let days = [];
+  if (/\bweekdays\b/.test(lower)) days.push(...WEEKDAYS);
+  if (/\bweeknights?\b/.test(lower)) days.push(...WEEKNIGHTS);
+  if (/\bweekends?\b/.test(lower)) days.push(...WEEKENDS);
+  for (const [word, idx] of Object.entries(DAY_MAP)) {
+    if (new RegExp(`\\b${word}\\b`).test(lower) && !days.includes(idx)) days.push(idx);
+  }
+  days = [...new Set(days)].sort();
+
+  // Time range — e.g. "8-10pm", "8pm-10pm", "8:30 to 10pm", "9am-11am"
+  let startTime = null, endTime = null;
+  const timeRx = /(\d{1,2}(?::\d{2})?)\s*(am|pm)?\s*(?:[-–to]+)\s*(\d{1,2}(?::\d{2})?)\s*(am|pm)/i;
+  const m = lower.match(timeRx);
+  if (m) {
+    const [, s, sAP, e, eAP] = m;
+    endTime = parseHHMM(e, eAP.toLowerCase());
+    const sH = parseInt(s);
+    const eH = parseInt(e);
+    // if start lacks am/pm, inherit end or guess
+    const sAmpm = sAP ? sAP.toLowerCase() : (eAP.toLowerCase() === 'pm' && sH <= eH ? 'pm' : (sH < 12 ? 'pm' : 'am'));
+    startTime = parseHHMM(s, sAmpm);
+  }
+
+  // Weeks/until
+  let weeks = 4;
+  const forWeeks = lower.match(/for\s+(?:the\s+next\s+)?(\d+)\s+weeks?/);
+  if (forWeeks) weeks = parseInt(forWeeks[1]);
+  const forMonths = lower.match(/for\s+(?:the\s+next\s+)?(\d+)\s+months?/);
+  if (forMonths) weeks = parseInt(forMonths[1]) * 4;
+
+  // "until October" / "until October 15" / "through November"
+  const untilRx = /(?:until|through|thru|till)\s+(?:the\s+end\s+of\s+)?([a-z]+)(?:\s+(\d+))?/i;
+  const um = lower.match(untilRx);
+  if (um) {
+    const mIdx = MONTH_IDX[um[1].toLowerCase()];
+    if (mIdx !== undefined) {
+      const dayNum = um[2] ? parseInt(um[2]) : null;
+      const now = new Date();
+      let yr = now.getFullYear();
+      const lastOfMonth = new Date(yr, mIdx + 1, 0);
+      if (lastOfMonth < now) yr++;
+      const endDate = dayNum ? new Date(yr, mIdx, dayNum) : new Date(yr, mIdx + 1, 0);
+      weeks = Math.max(1, Math.ceil((endDate - now) / (7 * 24 * 60 * 60 * 1000)) + 1);
+    }
+  }
+
+  return { days, startTime, endTime, weeks };
+}
+
+function describeResult({ days, startTime, endTime, weeks }) {
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if (!days.length || !startTime || !endTime) return null;
+  const dStr = days.map(d => dayNames[d]).join(', ');
+  return `Every ${dStr} · ${fmtTime(startTime)}–${fmtTime(endTime)} · ${weeks} weeks`;
+}
+
 const inputStyle = {
   width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
   padding: '10px 14px', fontSize: 13.5, outline: 'none',
@@ -41,6 +128,9 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
   const [quickWeeks, setQuickWeeks] = useState(4);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [aiText, setAiText] = useState('');
+  const [aiPreview, setAiPreview] = useState(null);
+  const [aiError, setAiError] = useState('');
 
   // Dates that already have real-date slots (show as marked in calendar)
   const existingDateSlots = existingSlots.filter(s => /^\d{4}/.test(s.date));
@@ -143,10 +233,82 @@ export default function SlotPicker({ onAdd, existingSlots = [], addLabel = '+ Ad
     setNotice('');
   }
 
+  function handleAiChange(val) {
+    setAiText(val);
+    setAiError('');
+    if (!val.trim()) { setAiPreview(null); return; }
+    const parsed = parseScheduleText(val);
+    const desc = describeResult(parsed);
+    setAiPreview(desc ? { parsed, desc } : null);
+  }
+
+  function handleAiAdd() {
+    if (!aiPreview) { setAiError('Try something like "every Sunday 8-10pm until October"'); return; }
+    const { days, startTime: s, endTime: e, weeks } = aiPreview.parsed;
+    addCandidates(
+      datesForWeekdays(days, weeks).map(date => ({ date, start_time: s, end_time: e })),
+      `Added from AI schedule: ${aiPreview.desc}`
+    );
+    setAiText('');
+    setAiPreview(null);
+    setAiError('');
+  }
+
   const ready = selectedDates.size > 0 && startTime && endTime && endTime > startTime;
 
   return (
     <div>
+      {/* ── AI scheduling ── */}
+      <div style={{
+        border: '1.5px solid #E0D9F5', borderRadius: 14, padding: 16,
+        background: 'linear-gradient(135deg,#F5F3FF,#EDE9FE)', marginBottom: 14,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+          <span style={{ fontSize: 16 }}>✨</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#5B21B6' }}>AI Scheduling</span>
+          <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>— type it, we'll build the slots</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            value={aiText}
+            onChange={e => handleAiChange(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAiAdd()}
+            placeholder='e.g. "every Sunday 8-10pm until October"'
+            style={{
+              flex: 1, border: '1.5px solid #C4B5FD', borderRadius: 10,
+              padding: '10px 14px', fontSize: 13, outline: 'none',
+              background: '#fff', color: 'var(--text)', fontFamily: 'var(--font-ui)',
+            }}
+            onFocus={e => e.target.style.borderColor = '#7C3AED'}
+            onBlur={e => e.target.style.borderColor = '#C4B5FD'}
+          />
+          <button
+            type="button"
+            onClick={handleAiAdd}
+            disabled={!aiPreview}
+            style={{
+              border: 'none', borderRadius: 10, padding: '10px 18px',
+              background: aiPreview ? '#7C3AED' : '#DDD6FE',
+              color: aiPreview ? '#fff' : '#A78BFA',
+              fontSize: 13, fontWeight: 800, cursor: aiPreview ? 'pointer' : 'default',
+              fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            Add slots
+          </button>
+        </div>
+        {aiPreview && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#5B21B6', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span>✓</span> {aiPreview.desc}
+          </div>
+        )}
+        {aiError && <div style={{ marginTop: 6, fontSize: 12, color: '#DC2626' }}>{aiError}</div>}
+        <div style={{ marginTop: 8, fontSize: 11, color: '#7C3AED', opacity: 0.7 }}>
+          Try: "Sundays and Tuesdays 9-11pm for 8 weeks" · "weeknights 8-9pm until December" · "every Friday 2-4pm until November 15"
+        </div>
+      </div>
+
       <div style={{
         border: '1px solid var(--border)', borderRadius: 14, padding: 16,
         background: 'linear-gradient(180deg,#fff,var(--cream-50))', marginBottom: 18,

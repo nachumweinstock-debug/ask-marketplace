@@ -5,6 +5,7 @@ import { randomInt } from 'crypto';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
 import { sendPasswordResetCode, sendWelcomeEmail, sendAdminNewUserNotification } from '../email.js';
+import { pushToAdmins } from '../push.js';
 import posthog from '../posthog.js';
 
 // Dummy hash used to prevent timing attacks when email doesn't exist
@@ -107,6 +108,7 @@ router.post('/signup', async (req, res) => {
     console.error('[AUTH] Welcome email failed:', err.message)
   );
   sendAdminNewUserNotification({ name: user.name, email: user.email, method: `email · ${user.university}` }).catch(() => {});
+  pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via email`, { screen: 'admin' }).catch(() => {});
 
   posthog.identify({
     distinctId: String(user.id),
@@ -305,6 +307,7 @@ router.get('/google/callback', async (req, res) => {
         ).run(profile.email.toLowerCase(), profile.name || profile.email.split('@')[0], profile.id);
         user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
         sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Google' }).catch(() => {});
+        pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Google`, { screen: 'admin' }).catch(() => {});
       }
     }
 
@@ -419,6 +422,7 @@ router.post('/apple/callback', async (req, res) => {
       ).run(finalEmail.toLowerCase(), finalName, appleId);
       user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
       sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Apple' }).catch(() => {});
+      pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Apple`, { screen: 'admin' }).catch(() => {});
     }
 
     const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
@@ -441,6 +445,119 @@ router.post('/apple/callback', async (req, res) => {
     console.error('[AUTH] Apple callback error:', err.message);
     posthog.captureException(err);
     res.redirect(`${FRONTEND}/login?error=apple_failed`);
+  }
+});
+
+// POST /auth/google/id-token — verify Google ID token from GIS/FedCM, return app JWT
+router.post('/google/id-token', async (req, res) => {
+  const { credential, redirect: redirectPath } = req.body;
+  if (!credential) return res.status(400).json({ error: 'credential required' });
+
+  try {
+    const tokenRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    const payload = await tokenRes.json();
+
+    if (!tokenRes.ok || payload.error_description || payload.error) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Token audience mismatch' });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || payload.given_name || email?.split('@')[0];
+    if (!email) return res.status(400).json({ error: 'No email in Google token' });
+
+    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId);
+    if (!user) {
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+      if (user) {
+        db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(googleId, user.id);
+      } else {
+        const ins = db.prepare(
+          "INSERT INTO users (email, name, password, role, email_verified, google_id) VALUES (?, ?, '', 'student', 1, ?)"
+        ).run(email.toLowerCase(), name, googleId);
+        user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(ins.lastInsertRowid);
+        sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Google (GIS)' }).catch(() => {});
+        pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Google`, { screen: 'admin' }).catch(() => {});
+      }
+    }
+
+    const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+    const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
+
+    posthog.identify({ distinctId: String(fullUser.id), properties: { $set: { name: fullUser.name, email: fullUser.email, role: fullUser.role } } });
+    posthog.capture({ distinctId: String(fullUser.id), event: 'google_gis_signin_completed', properties: { email: fullUser.email, role: fullUser.role } });
+
+    console.log(`[AUTH] Google GIS login: ${fullUser.email}`);
+    res.json({ token, user: fullUser });
+  } catch (err) {
+    console.error('[AUTH] Google ID token error:', err.message);
+    res.status(400).json({ error: 'Google sign-in failed' });
+  }
+});
+
+// POST /auth/device-token — register an APNs device token for push notifications
+router.post('/device-token', requireAuth, (req, res) => {
+  const { token, platform = 'ios' } = req.body;
+  if (!token) return res.status(400).json({ error: 'token required' });
+  db.prepare(
+    'INSERT OR REPLACE INTO device_tokens (user_id, token, platform) VALUES (?, ?, ?)'
+  ).run(req.user.id, token, platform);
+  res.json({ ok: true });
+});
+
+// POST /auth/device-token/remove — remove device token on logout
+router.post('/device-token/remove', requireAuth, (req, res) => {
+  const { token } = req.body;
+  if (token) db.prepare('DELETE FROM device_tokens WHERE user_id = ? AND token = ?').run(req.user.id, token);
+  res.json({ ok: true });
+});
+
+// POST /auth/apple/native — identity token from the native iOS Sign in with Apple SDK
+router.post('/apple/native', async (req, res) => {
+  const { identityToken, user: appleUser } = req.body;
+  if (!identityToken) return res.status(400).json({ error: 'identityToken required' });
+
+  try {
+    const [, payload64] = identityToken.split('.');
+    const payload = JSON.parse(Buffer.from(payload64, 'base64url').toString());
+
+    if (payload.iss !== 'https://appleid.apple.com') return res.status(400).json({ error: 'Invalid token issuer' });
+    if (payload.aud !== 'live.uask.app') return res.status(400).json({ error: 'Invalid token audience' });
+    if (payload.exp < Date.now() / 1000) return res.status(400).json({ error: 'Token expired' });
+
+    const appleId = payload.sub;
+    const email   = payload.email || appleUser?.email;
+    const name    = appleUser?.name?.trim() || (email ? email.split('@')[0] : 'Apple User');
+
+    let user = db.prepare('SELECT * FROM users WHERE apple_id = ?').get(appleId);
+    if (!user && email) {
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+      if (user) db.prepare('UPDATE users SET apple_id = ? WHERE id = ?').run(appleId, user.id);
+    }
+    if (!user) {
+      const finalEmail = email || `apple.${appleId}@privaterelay.appleid.com`;
+      const r = db.prepare(
+        "INSERT INTO users (email, name, password, role, email_verified, apple_id) VALUES (?, ?, '', 'student', 1, ?)"
+      ).run(finalEmail.toLowerCase(), name, appleId);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
+      sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Apple (native)' }).catch(() => {});
+      pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Apple`, { screen: 'admin' }).catch(() => {});
+    }
+
+    const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
+    const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
+
+    posthog.identify({ distinctId: String(fullUser.id), properties: { $set: { name: fullUser.name, email: fullUser.email, role: fullUser.role } } });
+    posthog.capture({ distinctId: String(fullUser.id), event: 'apple_native_signin_completed', properties: { email: fullUser.email, role: fullUser.role } });
+
+    console.log(`[AUTH] Apple native login: ${fullUser.email}`);
+    res.json({ token, user: fullUser });
+  } catch (err) {
+    console.error('[AUTH] Apple native error:', err.message);
+    res.status(400).json({ error: 'Apple Sign In failed' });
   }
 });
 

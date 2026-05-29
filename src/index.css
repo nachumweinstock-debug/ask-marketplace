@@ -73,6 +73,40 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── iOS / Capacitor hardening ───────────────────────────── */
+html {
+  /* Prevents double-tap zoom on buttons/links (removes 300ms delay) */
+  touch-action: manipulation;
+}
+body {
+  /* Stop the full-page rubber-band overscroll exposing the white shell */
+  overscroll-behavior-y: none;
+  /* No text highlight flash on tap */
+  -webkit-tap-highlight-color: transparent;
+  /* Don't let users accidentally select text while scrolling */
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Re-enable selection only where it makes sense */
+p, span, h1, h2, h3, h4, h5, h6, li, td, th, blockquote,
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* Inputs must be ≥ 16px or iOS auto-zooms on focus */
+input, textarea, select {
+  font-size: max(16px, 1em);
+}
+/* Scrollable containers get momentum scroll on iOS */
+.filter-scroll,
+.overflow-y-auto,
+[style*="overflow-y: auto"],
+[style*="overflow-y:auto"],
+[style*="overflow: auto"],
+[style*="overflowY: auto"] {
+  -webkit-overflow-scrolling: touch;
+}
+
 html,
 body,
 #root {
@@ -212,7 +246,9 @@ body {
   padding: 34px 40px 84px;
 }
 @media (max-width: 860px) {
-  .page { padding: 24px 20px 100px; }
+  .page {
+    padding: 24px 20px calc(100px + env(safe-area-inset-bottom, 0px));
+  }
   .support-page-grid { grid-template-columns: 1fr !important; }
   .slot-quick-grid { grid-template-columns: 1fr !important; }
 }
@@ -1229,13 +1265,13 @@ body {
 
 /* ── Floating support button — clear the mobile bottom bar ── */
 @media (max-width: 860px) {
-  .floating-help-btn   { bottom: 74px !important; }
-  .floating-support-panel { bottom: 134px !important; }
+  .floating-help-btn   { bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important; }
+  .floating-support-panel { bottom: calc(134px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 /* ── Footer — clear the mobile bottom bar ───────────────── */
 @media (max-width: 860px) {
-  .app-footer { padding-bottom: 76px !important; }
+  .app-footer { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 @media (max-width: 700px) {

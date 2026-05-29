@@ -32,7 +32,7 @@ const CAMPUS_OPTIONS = [
 
 const BASE_FILTERS = [
   { id: 'all',          label: 'All'           },
-  { id: 'tutor',        label: 'Instructors'   },
+  { id: 'tutor',        label: 'Tutors'        },
   { id: 'fitness',      label: 'Fitness'       },
   { id: 'barber',       label: 'Barbers'       },
   { id: 'languages',    label: 'Languages'     },
@@ -86,26 +86,11 @@ export default function Browse() {
   const [editModal, setEditModal] = useState(null); // { profileId, isAdminEdit, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
-  const [siteSalePercent, setSiteSalePercent] = useState(0);
-  const [siteSaleBusy, setSiteSaleBusy] = useState(false);
-  const [surgePricingPercent, setSurgePricingPercent] = useState(0);
-  const [surgeBusy, setSurgeBusy] = useState(false);
-
   useEffect(() => {
     api.get('/providers/categories')
       .then(({ data }) => setCustomCats(data))
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!user?.is_admin) return;
-    api.get('/admin/site-sale')
-      .then(({ data }) => setSiteSalePercent(Number(data.first_time_discount_percent || 0)))
-      .catch(() => {});
-    api.get('/admin/surge-pricing')
-      .then(({ data }) => setSurgePricingPercent(Number(data.surge_percent || 0)))
-      .catch(() => {});
-  }, [user?.is_admin]);
 
   useEffect(() => {
     if (!user) { setSavedIds(new Set()); return; }
@@ -190,36 +175,6 @@ export default function Browse() {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function toggleSitewideSale() {
-    if (!user?.is_admin || siteSaleBusy) return;
-    setSiteSaleBusy(true);
-    try {
-      const next = siteSalePercent === 15 ? 0 : 15;
-      const { data } = await api.patch('/admin/site-sale', { first_time_discount_percent: next });
-      setSiteSalePercent(Number(data.first_time_discount_percent || 0));
-      fetchProviders();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Could not update site-wide sale');
-    } finally {
-      setSiteSaleBusy(false);
-    }
-  }
-
-  async function toggleSurgePricing() {
-    if (!user?.is_admin || surgeBusy) return;
-    setSurgeBusy(true);
-    try {
-      const next = surgePricingPercent === 15 ? 0 : 15;
-      const { data } = await api.patch('/admin/surge-pricing', { surge_percent: next });
-      setSurgePricingPercent(Number(data.surge_percent || 0));
-      fetchProviders();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Could not update surge pricing');
-    } finally {
-      setSurgeBusy(false);
     }
   }
 
@@ -360,7 +315,7 @@ export default function Browse() {
 
   const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
-  const sitewideSaleActive = siteSalePercent === 15 || providers.some(p => p.first_time_discount_scope === 'sitewide');
+  const sitewideSaleActive = providers.some(p => p.first_time_discount_scope === 'sitewide');
   const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
   const emptyTitle = campusName
     ? `No ${campusName} listings yet.`
@@ -416,102 +371,6 @@ export default function Browse() {
           ))}
         </div>
       </div>
-
-      {user?.is_admin && (
-        <div style={{
-          marginBottom: 16, padding: '14px 16px',
-          border: '1px solid #E7E0D6',
-          borderRadius: 12,
-          background: '#fff',
-          boxShadow: '0 8px 24px rgba(23,19,15,0.05)',
-        }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.9px', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 10 }}>
-            Pricing Controls
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {/* Sale control */}
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: 10,
-              padding: '12px 14px', borderRadius: 10,
-              border: `1.5px solid ${siteSalePercent === 15 ? '#14B8A6' : 'var(--border)'}`,
-              background: siteSalePercent === 15
-                ? 'linear-gradient(135deg, #ECFEFF 0%, #F0FDFA 100%)'
-                : 'var(--bg)',
-              transition: 'all .2s',
-            }}>
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 950, color: siteSalePercent === 15 ? '#0F766E' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {siteSalePercent === 15 ? '✦ Sale is LIVE' : 'Sale Mode'}
-                  {siteSalePercent === 15 && (
-                    <span className="pricing-dot-live" />
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  {siteSalePercent === 15 ? '15% off applied sitewide.' : 'Launch a 15% discount for all students.'}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={toggleSitewideSale}
-                disabled={siteSaleBusy}
-                style={{
-                  border: 'none', borderRadius: 999, padding: '9px 14px',
-                  background: siteSalePercent === 15 ? '#17130F' : 'linear-gradient(135deg, #0891B2, #0F766E)',
-                  color: '#fff', fontSize: 12.5, fontWeight: 950,
-                  cursor: siteSaleBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)',
-                  boxShadow: siteSalePercent === 15 ? 'none' : '0 8px 20px rgba(15,118,110,0.28)',
-                  width: '100%', opacity: siteSaleBusy ? 0.7 : 1,
-                }}
-              >
-                {siteSaleBusy ? 'Saving...' : siteSalePercent === 15 ? 'End sale' : 'Launch 15% sale'}
-              </button>
-            </div>
-
-            {/* Surge control */}
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: 10,
-              padding: '12px 14px', borderRadius: 10,
-              border: `1.5px solid ${surgePricingPercent === 15 ? '#F97316' : 'var(--border)'}`,
-              background: surgePricingPercent === 15
-                ? 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)'
-                : 'var(--bg)',
-              transition: 'all .2s',
-            }}>
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 950, color: surgePricingPercent === 15 ? '#C2410C' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {surgePricingPercent === 15 ? '⚡ Surge is LIVE' : 'Surge Pricing'}
-                  {surgePricingPercent === 15 && (
-                    <span className="pricing-dot-surge" />
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  {surgePricingPercent === 15 ? '+15% applied — tutors are in demand.' : 'Raise all prices +15% during busy periods.'}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={toggleSurgePricing}
-                disabled={surgeBusy}
-                style={{
-                  border: 'none', borderRadius: 999, padding: '9px 14px',
-                  background: surgePricingPercent === 15 ? '#17130F' : 'linear-gradient(135deg, #F97316, #DC2626)',
-                  color: '#fff', fontSize: 12.5, fontWeight: 950,
-                  cursor: surgeBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-ui)',
-                  boxShadow: surgePricingPercent === 15 ? 'none' : '0 8px 20px rgba(249,115,22,0.28)',
-                  width: '100%', opacity: surgeBusy ? 0.7 : 1,
-                }}
-              >
-                {surgeBusy ? 'Saving...' : surgePricingPercent === 15 ? 'End surge' : 'Launch surge +15%'}
-              </button>
-            </div>
-          </div>
-          {siteSalePercent === 15 && surgePricingPercent === 15 && (
-            <div style={{ marginTop: 10, fontSize: 11, color: '#7C3AED', fontWeight: 700, padding: '6px 10px', background: '#F5F3FF', borderRadius: 7, border: '1px solid #DDD6FE' }}>
-              Both active — tutors earn surge premium, students still get the 15% sale discount from the surged price.
-            </div>
-          )}
-        </div>
-      )}
 
       {sitewideSaleActive && (
         <div className="sale-ribbon" style={{
@@ -571,7 +430,7 @@ export default function Browse() {
           </div>
           <input
             type="text"
-            placeholder="Search instructors, barbers, fitness..."
+            placeholder="Search tutors, barbers, fitness..."
             value={search}
             onChange={e => handleSearchInput(e.target.value)}
             style={{
@@ -871,14 +730,14 @@ export default function Browse() {
       )}
 
       <FAQAccordion
-        title="Instructor search FAQ"
+        title="Tutor search FAQ"
         schemaId="browse-faq-schema"
         faqs={[
-          ['How do I find the right instructor?', 'Use subject, price, rating, format, and availability filters to narrow the marketplace, then open profiles to compare schedule and reviews.'],
-          ['Can I message before booking?', 'Yes. Open an instructor profile and message them before requesting a session.'],
-          ['Can I book online sessions?', 'Yes. Use the Online filter to find instructors who offer Zoom or remote sessions.'],
-          ['Why do no instructors match my filters?', 'Some filters can be restrictive together. Try widening price or switching availability to any.'],
-          ['Can I save instructors for later?', 'Yes. Tap the heart on a card or profile to save instructors, then open Saved from your account.'],
+          ['How do I find the right tutor?', 'Use subject, price, rating, format, and availability filters to narrow the marketplace, then open profiles to compare schedule and reviews.'],
+          ['Can I message before booking?', 'Yes. Open a tutor profile and message them before requesting a session.'],
+          ['Can I book online sessions?', 'Yes. Use the Online filter to find tutors who offer Zoom or remote sessions.'],
+          ['Why do no tutors match my filters?', 'Some filters can be restrictive together. Try widening price or switching availability to any.'],
+          ['Can I save tutors for later?', 'Yes. Tap the heart on a card or profile to save tutors, then open Saved from your account.'],
         ]}
       />
 

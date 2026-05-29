@@ -12,6 +12,7 @@
 import db from './db.js';
 import { smsAppointmentReminder, smsReviewReminder } from './sms.js';
 import { sendAppointmentReminderEmail, sendReviewReminderEmail, sendDmNotification, sendNoAvailabilityReminderEmail, sendHangoutHostReminder } from './email.js';
+import { pushAppointmentReminder } from './push.js';
 
 // Returns "YYYY-MM-DD HH:MM" in Eastern time, offset by `mins` minutes from now
 function easternOffset(mins = 0) {
@@ -26,6 +27,7 @@ async function sendAppointmentReminders() {
 
   const bookings = db.prepare(`
     SELECT b.id, b.student_id, b.provider_id,
+           pp.user_id AS provider_user_id,
            a.date, a.start_time, a.end_time,
            su.name  AS student_name,  su.phone  AS student_phone,  su.email  AS student_email,
            pu.name  AS provider_name, pu.phone  AS provider_phone, pu.email  AS provider_email
@@ -43,12 +45,14 @@ async function sendAppointmentReminders() {
   for (const b of bookings) {
     try {
       await Promise.allSettled([
-        // Student — SMS + email
+        // Student — SMS + email + push
         smsAppointmentReminder({ phone: b.student_phone, otherName: b.provider_name, date: b.date, startTime: b.start_time, role: 'student' }),
         sendAppointmentReminderEmail({ toEmail: b.student_email, toName: b.student_name, otherName: b.provider_name, date: b.date, startTime: b.start_time, endTime: b.end_time, role: 'student', dashboardUrl: 'https://uask.live/dashboard/student' }),
-        // Provider — SMS + email
+        pushAppointmentReminder(b.student_id, { otherName: b.provider_name, date: b.date, startTime: b.start_time }),
+        // Provider — SMS + email + push
         smsAppointmentReminder({ phone: b.provider_phone, otherName: b.student_name, date: b.date, startTime: b.start_time, role: 'provider' }),
         sendAppointmentReminderEmail({ toEmail: b.provider_email, toName: b.provider_name, otherName: b.student_name, date: b.date, startTime: b.start_time, endTime: b.end_time, role: 'provider', dashboardUrl: 'https://uask.live/dashboard/provider' }),
+        pushAppointmentReminder(b.provider_user_id, { otherName: b.student_name, date: b.date, startTime: b.start_time }),
       ]);
       db.prepare('UPDATE bookings SET sms_reminder_sent = 1 WHERE id = ?').run(b.id);
       console.log(`[REMINDER] 1hr-before sent for booking ${b.id}`);

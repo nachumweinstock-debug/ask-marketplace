@@ -96,13 +96,16 @@ export default function Chat() {
   return (
     <div className="chat-container" style={{
       maxWidth: 760,
-      height: isMobile ? 'calc(100dvh - 132px)' : 'calc(100vh - 190px)',
+      height: isMobile
+        ? 'calc(100dvh - 132px - env(safe-area-inset-bottom, 0px))'
+        : 'calc(100vh - 190px)',
       minHeight: isMobile ? 520 : 560,
       margin: '0 auto',
       padding: isMobile ? '12px 12px 0' : '24px 20px 0',
       display: 'flex',
       flexDirection: 'column',
       boxSizing: 'border-box',
+      overscrollBehavior: 'none',
     }}>
 
       {/* Header */}
@@ -144,6 +147,8 @@ export default function Chat() {
       <div style={{
         flex: 1,
         overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,

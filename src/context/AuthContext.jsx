@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '../lib/supabase';
 import api from '../api';
 
@@ -94,6 +96,30 @@ export function AuthProvider({ children }) {
 
   async function refreshUser() {
     await syncUser(true);
+  }
+
+  // Request push permission and register token whenever a user session is active
+  useEffect(() => {
+    if (user) registerPush();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  async function registerPush() {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      const { receive } = await PushNotifications.requestPermissions();
+      if (receive !== 'granted') return;
+      await PushNotifications.register();
+      PushNotifications.addListener('registration', ({ value: token }) => {
+        api.post('/auth/device-token', { token, platform: 'ios' }).catch(() => {});
+      });
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        // App is in foreground — notification arrives silently, no action needed
+        console.log('[PUSH] foreground:', notification.title);
+      });
+    } catch (err) {
+      console.warn('[PUSH] registration failed:', err);
+    }
   }
 
   async function signOut() {
