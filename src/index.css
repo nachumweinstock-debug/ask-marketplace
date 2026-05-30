@@ -74,15 +74,12 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── iOS / Capacitor hardening ───────────────────────────── */
-/* Scoped to interactive elements only — setting touch-action on html/body
-   breaks trackpad scroll in Chrome Desktop PWA (treats trackpad as touch) */
-button, a, [role="button"], input[type="submit"], input[type="button"],
-input[type="reset"], label, select {
-  touch-action: manipulation;
+/* touch-action only on actual touch devices — desktop trackpads don't need it
+   and it breaks Mac trackpad scroll in Chrome Desktop PWA */
+@media (hover: none) and (pointer: coarse) {
+  html { touch-action: manipulation; }
 }
 body {
-  /* Stop the full-page rubber-band overscroll exposing the white shell */
-  overscroll-behavior-y: none;
   /* No text highlight flash on tap */
   -webkit-tap-highlight-color: transparent;
   /* Don't let users accidentally select text while scrolling */

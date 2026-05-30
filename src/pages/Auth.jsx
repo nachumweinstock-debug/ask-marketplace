@@ -97,40 +97,47 @@ function SocialButtons({ redirect }) {
     setGoogleError('');
     setGoogleLoading(true);
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    // Clear any stale result before starting
+    localStorage.removeItem('ask_oauth_result');
 
-    // Use Google Identity Services (GIS) with FedCM — works in Chrome Desktop PWA
-    // because it's a JS callback, not a navigation or popup.
-    if (clientId && window.google?.accounts?.id) {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async ({ credential }) => {
-          try {
-            const { data } = await api.post('/auth/google/id-token', { credential, redirect });
-            await loginWithToken(data.token, data.user);
-            navigate(redirect || (data.user?.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'), { replace: true });
-          } catch (err) {
-            setGoogleError(err.response?.data?.error || 'Google sign-in failed — please try again.');
-            setGoogleLoading(false);
-          }
-        },
-        use_fedcm_for_prompt: true,
-      });
+    // Open OAuth in a new window/tab.
+    // In Chrome Desktop PWA: out-of-scope URL opens in a regular Chrome browser tab.
+    // localStorage IS shared across browsing context groups (unlike BroadcastChannel),
+    // so the callback can write the token there and this window will pick it up.
+    const authWin = window.open(googleUrl, '_blank');
 
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed()) {
-          // FedCM unavailable — fall back to redirect OAuth
-          setGoogleLoading(false);
-          window.location.href = googleUrl;
-        } else if (notification.isSkippedMoment() || notification.isDismissedMoment()) {
-          setGoogleLoading(false);
-        }
-      });
+    if (!authWin) {
+      // Popup blocked — navigate current window (works in regular browser, not PWA)
+      window.location.href = googleUrl;
       return;
     }
 
-    // Fallback: redirect-based OAuth (GIS not loaded yet)
-    window.location.href = googleUrl;
+    // Poll localStorage every 500ms for the token written by AuthCallback
+    const pollId = setInterval(() => {
+      try {
+        const raw = localStorage.getItem('ask_oauth_result');
+        if (raw) {
+          localStorage.removeItem('ask_oauth_result');
+          clearInterval(pollId);
+          const { token: oauthToken, dest } = JSON.parse(raw);
+          setGoogleLoading(false);
+          if (oauthToken) {
+            loginWithToken(oauthToken, null, { skipMe: false }).then(() => {
+              navigate(dest || redirect || '/dashboard/student', { replace: true });
+            });
+          } else {
+            setGoogleError('Google sign-in failed — please try again.');
+          }
+          try { if (!authWin.closed) authWin.close(); } catch {}
+          return;
+        }
+      } catch {}
+      // Stop polling if user closed the window manually
+      try { if (authWin.closed) { clearInterval(pollId); setGoogleLoading(false); } } catch {}
+    }, 500);
+
+    // Safety timeout: 5 minutes
+    setTimeout(() => { clearInterval(pollId); setGoogleLoading(false); }, 300_000);
   }
 
   const btnBase = {

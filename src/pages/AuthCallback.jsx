@@ -16,25 +16,26 @@ const inputStyle = {
 };
 
 function finishOAuth(token, dest, navigate) {
-  // Broadcast to any same-origin PWA windows (works across PWA + browser contexts).
+  // Write to localStorage — shared across ALL same-origin windows including
+  // Chrome PWA and regular browser tabs (unlike BroadcastChannel which is
+  // browsing-context-group scoped and can't cross PWA ↔ browser boundaries).
   try {
-    const ch = new BroadcastChannel('ask_oauth');
-    ch.postMessage({ type: 'ask_oauth_success', token, dest });
-    ch.close();
+    localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest, ts: Date.now() }));
   } catch {}
 
-  // Belt-and-suspenders: also postMessage to opener if Chrome preserved it.
+  // Also try BroadcastChannel + opener postMessage as belt-and-suspenders
+  try { const ch = new BroadcastChannel('ask_oauth'); ch.postMessage({ type: 'ask_oauth_success', token, dest }); ch.close(); } catch {}
   if (window.opener && !window.opener.closed) {
     try { window.opener.postMessage({ type: 'ask_oauth_success', token, dest }, window.location.origin); } catch {}
     window.close();
     return;
   }
 
-  // Try to close this window/tab (succeeds when opened via window.open).
+  // Close this tab/window (opened as popup or new tab for OAuth)
   window.close();
 
-  // If close didn't work (this IS the main window), navigate directly.
-  setTimeout(() => navigate(dest, { replace: true }), 50);
+  // If close didn't work, this IS the main window — navigate directly
+  setTimeout(() => navigate(dest || '/dashboard/student', { replace: true }), 50);
 }
 
 export default function AuthCallback() {
@@ -58,11 +59,8 @@ export default function AuthCallback() {
       const error = params.get('error');
 
       if (error || !rawToken) {
-        try {
-          const ch = new BroadcastChannel('ask_oauth');
-          ch.postMessage({ type: 'ask_oauth_success', token: null, dest: null });
-          ch.close();
-        } catch {}
+        try { localStorage.setItem('ask_oauth_result', JSON.stringify({ token: null, dest: null, ts: Date.now() })); } catch {}
+        try { const ch = new BroadcastChannel('ask_oauth'); ch.postMessage({ type: 'ask_oauth_success', token: null, dest: null }); ch.close(); } catch {}
         if (window.opener && !window.opener.closed) {
           try { window.opener.postMessage({ type: 'ask_oauth_success', token: null, dest: null }, window.location.origin); } catch {}
           window.close();
