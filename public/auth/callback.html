@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ASK – Signing in…</title>
+<style>
+*{margin:0;padding:0}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FAF7F2}
+.s{width:28px;height:28px;border:2.5px solid #17130F;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="s"></div>
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  var token = p.get('token');
+  var next  = p.get('next') || '';
+  var dest  = (next && next.charAt(0) === '/') ? next : '/dashboard/student';
+
+  if (!token) { location.replace('/login'); return; }
+
+  // Store token — AuthContext on the destination page reads this on mount.
+  try { localStorage.setItem('ask_token', token); } catch(e) {}
+  // Write oauth result so any PWA polling loop also picks it up.
+  try { localStorage.setItem('ask_oauth_result', JSON.stringify({token:token,dest:dest,ts:Date.now()})); } catch(e) {}
+
+  // If a parent window (PWA) opened this tab, navigate it directly.
+  if (window.opener && !window.opener.closed) {
+    try { window.opener.location.href = dest; } catch(e) {}
+  }
+
+  // Always navigate this window.
+  location.replace(dest);
+})();
+</script>
+</body>
+</html>
