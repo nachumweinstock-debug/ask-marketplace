@@ -15,28 +15,22 @@ const inputStyle = {
   boxSizing: 'border-box', transition: 'border-color .15s',
 };
 
-// Navigate the right window to `dest`:
-// - If opened as a popup from a parent window (e.g. PWA opened a tab): navigate the
-//   opener directly (same-origin so this is allowed) and close this tab.
-// - Otherwise this IS the main/PWA window — just hard-navigate it.
 function finishOAuth(token, dest) {
   const target = dest || '/dashboard/student';
 
-  // Always write to localStorage so any parallel polling loop picks it up.
+  // Write for any polling loops (e.g. the PWA login page waiting for this result).
   try {
     localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest: target, ts: Date.now() }));
   } catch {}
 
+  // If a parent window (e.g. PWA) opened this tab, navigate it directly as a bonus.
+  // Do NOT return or try window.close() — Chrome blocks close() after cross-origin
+  // redirects, which would leave this tab showing the spinner forever.
   if (window.opener && !window.opener.closed) {
-    try {
-      // Same-origin: directly navigate the opener (PWA window) to the dashboard.
-      window.opener.location.href = target;
-    } catch {}
-    setTimeout(() => window.close(), 150);
-    return;
+    try { window.opener.location.href = target; } catch {}
   }
 
-  // This IS the main window (or opener was cross-origin / already closed).
+  // Always navigate this window. Works whether this is a popup tab or the main PWA window.
   window.location.href = target;
 }
 
@@ -54,18 +48,28 @@ export default function AuthCallback() {
   const [needsPhone, setNeedsPhone] = useState(false);
 
   useEffect(() => {
+    const rawToken = params.get('token');
+    const next     = params.get('next') || '';
+
+    // Hard safety net: if handle() throws or hangs for any reason, navigate after 3s.
+    const bail = setTimeout(() => {
+      if (rawToken) {
+        try { localStorage.setItem('ask_token', rawToken); } catch {}
+        window.location.href = next || '/dashboard/student';
+      } else {
+        window.location.href = '/login';
+      }
+    }, 3000);
+
     async function handle() {
-      const rawToken = params.get('token');
-      const next     = params.get('next') || '';
-      const isNew    = params.get('is_new') === '1';
-      const error    = params.get('error');
+      const isNew = params.get('is_new') === '1';
+      const error = params.get('error');
 
       if (error || !rawToken) {
+        clearTimeout(bail);
         try { localStorage.setItem('ask_oauth_result', JSON.stringify({ token: null, dest: null, ts: Date.now() })); } catch {}
         if (window.opener && !window.opener.closed) {
-          try { window.opener.postMessage({ type: 'ask_oauth_success', token: null, dest: null }, window.location.origin); } catch {}
-          setTimeout(() => window.close(), 100);
-          return;
+          try { window.opener.location.href = `/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`; } catch {}
         }
         window.location.href = `/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`;
         return;
@@ -73,12 +77,14 @@ export default function AuthCallback() {
 
       const decoded = parseJwt(rawToken);
       // Store token immediately — no network call needed for routing decisions.
-      // AuthContext will fetch the full user record from /auth/me on the destination page.
+      // AuthContext fetches the full user record from /auth/me on the destination page.
       await loginWithToken(rawToken, decoded ? { ...decoded } : null, { skipMe: true });
       setToken(rawToken);
 
       const destination = next || (decoded?.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
       setDest(destination);
+
+      clearTimeout(bail);
 
       if (isNew) {
         // Brand-new Google OAuth users never have a phone on file.
@@ -88,7 +94,14 @@ export default function AuthCallback() {
         finishOAuth(rawToken, destination);
       }
     }
-    handle();
+
+    handle().catch(() => {
+      clearTimeout(bail);
+      try { localStorage.setItem('ask_token', rawToken); } catch {}
+      window.location.href = next || '/dashboard/student';
+    });
+
+    return () => clearTimeout(bail);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTosAccept(e) {
