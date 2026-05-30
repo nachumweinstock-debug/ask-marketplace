@@ -50,7 +50,7 @@ api.interceptors.response.use(
       if (ourToken) {
         clearToken();
         // Redirect to login unless we're already on an auth page
-        const onAuthPage = /^\/(login|signup|forgot-password)/.test(window.location.pathname);
+        const onAuthPage = /^\/(login|signup|forgot-password|auth-callback)/.test(window.location.pathname);
         if (!onAuthPage) window.location.href = '/login';
         return Promise.reject(error);
       }

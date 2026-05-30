@@ -329,7 +329,7 @@ router.get('/google/callback', async (req, res) => {
       properties: { is_new_user: isNewUser, email: fullUser.email, role: fullUser.role },
     });
 
-    res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}${newFlag}`);
+    res.redirect(`${FRONTEND}/auth-callback?token=${token}${next}${newFlag}`);
   } catch (err) {
     console.error('[AUTH] Google callback error:', err.message);
     posthog.captureException(err);
@@ -443,7 +443,7 @@ router.post('/apple/callback', async (req, res) => {
       properties: { is_new_user: !user.apple_id, email: fullUser.email, role: fullUser.role },
     });
 
-    res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);
+    res.redirect(`${FRONTEND}/auth-callback?token=${token}${next}`);
   } catch (err) {
     console.error('[AUTH] Apple callback error:', err.message);
     posthog.captureException(err);
