@@ -74,8 +74,10 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── iOS / Capacitor hardening ───────────────────────────── */
-html {
-  /* Prevents double-tap zoom on buttons/links (removes 300ms delay) */
+/* Scoped to interactive elements only — setting touch-action on html/body
+   breaks trackpad scroll in Chrome Desktop PWA (treats trackpad as touch) */
+button, a, [role="button"], input[type="submit"], input[type="button"],
+input[type="reset"], label, select {
   touch-action: manipulation;
 }
 body {
