@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
@@ -15,29 +15,34 @@ const inputStyle = {
   boxSizing: 'border-box', transition: 'border-color .15s',
 };
 
+// Navigate the right window to `dest`:
+// - If opened as a popup from a parent window (e.g. PWA opened a tab): navigate the
+//   opener directly (same-origin so this is allowed) and close this tab.
+// - Otherwise this IS the main/PWA window — just hard-navigate it.
 function finishOAuth(token, dest) {
-  // Write to localStorage so any polling loop (in the opener PWA window) picks it up
+  const target = dest || '/dashboard/student';
+
+  // Always write to localStorage so any parallel polling loop picks it up.
   try {
-    localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest, ts: Date.now() }));
+    localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest: target, ts: Date.now() }));
   } catch {}
 
-  // If opened as a popup/tab from a parent window, notify it and close
   if (window.opener && !window.opener.closed) {
-    try { window.opener.postMessage({ type: 'ask_oauth_success', token, dest }, window.location.origin); } catch {}
-    // Give the message time to arrive before closing
-    setTimeout(() => window.close(), 100);
+    try {
+      // Same-origin: directly navigate the opener (PWA window) to the dashboard.
+      window.opener.location.href = target;
+    } catch {}
+    setTimeout(() => window.close(), 150);
     return;
   }
 
-  // This IS the main window (or a tab that can't be closed).
-  // Hard-navigate to the destination — works in any context including Chrome PWA.
-  window.location.href = dest || '/dashboard/student';
+  // This IS the main window (or opener was cross-origin / already closed).
+  window.location.href = target;
 }
 
 export default function AuthCallback() {
   const [params] = useSearchParams();
   const { loginWithToken } = useAuth();
-  const navigate = useNavigate();
 
   const [step, setStep]       = useState('loading'); // 'loading' | 'tos' | 'phone' | 'done'
   const [dest, setDest]       = useState('/dashboard/student');
@@ -51,8 +56,9 @@ export default function AuthCallback() {
   useEffect(() => {
     async function handle() {
       const rawToken = params.get('token');
-      const next  = params.get('next') || '';
-      const error = params.get('error');
+      const next     = params.get('next') || '';
+      const isNew    = params.get('is_new') === '1';
+      const error    = params.get('error');
 
       if (error || !rawToken) {
         try { localStorage.setItem('ask_oauth_result', JSON.stringify({ token: null, dest: null, ts: Date.now() })); } catch {}
@@ -66,27 +72,20 @@ export default function AuthCallback() {
       }
 
       const decoded = parseJwt(rawToken);
+      // Store token immediately — no network call needed for routing decisions.
+      // AuthContext will fetch the full user record from /auth/me on the destination page.
       await loginWithToken(rawToken, decoded ? { ...decoded } : null, { skipMe: true });
       setToken(rawToken);
 
-      // Fetch full user — only prompt phone for brand-new accounts (created <60s ago)
-      // 10-second timeout prevents infinite spinner if Railway is slow
-      try {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 10000);
-        const { data: user } = await api.get('/auth/me', { signal: controller.signal });
-        clearTimeout(tid);
-        const destination = next || (user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
-        const isNew = user.created_at && (Date.now() - new Date(user.created_at).getTime() < 60000);
-        setDest(destination);
-        if (isNew) {
-          setNeedsPhone(!user.phone);
-          setStep('tos');
-        } else {
-          finishOAuth(rawToken, destination);
-        }
-      } catch {
-        finishOAuth(rawToken, next || '/dashboard/student');
+      const destination = next || (decoded?.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
+      setDest(destination);
+
+      if (isNew) {
+        // Brand-new Google OAuth users never have a phone on file.
+        setNeedsPhone(true);
+        setStep('tos');
+      } else {
+        finishOAuth(rawToken, destination);
       }
     }
     handle();
@@ -97,7 +96,7 @@ export default function AuthCallback() {
     if (!tosChecked) { setTosError(true); return; }
     setTosError(false);
     if (needsPhone) setStep('phone');
-    else finishOAuth(token, dest, navigate);
+    else finishOAuth(token, dest);
   }
 
   async function handlePhoneSubmit(e) {
@@ -106,7 +105,7 @@ export default function AuthCallback() {
       setSaving(true);
       try { await api.put('/account', { phone: phone.trim() }); } catch {}
     }
-    finishOAuth(token, dest, navigate);
+    finishOAuth(token, dest);
   }
 
   if (step === 'tos') return (
@@ -170,7 +169,7 @@ export default function AuthCallback() {
     </div>
   );
 
-  // Phone prompt — shown for Google users without a phone on file
+  // Phone prompt — shown for new Google users without a phone on file
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
@@ -210,7 +209,7 @@ export default function AuthCallback() {
             }}>
               {saving ? 'Saving...' : 'Save & continue'}
             </button>
-            <button type="button" onClick={() => navigate(dest, { replace: true })} style={{
+            <button type="button" onClick={() => finishOAuth(token, dest)} style={{
               width: '100%', background: 'none', border: 'none',
               color: 'var(--muted)', fontSize: 13, cursor: 'pointer',
               fontFamily: 'var(--font-ui)', padding: '6px',

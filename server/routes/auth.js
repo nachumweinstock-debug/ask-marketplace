@@ -295,6 +295,7 @@ router.get('/google/callback', async (req, res) => {
 
     // Find or create user
     let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
+    let isNewUser = false;
     if (!user) {
       user = db.prepare('SELECT * FROM users WHERE email = ?').get(profile.email.toLowerCase());
       if (user) {
@@ -302,6 +303,7 @@ router.get('/google/callback', async (req, res) => {
         db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(profile.id, user.id);
       } else {
         // New user — password '' means OAuth-only (login handler rejects empty passwords)
+        isNewUser = true;
         const r = db.prepare(
           "INSERT INTO users (email, name, password, role, email_verified, google_id) VALUES (?, ?, '', 'student', 1, ?)"
         ).run(profile.email.toLowerCase(), profile.name || profile.email.split('@')[0], profile.id);
@@ -314,7 +316,8 @@ router.get('/google/callback', async (req, res) => {
     const fullUser = db.prepare('SELECT id, email, name, role, token_version FROM users WHERE id = ?').get(user.id);
     const token = signToken({ id: fullUser.id, email: fullUser.email, name: fullUser.name, role: fullUser.role, token_version: fullUser.token_version });
     const next = redirect ? `&next=${encodeURIComponent(redirect)}` : '';
-    console.log(`[AUTH] Google login: ${user.email}`);
+    const newFlag = isNewUser ? '&is_new=1' : '';
+    console.log(`[AUTH] Google login: ${user.email} (new=${isNewUser})`);
 
     posthog.identify({
       distinctId: String(fullUser.id),
@@ -323,10 +326,10 @@ router.get('/google/callback', async (req, res) => {
     posthog.capture({
       distinctId: String(fullUser.id),
       event: 'google_oauth_completed',
-      properties: { is_new_user: !user.google_id, email: fullUser.email, role: fullUser.role },
+      properties: { is_new_user: isNewUser, email: fullUser.email, role: fullUser.role },
     });
 
-    res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}`);
+    res.redirect(`${FRONTEND}/auth/callback?token=${token}${next}${newFlag}`);
   } catch (err) {
     console.error('[AUTH] Google callback error:', err.message);
     posthog.captureException(err);
