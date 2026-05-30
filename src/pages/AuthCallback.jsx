@@ -15,27 +15,23 @@ const inputStyle = {
   boxSizing: 'border-box', transition: 'border-color .15s',
 };
 
-function finishOAuth(token, dest, navigate) {
-  // Write to localStorage — shared across ALL same-origin windows including
-  // Chrome PWA and regular browser tabs (unlike BroadcastChannel which is
-  // browsing-context-group scoped and can't cross PWA ↔ browser boundaries).
+function finishOAuth(token, dest) {
+  // Write to localStorage so any polling loop (in the opener PWA window) picks it up
   try {
     localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest, ts: Date.now() }));
   } catch {}
 
-  // Also try BroadcastChannel + opener postMessage as belt-and-suspenders
-  try { const ch = new BroadcastChannel('ask_oauth'); ch.postMessage({ type: 'ask_oauth_success', token, dest }); ch.close(); } catch {}
+  // If opened as a popup/tab from a parent window, notify it and close
   if (window.opener && !window.opener.closed) {
     try { window.opener.postMessage({ type: 'ask_oauth_success', token, dest }, window.location.origin); } catch {}
-    window.close();
+    // Give the message time to arrive before closing
+    setTimeout(() => window.close(), 100);
     return;
   }
 
-  // Close this tab/window (opened as popup or new tab for OAuth)
-  window.close();
-
-  // If close didn't work, this IS the main window — navigate directly
-  setTimeout(() => navigate(dest || '/dashboard/student', { replace: true }), 50);
+  // This IS the main window (or a tab that can't be closed).
+  // Hard-navigate to the destination — works in any context including Chrome PWA.
+  window.location.href = dest || '/dashboard/student';
 }
 
 export default function AuthCallback() {
@@ -60,14 +56,12 @@ export default function AuthCallback() {
 
       if (error || !rawToken) {
         try { localStorage.setItem('ask_oauth_result', JSON.stringify({ token: null, dest: null, ts: Date.now() })); } catch {}
-        try { const ch = new BroadcastChannel('ask_oauth'); ch.postMessage({ type: 'ask_oauth_success', token: null, dest: null }); ch.close(); } catch {}
         if (window.opener && !window.opener.closed) {
           try { window.opener.postMessage({ type: 'ask_oauth_success', token: null, dest: null }, window.location.origin); } catch {}
-          window.close();
+          setTimeout(() => window.close(), 100);
           return;
         }
-        window.close();
-        setTimeout(() => navigate(`/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`, { replace: true }), 50);
+        window.location.href = `/login${error && error !== 'cancelled' ? `?error=${error}` : ''}`;
         return;
       }
 
@@ -76,8 +70,12 @@ export default function AuthCallback() {
       setToken(rawToken);
 
       // Fetch full user — only prompt phone for brand-new accounts (created <60s ago)
+      // 10-second timeout prevents infinite spinner if Railway is slow
       try {
-        const { data: user } = await api.get('/auth/me');
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 10000);
+        const { data: user } = await api.get('/auth/me', { signal: controller.signal });
+        clearTimeout(tid);
         const destination = next || (user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student');
         const isNew = user.created_at && (Date.now() - new Date(user.created_at).getTime() < 60000);
         setDest(destination);
@@ -85,10 +83,10 @@ export default function AuthCallback() {
           setNeedsPhone(!user.phone);
           setStep('tos');
         } else {
-          finishOAuth(rawToken, destination, navigate);
+          finishOAuth(rawToken, destination);
         }
       } catch {
-        finishOAuth(rawToken, next || '/dashboard/student', navigate);
+        finishOAuth(rawToken, next || '/dashboard/student');
       }
     }
     handle();
