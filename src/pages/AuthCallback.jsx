@@ -16,21 +16,19 @@ const inputStyle = {
 };
 
 function finishOAuth(token, dest) {
-  const target = dest || '/dashboard/student';
+  // /dashboard is a single-segment path — React loads fine there with base:'./'
+  // It redirects client-side to /dashboard/student or /dashboard/provider via the route.
+  const target = '/dashboard';
 
   // Write for any polling loops (e.g. the PWA login page waiting for this result).
   try {
-    localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest: target, ts: Date.now() }));
+    localStorage.setItem('ask_oauth_result', JSON.stringify({ token, dest: dest || target, ts: Date.now() }));
   } catch {}
 
-  // If a parent window (e.g. PWA) opened this tab, navigate it directly as a bonus.
-  // Do NOT return or try window.close() — Chrome blocks close() after cross-origin
-  // redirects, which would leave this tab showing the spinner forever.
   if (window.opener && !window.opener.closed) {
     try { window.opener.location.href = target; } catch {}
   }
 
-  // Always navigate this window. Works whether this is a popup tab or the main PWA window.
   window.location.href = target;
 }
 
@@ -55,7 +53,7 @@ export default function AuthCallback() {
     const bail = setTimeout(() => {
       if (rawToken) {
         try { localStorage.setItem('ask_token', rawToken); } catch {}
-        window.location.href = next || '/dashboard/student';
+        window.location.href = '/dashboard';
       } else {
         window.location.href = '/login';
       }
@@ -98,7 +96,7 @@ export default function AuthCallback() {
     handle().catch(() => {
       clearTimeout(bail);
       try { localStorage.setItem('ask_token', rawToken); } catch {}
-      window.location.href = next || '/dashboard/student';
+      window.location.href = '/dashboard';
     });
 
     return () => clearTimeout(bail);

@@ -17,7 +17,9 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;bac
   var p = new URLSearchParams(location.search);
   var token = p.get('token');
   var next  = p.get('next') || '';
-  var dest  = (next && next.charAt(0) === '/') ? next : '/dashboard/student';
+  // Use /dashboard (single-segment) so React loads correctly with Vite's base:'./' setting.
+  // The /dashboard route client-side redirects to /dashboard/student or /dashboard/provider.
+  var dest  = '/dashboard';
 
   if (!token) { location.replace('/login'); return; }
 

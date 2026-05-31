@@ -310,6 +310,10 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth-callback" element={<AuthCallback />} />
         <Route
+          path="/dashboard"
+          element={user ? <Navigate to={user.role === 'provider' ? '/dashboard/provider' : '/dashboard/student'} replace /> : <Navigate to="/login" replace />}
+        />
+        <Route
           path="/chat/:bookingId"
           element={
             <ProtectedRoute>
