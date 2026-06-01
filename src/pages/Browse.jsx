@@ -156,6 +156,15 @@ const BASE_FILTERS = [
 
 const SUBCATEGORY_PARENT = new Set(['tutor', 'fitness', 'languages', 'music']);
 
+const CATEGORY_SEO = {
+  tutor:          { title: 'Tutors at Yeshiva University | ASK Marketplace', desc: 'Find tutors for finance, math, chemistry, biology, physics, economics, writing, and exam prep at YU.' },
+  barber:         { title: 'Campus Barbers at Yeshiva University | ASK Marketplace', desc: 'Book a student barber at YU — fades, tapers, beard trims, and cuts at affordable prices on campus.' },
+  fitness:        { title: 'Personal Trainers & Fitness Coaches at YU | ASK Marketplace', desc: 'Find personal trainers, tennis coaches, boxing instructors, yoga teachers, and fitness coaches at Yeshiva University.' },
+  languages:      { title: 'Language Tutors at Yeshiva University | ASK Marketplace', desc: 'Hebrew, Ivrit, Spanish, French, Yiddish, Arabic, and other language tutors at YU — book a session through ASK.' },
+  music:          { title: 'Music Lessons at Yeshiva University | ASK Marketplace', desc: 'Guitar, piano, violin, drums, vocals, and music theory lessons from student musicians at YU.' },
+  'Torah Studies':{ title: 'Torah Studies & Gemara Tutors at YU | ASK Marketplace', desc: 'Find Gemara, Chumash, Halacha, Mishna, and Tanach tutors and chavruta partners at Yeshiva University.' },
+};
+
 function TextSuggestion({ value, onApply }) {
   if (!value || !hasSuggestion(value)) return null;
   const suggestion = suggestText(value);
@@ -200,6 +209,23 @@ export default function Browse() {
   const [editModal, setEditModal] = useState(null); // { profileId, isAdminEdit, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  // Dynamic meta per category for SEO
+  useEffect(() => {
+    const seo = CATEGORY_SEO[category];
+    const search = searchParams.get('search') || '';
+    if (seo) {
+      document.title = seo.title;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', seo.desc);
+    } else if (search) {
+      document.title = `"${search}" at Yeshiva University | ASK Marketplace`;
+    } else {
+      document.title = 'Browse Campus Services at Yeshiva University | ASK Marketplace';
+    }
+    return () => {
+      document.title = 'ASK Marketplace | Tutors, Barbers, Fitness & More at Yeshiva University';
+    };
+  }, [category, searchParams]);
+
   useEffect(() => {
     api.get('/providers/categories')
       .then(({ data }) => setCustomCats(data))

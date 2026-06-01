@@ -1164,4 +1164,49 @@
     <loc>https://www.uask.live/tutors/jonah-weiss-statistics-economics-rutgers</loc>
     <lastmod>2026-05-02T00:00:00.000Z</lastmod>
   </url>
+
+<!-- generated-services -->
+  <url>
+    <loc>https://www.uask.live/services/campus-barber</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/personal-trainer</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/tennis-lessons</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/hebrew-tutor</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/torah-studies</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/guitar-lessons</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.uask.live/services/piano-lessons</loc>
+    <lastmod>2026-06-01T00:00:00.000Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<!-- /generated-services -->
 </urlset>
