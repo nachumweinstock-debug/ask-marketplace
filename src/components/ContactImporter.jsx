@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { buildShareText } from './SharePanel';
 
+// Contact Picker API — Android Chrome / WebView only
 const hasContactAPI = typeof navigator !== 'undefined' && 'contacts' in navigator;
+// Native share sheet — iOS Safari + Android Chrome
+const hasShareAPI = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+// Real mobile device
+const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 function normalizePhone(raw) {
   const s = String(raw || '').trim();
@@ -11,10 +16,8 @@ function normalizePhone(raw) {
 }
 
 function waHref(tel, shareText) {
-  const clean = tel.replace(/[^0-9]/g, '');
-  return `https://wa.me/${clean}?text=${encodeURIComponent(shareText)}`;
+  return `https://wa.me/${tel.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(shareText)}`;
 }
-
 function smsHref(tel, shareText) {
   return `sms:${tel}?body=${encodeURIComponent(shareText)}`;
 }
@@ -28,6 +31,7 @@ export default function ContactImporter({ referralCode, university }) {
   const [importing, setImporting] = useState(false);
   const [sent, setSent] = useState(new Set());
 
+  // Android: native contact picker
   async function importFromDevice() {
     if (!hasContactAPI) return;
     setImporting(true);
@@ -42,8 +46,16 @@ export default function ContactImporter({ referralCode, university }) {
         if (!contacts.find(x => x.id === id)) incoming.push({ id, name, tel });
       }
       setContacts(prev => [...prev, ...incoming]);
-    } catch { /* user dismissed — silent */ }
+    } catch { /* dismissed */ }
     finally { setImporting(false); }
+  }
+
+  // iOS: native share sheet → user picks contacts in iMessage/WhatsApp/etc
+  async function shareViaSheet() {
+    if (!hasShareAPI) return;
+    try {
+      await navigator.share({ title: 'Join me on ASK', text: shareText, url: link });
+    } catch { /* dismissed */ }
   }
 
   function removeContact(id) {
@@ -51,67 +63,86 @@ export default function ContactImporter({ referralCode, university }) {
     setSent(prev => { const n = new Set(prev); n.delete(id); return n; });
   }
 
-  function markSent(id) {
-    setSent(prev => new Set([...prev, id]));
-  }
-
   if (!code) return null;
+
+  const btnStyle = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+    padding: '13px 22px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+    fontFamily: 'var(--font-ui)', border: 'none', cursor: 'pointer',
+    touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+    transition: 'opacity .15s',
+  };
 
   return (
     <div>
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, margin: 0 }}>
-            Invite from your contacts
-          </h3>
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: '5px 0 0', lineHeight: 1.5 }}>
-            {hasContactAPI
-              ? 'Select people from your phone — tap a button to send each one their invite.'
-              : 'Open this page on your phone to import contacts directly.'}
-          </p>
-        </div>
-
-        {hasContactAPI && (
-          <button
-            type="button"
-            onClick={importFromDevice}
-            disabled={importing}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '12px 22px', borderRadius: 12,
-              background: '#F15A24', color: '#fff',
-              border: 'none', cursor: 'pointer', flexShrink: 0,
-              fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-ui)',
-              opacity: importing ? 0.7 : 1, transition: 'opacity .15s',
-            }}
-          >
-            {importing ? (
-              <>
-                <span style={{
-                  width: 15, height: 15, flexShrink: 0,
-                  border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff',
-                  borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite',
-                }} />
-                Opening…
-              </>
-            ) : (
-              <>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Import Contacts
-              </>
-            )}
-          </button>
-        )}
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, margin: '0 0 6px' }}>
+          Invite from your contacts
+        </h3>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>
+          {hasContactAPI
+            ? 'Pick contacts from your phone — tap a button to send each one their invite.'
+            : hasShareAPI
+              ? 'Tap below to open your share sheet and send the invite to any contact.'
+              : 'Open this page on your phone to send invites to your contacts.'}
+        </p>
       </div>
 
-      {/* Not supported on this device */}
-      {!hasContactAPI && contacts.length === 0 && (
+      {/* Android — real contact picker */}
+      {hasContactAPI && (
+        <button
+          type="button"
+          onClick={importFromDevice}
+          disabled={importing}
+          style={{ ...btnStyle, background: '#F15A24', color: '#fff', width: '100%', opacity: importing ? 0.7 : 1 }}
+        >
+          {importing ? (
+            <>
+              <span style={{
+                width: 16, height: 16, flexShrink: 0,
+                border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                borderRadius: '50%', display: 'inline-block',
+                animation: 'spin 0.7s linear infinite',
+              }} />
+              Opening contacts…
+            </>
+          ) : (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Import Contacts
+            </>
+          )}
+        </button>
+      )}
+
+      {/* iOS — native share sheet (iMessage, WhatsApp, AirDrop, etc.) */}
+      {!hasContactAPI && hasShareAPI && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button
+            type="button"
+            onClick={shareViaSheet}
+            style={{ ...btnStyle, background: '#F15A24', color: '#fff', width: '100%' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+            Share invite to contacts
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+            Opens your share sheet — pick iMessage, WhatsApp, or any app to choose who to send to.
+          </p>
+        </div>
+      )}
+
+      {/* Desktop — not supported */}
+      {!isMobile && !hasContactAPI && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 16,
           background: '#FFF1E8', border: '1.5px solid #F5D4BE',
@@ -128,29 +159,25 @@ export default function ContactImporter({ referralCode, university }) {
             </svg>
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>Available on mobile</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>Use on your phone</div>
             <div style={{ fontSize: 13, color: '#5F5A50', lineHeight: 1.5 }}>
-              Open <strong>uask.live/referrals</strong> on your iPhone or Android to import contacts directly from your phone.
+              Open <strong>uask.live/referrals</strong> on your phone to send invites directly to contacts.
             </div>
           </div>
         </div>
       )}
 
-      {/* Contact list */}
+      {/* Android contact list after import */}
       {contacts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               {contacts.length} contact{contacts.length !== 1 ? 's' : ''} · {sent.size} sent
             </span>
             <button
               type="button"
               onClick={importFromDevice}
-              style={{
-                fontSize: 12, fontWeight: 700, color: '#F15A24',
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                fontFamily: 'var(--font-ui)',
-              }}
+              style={{ fontSize: 12, fontWeight: 700, color: '#F15A24', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-ui)', touchAction: 'manipulation' }}
             >
               + Add more
             </button>
@@ -164,7 +191,6 @@ export default function ContactImporter({ referralCode, university }) {
                 padding: '11px 14px', borderRadius: 12,
                 background: isSent ? '#F0FDF4' : '#FAFAF9',
                 border: `1px solid ${isSent ? '#BBF7D0' : 'var(--border)'}`,
-                transition: 'background .2s, border-color .2s',
               }}>
                 <div style={{
                   width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
@@ -175,61 +201,27 @@ export default function ContactImporter({ referralCode, university }) {
                 }}>
                   {isSent
                     ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    : c.name.charAt(0).toUpperCase()
-                  }
+                    : c.name.charAt(0).toUpperCase()}
                 </div>
-
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                  {c.name !== c.tel && (
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{c.tel}</div>
-                  )}
+                  {c.name !== c.tel && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{c.tel}</div>}
                 </div>
-
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <a
-                    href={waHref(c.tel, shareText)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => markSent(c.id)}
-                    title="Send via WhatsApp"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 34, height: 34, borderRadius: 9,
-                      background: '#25D366', color: '#fff', textDecoration: 'none',
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 32 32">
-                      <path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z" />
-                    </svg>
+                  <a href={waHref(c.tel, shareText)} target="_blank" rel="noopener noreferrer" onClick={() => setSent(p => new Set([...p, c.id]))}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: '#25D366', color: '#fff', textDecoration: 'none', touchAction: 'manipulation' }}
+                    title="WhatsApp">
+                    <svg width="16" height="16" viewBox="0 0 32 32"><path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg>
                   </a>
-                  <a
-                    href={smsHref(c.tel, shareText)}
-                    onClick={() => markSent(c.id)}
-                    title="Send via iMessage/SMS"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 34, height: 34, borderRadius: 9,
-                      background: '#1B3A6B', color: '#fff', textDecoration: 'none',
-                    }}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
+                  <a href={smsHref(c.tel, shareText)} onClick={() => setSent(p => new Set([...p, c.id]))}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: '#1B3A6B', color: '#fff', textDecoration: 'none', touchAction: 'manipulation' }}
+                    title="iMessage">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => removeContact(c.id)}
-                    title="Remove"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 34, height: 34, borderRadius: 9,
-                      background: '#F3F2F0', border: 'none', cursor: 'pointer', color: 'var(--muted)',
-                    }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
+                  <button type="button" onClick={() => removeContact(c.id)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: '#F3F2F0', border: 'none', cursor: 'pointer', color: 'var(--muted)', touchAction: 'manipulation' }}
+                    title="Remove">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
               </div>

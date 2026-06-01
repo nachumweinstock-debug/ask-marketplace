@@ -137,8 +137,17 @@ export default function WelcomeWalkthrough() {
   if (!visible) return null;
 
   function dismiss() {
-    if (user) localStorage.setItem(`ask_walkthrough_${user.id}`, Date.now().toString());
+    // Save BEFORE hiding so the key is persisted even if component unmounts fast
+    try {
+      if (user) localStorage.setItem(`ask_walkthrough_${user.id}`, Date.now().toString());
+    } catch {}
     setVisible(false);
+  }
+
+  // Single handler for all interactive elements — no onTouchEnd hacks
+  function handleDismiss(e) {
+    e.stopPropagation();
+    dismiss();
   }
 
   function next() {
@@ -152,10 +161,20 @@ export default function WelcomeWalkthrough() {
     setStep(i => i + 1);
   }
 
+  function handleNext(e) {
+    e.stopPropagation();
+    next();
+  }
+
   function back() {
     if (step === 0) return;
     setAnimDir(-1);
     setStep(i => i - 1);
+  }
+
+  function handleBack(e) {
+    e.stopPropagation();
+    back();
   }
 
   const s = STEPS[step];
@@ -172,51 +191,58 @@ export default function WelcomeWalkthrough() {
         @keyframes wt-step-bwd { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:translateX(0); } }
       `}</style>
 
-      {/* Backdrop */}
-      <div onClick={dismiss} style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(17,13,10,0.58)',
-        zIndex: 200,
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
-      }}>
-        {/* Card */}
-        <div onClick={e => e.stopPropagation()} style={{
-          width: '100%', maxWidth: 420,
-          background: '#fff',
-          borderRadius: 22,
-          overflow: 'hidden',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.4)',
-          animation: 'wt-in 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both',
-        }}>
+      {/* Backdrop — tapping outside dismisses */}
+      <div
+        onClick={dismiss}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(17,13,10,0.58)',
+          zIndex: 200,
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {/* Card — stop propagation so card taps don't dismiss */}
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: 420,
+            background: '#fff',
+            borderRadius: 22,
+            overflow: 'hidden',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.4)',
+            animation: 'wt-in 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both',
+            position: 'relative',
+          }}
+        >
+          {/* Skip — rendered OUTSIDE the overflow:hidden header so it's never clipped */}
+          <button
+            type="button"
+            onClick={handleDismiss}
+            style={{
+              position: 'absolute', top: 12, right: 12, zIndex: 10,
+              background: 'rgba(255,255,255,0.22)', border: 'none',
+              borderRadius: 99, padding: '9px 18px',
+              minHeight: 44, minWidth: 64,
+              fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.95)',
+              cursor: 'pointer', fontFamily: 'var(--font-ui)',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            Skip
+          </button>
+
           {/* Colored header */}
           <div style={{
             height: 188,
             background: s.gradient,
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
           }}>
-            {/* Skip button */}
-            <button
-              onClick={dismiss}
-              onTouchEnd={e => { e.preventDefault(); dismiss(); }}
-              style={{
-                position: 'absolute', top: 10, right: 10,
-                background: 'rgba(255,255,255,0.18)', border: 'none',
-                borderRadius: 99, padding: '8px 16px',
-                minHeight: 44, minWidth: 44,
-                fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.9)',
-                cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                touchAction: 'manipulation',
-                WebkitUserSelect: 'none',
-              }}
-            >
-              Skip
-            </button>
-
             {/* Step number */}
             <div style={{
               position: 'absolute', top: 16, left: 18,
@@ -235,11 +261,7 @@ export default function WelcomeWalkthrough() {
                 width: '100%', height: '100%',
               }}
             >
-              {s.illustration ? (
-                <TabIllustration />
-              ) : (
-                <span style={{ fontSize: 68, lineHeight: 1 }}>{s.emoji}</span>
-              )}
+              {s.illustration ? <TabIllustration /> : <span style={{ fontSize: 68, lineHeight: 1 }}>{s.emoji}</span>}
             </div>
           </div>
 
@@ -264,23 +286,18 @@ export default function WelcomeWalkthrough() {
             </div>
 
             {/* Progress dots + nav */}
-            <div style={{
-              marginTop: 26,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              {/* Back button or dots spacer */}
+            <div style={{ marginTop: 26, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {step > 0 && (
                   <button
-                    onClick={back}
-                    onTouchEnd={e => { e.preventDefault(); back(); }}
+                    type="button"
+                    onClick={handleBack}
                     style={{
                       background: 'none', border: '1px solid var(--border)',
-                      borderRadius: 99, padding: '8px 16px',
-                      minHeight: 44,
+                      borderRadius: 99, padding: '9px 18px', minHeight: 44,
                       fontSize: 13, fontWeight: 600, color: 'var(--muted)',
                       cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                      touchAction: 'manipulation',
+                      touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
                     }}
                   >
                     ← Back
@@ -288,32 +305,33 @@ export default function WelcomeWalkthrough() {
                 )}
               </div>
 
-              {/* Dots */}
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {STEPS.map((_, i) => (
-                  <button key={i} onClick={() => { setAnimDir(i > step ? 1 : -1); setStep(i); }} style={{
-                    width: i === step ? 18 : 7,
-                    height: 7, borderRadius: 99,
-                    background: i === step ? 'var(--orange)' : 'var(--gray-200)',
-                    border: 'none', cursor: 'pointer', padding: 0,
-                    transition: 'width 0.22s ease, background 0.22s ease',
-                  }} />
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setAnimDir(i > step ? 1 : -1); setStep(i); }}
+                    style={{
+                      width: i === step ? 18 : 7, height: 7, borderRadius: 99,
+                      background: i === step ? 'var(--orange)' : 'var(--gray-200)',
+                      border: 'none', cursor: 'pointer', padding: 0,
+                      transition: 'width 0.22s ease, background 0.22s ease',
+                      touchAction: 'manipulation',
+                    }}
+                  />
                 ))}
               </div>
 
-              {/* CTA */}
               <button
-                onClick={next}
-                onTouchEnd={e => { e.preventDefault(); next(); }}
+                type="button"
+                onClick={handleNext}
                 style={{
                   background: 'var(--text)', color: '#fff',
-                  border: 'none', borderRadius: 99,
-                  padding: '10px 20px', fontSize: 13.5,
-                  minHeight: 44,
-                  fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
+                  border: 'none', borderRadius: 99, padding: '10px 20px',
+                  fontSize: 13.5, minHeight: 44, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'var(--font-ui)',
                   boxShadow: '0 4px 16px rgba(23,19,15,0.22)',
-                  touchAction: 'manipulation',
+                  touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
                 }}
               >
                 {s.cta}
