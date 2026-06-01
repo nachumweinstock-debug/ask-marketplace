@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite\"",
-    "prebuild": "node scripts/generate-school-seo-pages.mjs && node scripts/generate-service-seo-pages.mjs",
+    "prebuild": "node scripts/generate-school-seo-pages.mjs && node scripts/generate-service-seo-pages.mjs && node scripts/generate-university-seo-pages.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "test:e2e": "playwright test",
