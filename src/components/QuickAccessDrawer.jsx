@@ -4,13 +4,13 @@ import { useAuth } from '../context/AuthContext';
 
 const ALL_LINKS = [
   { to: '/browse',         emoji: '🔍', label: 'Browse',         desc: 'Find services' },
+  { to: '/referrals',      emoji: '🎁', label: 'Refer a Friend', desc: 'Invite classmates', authOnly: true },
   { to: '/studyparty',     emoji: '🪩', label: 'StudyParty',      desc: 'Join a live session', party: true },
   { to: '/find-a-tutor',   emoji: '🎓', label: 'Find a Tutor',    desc: 'Get matched fast' },
   { to: '/create-listing', emoji: '✏️', label: 'Post a Listing',  desc: 'Offer your service', authOnly: true },
   { to: '/help-wanted',    emoji: '🙋', label: 'Help Wanted',      desc: 'Request a service' },
   { to: '/saved-tutors',   emoji: '❤️', label: 'Saved',            desc: 'Your saved tutors', authOnly: true },
   { to: '/people',         emoji: '👥', label: 'People',           desc: 'YU community' },
-  { to: '/referrals',      emoji: '🎁', label: 'Referrals',        desc: 'Invite friends', authOnly: true },
   { to: '/support',        emoji: '💬', label: 'Support',          desc: 'Get help' },
 ];
 

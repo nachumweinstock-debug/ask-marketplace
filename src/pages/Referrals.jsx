@@ -23,48 +23,43 @@ export default function Referrals() {
 
       {/* ── Refer a Friend hero ─────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1B3A6B 0%, #2a5298 100%)',
-        borderRadius: 20, padding: '32px 28px', marginBottom: 16, color: '#fff',
+        background: '#FFF1E8', border: '1.5px solid #F5D4BE',
+        borderRadius: 20, padding: '32px 28px', marginBottom: 16,
       }}>
         <div style={{
-          display: 'inline-block', fontSize: 11, fontWeight: 700,
-          letterSpacing: '0.1em', textTransform: 'uppercase',
-          background: 'rgba(255,255,255,0.15)', borderRadius: 6,
-          padding: '3px 10px', marginBottom: 14,
-          fontFamily: 'var(--font-ui)',
+          fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
+          textTransform: 'uppercase', color: '#F15A24',
+          fontFamily: 'var(--font-ui)', marginBottom: 12,
         }}>
-          Refer a Friend
+          ✦ Refer a Friend
         </div>
 
         <h1 style={{
-          fontFamily: 'var(--font-display)', fontSize: 38, lineHeight: 1.1,
-          marginBottom: 12, color: '#fff',
+          fontFamily: 'var(--font-display)', fontSize: 38, lineHeight: 1.05,
+          marginBottom: 12, color: '#17130F',
         }}>
           Invite your classmates to ASK
         </h1>
 
         <p style={{
-          fontSize: 14, lineHeight: 1.75, color: 'rgba(255,255,255,0.8)',
-          marginBottom: 24, maxWidth: 500,
+          fontSize: 14, lineHeight: 1.75, color: '#5F5A50',
+          marginBottom: 20, maxWidth: 500,
         }}>
-          ASK is the YU campus marketplace — book barbers, tutors, personal trainers, and more from students who offer services on campus. Share your personal link and help your classmates find what they need.
+          ASK is a campus app to find OR offer tutoring, barbers, fitness and more. Share your personal link — when classmates sign up, you're credited.
         </p>
 
-        {/* Invite link */}
+        {/* Invite link pill */}
         <div style={{
-          background: 'rgba(255,255,255,0.1)', borderRadius: 12,
-          padding: '10px 14px', marginBottom: 14,
-          display: 'flex', alignItems: 'center', gap: 10,
+          display: 'inline-flex', alignItems: 'center',
+          background: '#fff', border: '1px solid #F5D4BE',
+          borderRadius: 8, padding: '8px 14px', marginBottom: 18,
         }}>
-          <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: 12,
-            color: 'rgba(255,255,255,0.9)', flex: 1, wordBreak: 'break-all',
-          }}>
-            {data?.invite_url || '—'}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#5F5A50' }}>
+            {data?.invite_url?.replace('https://', '') || '—'}
           </span>
         </div>
 
-        <SharePanel referralCode={data?.code} university={user?.university} />
+        <SharePanel referralCode={data?.code} university={user?.university} variant="light" />
       </div>
 
       {/* ── Stats row ───────────────────────────────────────── */}

@@ -7,9 +7,68 @@ import { trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
-import SharePanel from '../components/SharePanel';
 
 const BROWSE_REFERRAL_DISMISSED_KEY = 'browse_referral_dismissed_v2';
+
+function uniLabel(u) {
+  if (!u) return 'your campus';
+  const map = { 'Yeshiva University': 'YU', 'Stern College for Women': 'Stern' };
+  return map[u] || u;
+}
+
+function BrowseShareButtons({ referralCode, university }) {
+  const [copied, setCopied] = useState(false);
+  const code = String(referralCode || '').trim().toUpperCase();
+  const link = code ? `https://uask.live/join/${encodeURIComponent(code)}` : '';
+  const text = link
+    ? `Hey! ASK is a campus app to find OR offer tutoring, barbers, fitness and more at ${uniLabel(university)}. Sign up with my link: ${link}`
+    : '';
+  const waHref  = text ? `https://wa.me/?text=${encodeURIComponent(text)}` : '#';
+  const smsHref = text ? `sms:?body=${encodeURIComponent(text)}` : '#';
+
+  async function handleCopy() {
+    if (!text) return;
+    try {
+      const { copyText } = await import('../lib/clipboard');
+      await copyText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {}
+  }
+
+  const base = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+    padding: '11px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+    fontFamily: 'var(--font-ui)', cursor: 'pointer', textDecoration: 'none',
+    transition: 'opacity .15s', border: 'none', whiteSpace: 'nowrap',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <a href={smsHref} style={{ ...base, background: '#F15A24', color: '#fff' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          iMessage
+        </a>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" style={{ ...base, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA' }}>
+          <svg width="15" height="15" viewBox="0 0 32 32"><path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+      <button type="button" onClick={handleCopy} disabled={!text}
+        style={copied
+          ? { ...base, background: '#F0FDF4', color: '#15803d', border: '1.5px solid #BBF7D0' }
+          : { ...base, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA', opacity: text ? 1 : 0.5 }
+        }
+      >
+        {copied
+          ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
+          : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy message &amp; link</>
+        }
+      </button>
+    </div>
+  );
+}
 
 function BrowseReferralBanner({ user }) {
   const [code, setCode] = useState(null);
@@ -33,11 +92,12 @@ function BrowseReferralBanner({ user }) {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1B3A6B 0%, #2a5298 100%)',
-      borderRadius: 18, marginBottom: 22, overflow: 'hidden',
+      background: '#FFF1E8',
+      border: '1.5px solid #F5D4BE',
+      borderRadius: 18, marginBottom: 22,
       position: 'relative',
     }}>
-      {/* Dismiss button */}
+      {/* Dismiss */}
       <button
         type="button"
         onClick={dismiss}
@@ -45,60 +105,51 @@ function BrowseReferralBanner({ user }) {
         style={{
           position: 'absolute', top: 12, right: 12, zIndex: 2,
           width: 28, height: 28, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.15)', border: 'none',
-          cursor: 'pointer', color: '#fff',
+          background: '#F5D4BE', border: 'none',
+          cursor: 'pointer', color: '#5F5A50',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'minmax(0,1fr) minmax(0,360px)',
+        gridTemplateColumns: 'minmax(0,1fr) minmax(0,340px)',
         gap: 28, padding: '24px 28px', alignItems: 'center',
       }}
         className="referral-strip-grid"
       >
-        {/* Left: copy */}
+        {/* Left */}
         <div>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,255,255,0.18)', borderRadius: 99,
-            padding: '3px 12px', marginBottom: 10,
-            fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-            textTransform: 'uppercase', color: '#fff', fontFamily: 'var(--font-ui)',
+            fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: '#F15A24',
+            fontFamily: 'var(--font-ui)', marginBottom: 10,
           }}>
             ✦ Refer a Friend
           </div>
           <h2 style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(22px, 3vw, 34px)',
-            color: '#fff', margin: '0 0 8px', lineHeight: 1.1,
+            fontSize: 'clamp(20px, 2.8vw, 30px)',
+            color: '#17130F', margin: '0 0 8px', lineHeight: 1.1,
           }}>
             Know someone who needs campus services?
           </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.72)', fontSize: 14,
-            lineHeight: 1.65, margin: 0, maxWidth: 420,
-          }}>
-            Share your link — they sign up, you're credited. Barbers, tutors, trainers, and more — all from students on your campus.
+          <p style={{ color: '#5F5A50', fontSize: 13, lineHeight: 1.65, margin: 0, maxWidth: 380 }}>
+            Share your link — when they sign up you're credited. Barbers, tutors, trainers and more — all from students on your campus.
           </p>
           <div style={{
-            marginTop: 12,
-            fontFamily: 'var(--font-mono)', fontSize: 11,
-            color: 'rgba(255,255,255,0.55)',
+            marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 11, color: '#A09890',
           }}>
-            uask.live/join/{code}
+            uask.live/join/{code.toLowerCase()}
           </div>
         </div>
 
-        {/* Right: share buttons */}
-        <div>
-          <SharePanel referralCode={code} university={user?.university} />
-        </div>
+        {/* Right: light-mode buttons */}
+        <BrowseShareButtons referralCode={code} university={user?.university} />
       </div>
     </div>
   );

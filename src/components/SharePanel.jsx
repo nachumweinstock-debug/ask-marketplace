@@ -39,7 +39,9 @@ const MSG_ICON = (
   </svg>
 );
 
-export default function SharePanel({ referralCode, university }) {
+// variant="dark"  → white buttons on dark blue (default, for banners)
+// variant="light" → orange primary + white secondary on cream backgrounds
+export default function SharePanel({ referralCode, university, variant = 'dark' }) {
   const [copied, setCopied] = useState(false);
   const code = String(referralCode || '').trim().toUpperCase();
   const link = useMemo(() => `https://uask.live/join/${encodeURIComponent(code)}`, [code]);
@@ -68,13 +70,25 @@ export default function SharePanel({ referralCode, university }) {
   }
 
   const disabled = !code;
+  const light = variant === 'light';
+
+  // light variant: orange primary, white secondary on cream backgrounds
+  const primary   = light ? { ...base, background: '#F15A24', color: '#fff', opacity: disabled ? 0.5 : 1 } : solidBtn(disabled);
+  const secondary = light
+    ? { ...base, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA', opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }
+    : solidLink(disabled);
+  const copyStyle = copied
+    ? { ...base, background: light ? '#F0FDF4' : '#15803d', color: light ? '#15803d' : '#fff', border: light ? '1.5px solid #BBF7D0' : 'none', justifyContent: 'center' }
+    : light
+      ? { ...base, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA', justifyContent: 'center', opacity: disabled ? 0.5 : 1 }
+      : { ...solidBtn(disabled), background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', justifyContent: 'center' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Row 1: iMessage / Share  +  WhatsApp */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {canShare ? (
-          <button type="button" onClick={handleNativeShare} disabled={disabled} style={solidBtn(disabled)}>
+          <button type="button" onClick={handleNativeShare} disabled={disabled} style={primary}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
               <polyline points="16 6 12 2 8 6"/>
@@ -83,27 +97,19 @@ export default function SharePanel({ referralCode, university }) {
             Share
           </button>
         ) : (
-          <a href={smsHref} style={solidLink(disabled)}>
+          <a href={smsHref} style={primary}>
             {MSG_ICON}
             iMessage
           </a>
         )}
-        <a href={waHref} target="_blank" rel="noopener noreferrer" style={solidLink(disabled)}>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" style={secondary}>
           {WA_ICON}
           WhatsApp
         </a>
       </div>
 
       {/* Row 2: Copy full message — full width */}
-      <button
-        type="button"
-        onClick={handleCopy}
-        disabled={disabled}
-        style={copied
-          ? { ...solidBtn(false), background: '#15803d', color: '#fff', justifyContent: 'center' }
-          : { ...solidBtn(disabled), background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', justifyContent: 'center' }
-        }
-      >
+      <button type="button" onClick={handleCopy} disabled={disabled} style={copyStyle}>
         {copied ? (
           <>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -123,7 +129,6 @@ export default function SharePanel({ referralCode, university }) {
   );
 }
 
-// Solid white button — pops against any dark background
 const base = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
   padding: '12px 16px', borderRadius: 11,
@@ -132,6 +137,7 @@ const base = {
   border: 'none', textDecoration: 'none', whiteSpace: 'nowrap',
 };
 
+// Dark variant: solid white on dark blue backgrounds
 function solidBtn(disabled) {
   return { ...base, background: '#fff', color: '#1B3A6B', opacity: disabled ? 0.45 : 1 };
 }

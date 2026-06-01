@@ -54,6 +54,71 @@ const ACADEMIC_CATEGORIES = [
   },
 ];
 
+// Light-mode share buttons for cream/orange backgrounds
+function ReferralShareButtons({ referralCode, university }) {
+  const [copied, setCopied] = useState(false);
+
+  const code = String(referralCode || '').trim().toUpperCase();
+  const link = code ? `https://uask.live/join/${encodeURIComponent(code)}` : '';
+
+  function uniLabel(u) {
+    if (!u) return 'your campus';
+    const map = { 'Yeshiva University': 'YU', 'Stern College for Women': 'Stern' };
+    return map[u] || u;
+  }
+  const text = link
+    ? `Hey! ASK is a campus app to find OR offer tutoring, barbers, fitness and more at ${uniLabel(university)}. Sign up with my link: ${link}`
+    : '';
+
+  const waHref  = text ? `https://wa.me/?text=${encodeURIComponent(text)}` : '#';
+  const smsHref = text ? `sms:?body=${encodeURIComponent(text)}` : '#';
+
+  async function handleCopy() {
+    if (!text) return;
+    try {
+      const { copyText } = await import('../lib/clipboard');
+      await copyText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {}
+  }
+
+  const btnBase = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: '13px 20px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+    fontFamily: 'var(--font-ui)', cursor: 'pointer', textDecoration: 'none',
+    transition: 'all .15s', border: 'none', whiteSpace: 'nowrap',
+  };
+  const primaryBtn = { ...btnBase, background: '#F15A24', color: '#fff' };
+  const secondaryBtn = { ...btnBase, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA' };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <a href={smsHref} style={primaryBtn}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          iMessage
+        </a>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" style={secondaryBtn}>
+          <svg width="16" height="16" viewBox="0 0 32 32"><path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+      <button type="button" onClick={handleCopy} disabled={!text} style={
+        copied
+          ? { ...secondaryBtn, background: '#F0FDF4', borderColor: '#BBF7D0', color: '#15803d' }
+          : { ...secondaryBtn, justifyContent: 'center', opacity: text ? 1 : 0.5 }
+      }>
+        {copied ? (
+          <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
+        ) : (
+          <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy message &amp; link</>
+        )}
+      </button>
+    </div>
+  );
+}
+
 function ReferralStrip() {
   const { user } = useAuth();
   const [referralCode, setReferralCode] = useState(null);
@@ -66,49 +131,54 @@ function ReferralStrip() {
 
   return (
     <section style={{
-      background: 'linear-gradient(135deg, #1B3A6B 0%, #243f7a 100%)',
-      padding: '40px 24px',
+      background: '#FFF1E8',
+      borderTop: '1px solid #F5D4BE',
+      borderBottom: '1px solid #F5D4BE',
+      padding: '44px 24px',
     }}>
       <div style={{
         maxWidth: 1100, margin: '0 auto',
         display: 'grid',
-        gridTemplateColumns: 'minmax(0,1fr) minmax(0,380px)',
-        gap: 40, alignItems: 'center',
+        gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)',
+        gap: 48, alignItems: 'center',
       }}
         className="referral-strip-grid"
       >
         <div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+            fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            background: 'rgba(255,255,255,0.18)', borderRadius: 99,
-            padding: '3px 12px', marginBottom: 12, color: '#fff',
-            fontFamily: 'var(--font-ui)',
+            color: '#F15A24', fontFamily: 'var(--font-ui)',
+            marginBottom: 12,
           }}>
             ✦ Refer a Friend
           </div>
           <h2 style={{
-            fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.5vw,40px)',
-            color: '#fff', lineHeight: 1.1, margin: '0 0 12px',
+            fontFamily: 'var(--font-display)', fontSize: 'clamp(28px,3.5vw,44px)',
+            color: '#17130F', lineHeight: 1.05, margin: '0 0 14px',
           }}>
             Invite your classmates to ASK
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 1.65, maxWidth: 420, margin: 0 }}>
-            ASK is a campus app to find OR offer tutoring, barbers, fitness and more. Share your link and bring your friends in.
+          <p style={{ color: '#5F5A50', fontSize: 15, lineHeight: 1.7, maxWidth: 440, margin: 0 }}>
+            ASK is a campus app to find OR offer tutoring, barbers, fitness and more. Share your personal link — when they sign up, you're credited.
           </p>
           {referralCode && (
             <div style={{
-              marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 12,
-              color: 'rgba(255,255,255,0.5)',
+              marginTop: 16,
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: '#fff', border: '1px solid #F5D4BE',
+              borderRadius: 8, padding: '7px 14px',
             }}>
-              uask.live/join/{referralCode.toLowerCase()}
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#5F5A50' }}>
+                uask.live/join/{referralCode.toLowerCase()}
+              </span>
             </div>
           )}
         </div>
 
         <div>
-          <SharePanel referralCode={referralCode} university={user?.university} />
+          <ReferralShareButtons referralCode={referralCode} university={user?.university} />
         </div>
       </div>
     </section>
@@ -261,7 +331,7 @@ export default function Home() {
                 Start with what you need.
               </h2>
             </div>
-            <Link className="ask-button-secondary" to="/browse">View everything</Link>
+            <Link className="ask-button-secondary" to="/browse">Browse all listings</Link>
           </div>
           <div className="pill-row">
             {FILTERS.map(({ id, label }) => (

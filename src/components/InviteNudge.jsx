@@ -35,7 +35,7 @@ export default function InviteNudge({ referralCode, university }) {
           ASK is the YU marketplace for booking barbers, tutors, personal trainers, and more — all from students on campus. Share your link and invite classmates to join.
         </p>
       </div>
-      <SharePanel referralCode={referralCode} university={university} />
+      <SharePanel referralCode={referralCode} university={university} variant="light" />
       <button
         type="button"
         onClick={dismiss}
