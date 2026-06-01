@@ -9,7 +9,7 @@ import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 import SharePanel from '../components/SharePanel';
 
-const BROWSE_REFERRAL_DISMISSED_KEY = 'browse_referral_dismissed_v1';
+const BROWSE_REFERRAL_DISMISSED_KEY = 'browse_referral_dismissed_v2';
 
 function BrowseReferralBanner({ user }) {
   const [code, setCode] = useState(null);
@@ -97,7 +97,7 @@ function BrowseReferralBanner({ user }) {
 
         {/* Right: share buttons */}
         <div>
-          <SharePanel referralCode={code} university={user?.university} onShared={dismiss} />
+          <SharePanel referralCode={code} university={user?.university} />
         </div>
       </div>
     </div>

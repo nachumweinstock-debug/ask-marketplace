@@ -39,7 +39,7 @@ const MSG_ICON = (
   </svg>
 );
 
-export default function SharePanel({ referralCode, university, onShared }) {
+export default function SharePanel({ referralCode, university }) {
   const [copied, setCopied] = useState(false);
   const code = String(referralCode || '').trim().toUpperCase();
   const link = useMemo(() => `https://uask.live/join/${encodeURIComponent(code)}`, [code]);
@@ -54,9 +54,8 @@ export default function SharePanel({ referralCode, university, onShared }) {
   async function handleCopy() {
     if (!code) return;
     try {
-      await copyText(text); // copy the full message with link, not just the bare URL
+      await copyText(text);
       setCopied(true);
-      onShared?.();
       setTimeout(() => setCopied(false), 2500);
     } catch {}
   }
@@ -65,7 +64,6 @@ export default function SharePanel({ referralCode, university, onShared }) {
     if (!code) return;
     try {
       await navigator.share({ title: 'Join me on ASK', text, url: link });
-      onShared?.();
     } catch {}
   }
 
@@ -85,12 +83,12 @@ export default function SharePanel({ referralCode, university, onShared }) {
             Share
           </button>
         ) : (
-          <a href={smsHref} onClick={() => !disabled && onShared?.()} style={solidLink(disabled)}>
+          <a href={smsHref} style={solidLink(disabled)}>
             {MSG_ICON}
             iMessage
           </a>
         )}
-        <a href={waHref} target="_blank" rel="noopener noreferrer" onClick={() => !disabled && onShared?.()} style={solidLink(disabled)}>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" style={solidLink(disabled)}>
           {WA_ICON}
           WhatsApp
         </a>

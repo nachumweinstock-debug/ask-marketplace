@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import SharePanel from './SharePanel';
 
-const INVITE_NUDGE_KEY = 'hasSeenInviteNudge';
+const INVITE_NUDGE_KEY = 'hasSeenInviteNudge_v2';
 
 export default function InviteNudge({ referralCode, university }) {
   const [visible, setVisible] = useState(false);
@@ -35,7 +35,7 @@ export default function InviteNudge({ referralCode, university }) {
           ASK is the YU marketplace for booking barbers, tutors, personal trainers, and more — all from students on campus. Share your link and invite classmates to join.
         </p>
       </div>
-      <SharePanel referralCode={referralCode} university={university} onShared={dismiss} />
+      <SharePanel referralCode={referralCode} university={university} />
       <button
         type="button"
         onClick={dismiss}
