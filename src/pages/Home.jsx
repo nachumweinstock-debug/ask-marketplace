@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FAQAccordion from '../components/FAQAccordion';
+import SharePanel from '../components/SharePanel';
 import api from '../api';
 
 const FILTERS = [
@@ -52,6 +53,70 @@ const ACADEMIC_CATEGORIES = [
     ],
   },
 ];
+
+function ReferralStrip() {
+  const [referralCode, setReferralCode] = useState(null);
+
+  useEffect(() => {
+    api.get('/referrals/mine')
+      .then(r => setReferralCode(r.data?.code || null))
+      .catch(() => {});
+  }, []);
+
+  return (
+    <section style={{
+      background: 'linear-gradient(135deg, #1B3A6B 0%, #243f7a 100%)',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        maxWidth: 1100, margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)',
+        gap: 40, alignItems: 'center',
+      }}
+        className="referral-strip-grid"
+      >
+        <div>
+          <div style={{
+            display: 'inline-block', fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            background: 'rgba(255,255,255,0.15)', borderRadius: 6,
+            padding: '3px 10px', marginBottom: 12, color: '#fff',
+            fontFamily: 'var(--font-ui)',
+          }}>
+            Refer a Friend
+          </div>
+          <h2 style={{
+            fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.5vw,40px)',
+            color: '#fff', lineHeight: 1.1, margin: '0 0 12px',
+          }}>
+            Invite your classmates to ASK
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 1.65, maxWidth: 420, margin: 0 }}>
+            ASK is where YU students book barbers, tutors, personal trainers, and more — all on campus. Share your link and bring your friends in.
+          </p>
+        </div>
+
+        <div>
+          {/* Invite link display */}
+          {referralCode && (
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 10, padding: '9px 14px',
+              fontFamily: 'var(--font-mono)', fontSize: 12,
+              color: 'rgba(255,255,255,0.85)', marginBottom: 12,
+              wordBreak: 'break-all',
+            }}>
+              uask.live/join/{referralCode}
+            </div>
+          )}
+          <SharePanel referralCode={referralCode} />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function HangoutsStrip() {
   const [count, setCount] = useState(null);
@@ -216,6 +281,8 @@ export default function Home() {
       </section>
 
       <HangoutsStrip />
+
+      {user && <ReferralStrip />}
 
       <section className="home-section" style={{ background: '#fff' }}>
         <div className="home-section-inner">
