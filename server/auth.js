@@ -72,7 +72,8 @@ export async function requireAuth(req, res, next) {
     const dbUser = db.prepare(`
       SELECT id, email, name, username, role, is_admin, avatar_url, university, major, interests,
              classes_taking, gpa, user_bio, zelle, venmo, phone, contact_pref, timezone,
-             referral_code, referred_by, created_at, token_version
+             referral_code, referred_by, created_at, token_version,
+             provider_terms_version, provider_terms_at
       FROM users WHERE id = ?
     `).get(customUser.id);
     if (dbUser) {

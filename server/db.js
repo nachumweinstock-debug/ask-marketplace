@@ -107,8 +107,10 @@ if (!cols.includes('gpa'))            db.exec('ALTER TABLE users ADD COLUMN gpa 
 if (!cols.includes('user_bio'))       db.exec('ALTER TABLE users ADD COLUMN user_bio TEXT');
 if (!cols.includes('timezone'))       db.exec('ALTER TABLE users ADD COLUMN timezone TEXT');
 if (!cols.includes('referral_code'))  db.exec('ALTER TABLE users ADD COLUMN referral_code TEXT');
-if (!cols.includes('referred_by'))    db.exec('ALTER TABLE users ADD COLUMN referred_by INTEGER REFERENCES users(id)');
-if (!cols.includes('last_active_at')) db.exec('ALTER TABLE users ADD COLUMN last_active_at DATETIME');
+if (!cols.includes('referred_by'))            db.exec('ALTER TABLE users ADD COLUMN referred_by INTEGER REFERENCES users(id)');
+if (!cols.includes('last_active_at'))         db.exec('ALTER TABLE users ADD COLUMN last_active_at DATETIME');
+if (!cols.includes('provider_terms_version')) db.exec('ALTER TABLE users ADD COLUMN provider_terms_version TEXT');
+if (!cols.includes('provider_terms_at'))      db.exec('ALTER TABLE users ADD COLUMN provider_terms_at DATETIME');
 
 if (!cols.includes('zelle')) db.exec('ALTER TABLE users ADD COLUMN zelle TEXT');
 if (!cols.includes('venmo')) db.exec('ALTER TABLE users ADD COLUMN venmo TEXT');

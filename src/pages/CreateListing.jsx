@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import SlotPicker, { SlotList } from '../components/SlotPicker';
 import { trackEvent } from '../lib/analytics';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
+import ProviderAgreementModal, { PROVIDER_TERMS_VERSION } from '../components/ProviderAgreementModal';
 
 const CATEGORIES = [
   { id: 'tutor',     label: 'Instruction'   },
@@ -239,8 +240,13 @@ function LivePreview({ category, customCategory, subcategory, bio, price, listin
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function CreateListing() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+
+  // Show provider agreement if user hasn't accepted current version
+  const needsAgreement = user?.provider_terms_version !== PROVIDER_TERMS_VERSION;
+  const [showAgreement, setShowAgreement] = useState(needsAgreement);
+  const [agreementLoading, setAgreementLoading] = useState(false);
 
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -306,7 +312,7 @@ export default function CreateListing() {
     if (!bio.trim() || bio.trim().length < 20) { setError('Add a description (at least 20 characters) so people know what you offer'); return; }
     setError(''); setLoading(true);
     try {
-      const { data: becomeData } = await api.post('/providers/become');
+      const { data: becomeData } = await api.post('/providers/become', { providerTermsVersion: PROVIDER_TERMS_VERSION });
       const profileId = becomeData.profile_id;
       const CUSTOM_CAT_MAP = { torah: 'Torah Studies', languages: 'Languages', music: 'Music' };
       const isCustom = !!CUSTOM_CAT_MAP[category];
@@ -343,7 +349,29 @@ export default function CreateListing() {
     }
   }
 
+  async function handleAgreementAccept() {
+    setAgreementLoading(true);
+    try {
+      // Pre-record acceptance — /become will also record it, but this ensures
+      // the user object in context gets refreshed before listing creation
+      await refreshUser();
+      setShowAgreement(false);
+    } catch {
+      setAgreementLoading(false);
+    } finally {
+      setAgreementLoading(false);
+    }
+  }
+
   return (
+    <>
+      {showAgreement && (
+        <ProviderAgreementModal
+          onAccept={handleAgreementAccept}
+          onCancel={() => navigate(-1)}
+          loading={agreementLoading}
+        />
+      )}
     <div className="create-listing-page" style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 48px 100px' }}>
 
       {/* ── Two-column layout ── */}
@@ -758,5 +786,6 @@ export default function CreateListing() {
         }
       `}</style>
     </div>
+    </>
   );
 }

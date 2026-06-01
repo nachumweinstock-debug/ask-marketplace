@@ -347,6 +347,24 @@ router.get('/', optionalAuth, (req, res) => {
 
 // POST /providers/become — create a new listing (always creates new, no longer a toggle)
 router.post('/become', requireAuth, (req, res) => {
+  const { providerTermsVersion } = req.body || {};
+  const CURRENT_PROVIDER_TERMS = '2026-06-01';
+
+  // Check if terms already accepted on a prior listing creation
+  const termsRow = db.prepare('SELECT provider_terms_version FROM users WHERE id = ?').get(req.user.id);
+  const alreadyAccepted = termsRow?.provider_terms_version === CURRENT_PROVIDER_TERMS;
+
+  if (!alreadyAccepted) {
+    if (!providerTermsVersion) {
+      return res.status(403).json({ error: 'provider_terms_required', currentVersion: CURRENT_PROVIDER_TERMS });
+    }
+    if (providerTermsVersion !== CURRENT_PROVIDER_TERMS) {
+      return res.status(403).json({ error: 'provider_terms_outdated', currentVersion: CURRENT_PROVIDER_TERMS });
+    }
+    db.prepare("UPDATE users SET provider_terms_version = ?, provider_terms_at = datetime('now') WHERE id = ?")
+      .run(providerTermsVersion, req.user.id);
+  }
+
   db.prepare("INSERT INTO provider_profiles (user_id, category, created_at) VALUES (?, ?, datetime('now'))").run(req.user.id, 'other');
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
   // Auto-assign username if not already set
