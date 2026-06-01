@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { buildShareText } from './SharePanel';
+import { copyText } from '../lib/clipboard';
 
 // Contact Picker API — Android Chrome / WebView only
 const hasContactAPI = typeof navigator !== 'undefined' && 'contacts' in navigator;
@@ -30,6 +31,7 @@ export default function ContactImporter({ referralCode, university }) {
   const [contacts, setContacts] = useState([]);
   const [importing, setImporting] = useState(false);
   const [sent, setSent] = useState(new Set());
+  const [urlCopied, setUrlCopied] = useState(false);
 
   // Android: native contact picker
   async function importFromDevice() {
@@ -120,49 +122,122 @@ export default function ContactImporter({ referralCode, university }) {
         </button>
       )}
 
-      {/* iOS — native share sheet (iMessage, WhatsApp, AirDrop, etc.) */}
+      {/* iOS — native share sheet */}
       {!hasContactAPI && hasShareAPI && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            type="button"
-            onClick={shareViaSheet}
-            style={{ ...btnStyle, background: '#F15A24', color: '#fff', width: '100%' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-              <polyline points="16 6 12 2 8 6"/>
-              <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-            Share invite to contacts
-          </button>
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
-            Opens your share sheet — pick iMessage, WhatsApp, or any app to choose who to send to.
-          </p>
+        <div style={{
+          background: '#FFF1E8', border: '1.5px solid #F5D4BE',
+          borderRadius: 16, overflow: 'hidden',
+        }}>
+          <div style={{ padding: '20px 20px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+                background: '#F15A24', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#17130F' }}>Share to your contacts</div>
+                <div style={{ fontSize: 13, color: '#5F5A50', marginTop: 2 }}>
+                  Opens iMessage, WhatsApp, or any app — you pick the contact.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={shareViaSheet}
+              style={{ ...btnStyle, background: '#F15A24', color: '#fff', width: '100%' }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+              Open share sheet
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Desktop — not supported */}
+      {/* Desktop — send the link to your phone */}
       {!isMobile && !hasContactAPI && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 16,
           background: '#FFF1E8', border: '1.5px solid #F5D4BE',
-          borderRadius: 14, padding: '18px 20px',
+          borderRadius: 16, overflow: 'hidden',
         }}>
+          {/* Top strip */}
           <div style={{
-            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-            background: '#F15A24',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#F15A24', padding: '14px 20px',
+            display: 'flex', alignItems: 'center', gap: 10,
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
               <line x1="12" y1="18" x2="12.01" y2="18"/>
             </svg>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-ui)' }}>
+              Open on your phone to send to contacts
+            </span>
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>Use on your phone</div>
-            <div style={{ fontSize: 13, color: '#5F5A50', lineHeight: 1.5 }}>
-              Open <strong>uask.live/referrals</strong> on your phone to send invites directly to contacts.
+
+          <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ fontSize: 13, color: '#5F5A50', margin: 0, lineHeight: 1.6 }}>
+              iOS and Android don't allow websites to access your contact list directly — it has to be done from your phone's browser. Copy the link below and open it there.
+            </p>
+
+            {/* URL display + copy */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: '#fff', border: '1.5px solid #F5D4BE', borderRadius: 10,
+              padding: '10px 14px',
+            }}>
+              <span style={{
+                flex: 1, fontFamily: 'var(--font-mono)', fontSize: 13,
+                color: '#17130F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                uask.live/referrals
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await copyText('https://uask.live/referrals');
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 2500);
+                  } catch {}
+                }}
+                style={{
+                  flexShrink: 0, padding: '6px 14px', borderRadius: 7,
+                  background: urlCopied ? '#15803d' : '#F15A24', color: '#fff',
+                  border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  fontFamily: 'var(--font-ui)', touchAction: 'manipulation',
+                  transition: 'background .2s',
+                }}
+              >
+                {urlCopied ? 'Copied!' : 'Copy'}
+              </button>
             </div>
+
+            {/* Text to self */}
+            <a
+              href={`sms:?body=Open this on your phone to invite friends to ASK: https://uask.live/referrals`}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                padding: '11px 16px', borderRadius: 10,
+                background: '#fff', border: '1.5px solid #F5D4BE',
+                fontSize: 13, fontWeight: 700, color: '#17130F',
+                textDecoration: 'none', fontFamily: 'var(--font-ui)',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Text this link to myself
+            </a>
           </div>
         </div>
       )}
