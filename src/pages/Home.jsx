@@ -280,9 +280,9 @@ export default function Home() {
         </div>
       </section>
 
-      <HangoutsStrip />
-
       {user && <ReferralStrip />}
+
+      <HangoutsStrip />
 
       <section className="home-section" style={{ background: '#fff' }}>
         <div className="home-section-inner">

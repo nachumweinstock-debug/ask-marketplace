@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../api';
 import { RowSkeleton } from '../components/Skeletons';
 import SharePanel from '../components/SharePanel';
+import ContactImporter from '../components/ContactImporter';
 import { useAuth } from '../context/AuthContext';
 
 export default function Referrals() {
@@ -99,6 +100,11 @@ export default function Referrals() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── Contact importer ────────────────────────────────── */}
+      <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
+        <ContactImporter referralCode={data?.code} />
       </div>
 
       {/* ── Invited users list ──────────────────────────────── */}

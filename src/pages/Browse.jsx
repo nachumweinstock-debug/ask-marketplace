@@ -7,6 +7,102 @@ import { trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
+import SharePanel from '../components/SharePanel';
+
+const BROWSE_REFERRAL_DISMISSED_KEY = 'browse_referral_dismissed_v1';
+
+function BrowseReferralBanner({ user }) {
+  const [code, setCode] = useState(null);
+  const [dismissed, setDismissed] = useState(
+    () => !!localStorage.getItem(BROWSE_REFERRAL_DISMISSED_KEY)
+  );
+
+  useEffect(() => {
+    if (!user || dismissed) return;
+    api.get('/referrals/mine')
+      .then(r => setCode(r.data?.code || null))
+      .catch(() => {});
+  }, [user, dismissed]);
+
+  if (!user || dismissed || !code) return null;
+
+  function dismiss() {
+    localStorage.setItem(BROWSE_REFERRAL_DISMISSED_KEY, '1');
+    setDismissed(true);
+  }
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #1B3A6B 0%, #2a5298 100%)',
+      borderRadius: 18, marginBottom: 22, overflow: 'hidden',
+      position: 'relative',
+    }}>
+      {/* Dismiss button */}
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Dismiss"
+        style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 2,
+          width: 28, height: 28, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)', border: 'none',
+          cursor: 'pointer', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,1fr) minmax(0,360px)',
+        gap: 28, padding: '24px 28px', alignItems: 'center',
+      }}
+        className="referral-strip-grid"
+      >
+        {/* Left: copy */}
+        <div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(255,255,255,0.18)', borderRadius: 99,
+            padding: '3px 12px', marginBottom: 10,
+            fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: '#fff', fontFamily: 'var(--font-ui)',
+          }}>
+            ✦ Refer a Friend
+          </div>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(22px, 3vw, 34px)',
+            color: '#fff', margin: '0 0 8px', lineHeight: 1.1,
+          }}>
+            Know someone who needs campus services?
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.72)', fontSize: 14,
+            lineHeight: 1.65, margin: 0, maxWidth: 420,
+          }}>
+            Share your link — they sign up, you're credited. Barbers, tutors, trainers, and more, all from YU students.
+          </p>
+          <div style={{
+            marginTop: 12,
+            fontFamily: 'var(--font-mono)', fontSize: 11,
+            color: 'rgba(255,255,255,0.55)',
+          }}>
+            uask.live/join/{code}
+          </div>
+        </div>
+
+        {/* Right: share buttons */}
+        <div>
+          <SharePanel referralCode={code} onShared={dismiss} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const EDIT_CATEGORIES = [
   { id: 'tutor',     label: 'Instruction'  },
@@ -326,6 +422,8 @@ export default function Browse() {
 
   return (
     <div className="page" style={{ paddingTop: 26 }}>
+
+      <BrowseReferralBanner user={user} />
 
       {/* ── Header row ── */}
       <div className="browse-header" style={{
