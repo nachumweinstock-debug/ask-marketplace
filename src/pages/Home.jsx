@@ -55,6 +55,7 @@ const ACADEMIC_CATEGORIES = [
 ];
 
 function ReferralStrip() {
+  const { user } = useAuth();
   const [referralCode, setReferralCode] = useState(null);
 
   useEffect(() => {
@@ -71,20 +72,21 @@ function ReferralStrip() {
       <div style={{
         maxWidth: 1100, margin: '0 auto',
         display: 'grid',
-        gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)',
+        gridTemplateColumns: 'minmax(0,1fr) minmax(0,380px)',
         gap: 40, alignItems: 'center',
       }}
         className="referral-strip-grid"
       >
         <div>
           <div style={{
-            display: 'inline-block', fontSize: 11, fontWeight: 700,
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-            background: 'rgba(255,255,255,0.15)', borderRadius: 6,
-            padding: '3px 10px', marginBottom: 12, color: '#fff',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            background: 'rgba(255,255,255,0.18)', borderRadius: 99,
+            padding: '3px 12px', marginBottom: 12, color: '#fff',
             fontFamily: 'var(--font-ui)',
           }}>
-            Refer a Friend
+            ✦ Refer a Friend
           </div>
           <h2 style={{
             fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.5vw,40px)',
@@ -93,25 +95,20 @@ function ReferralStrip() {
             Invite your classmates to ASK
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 1.65, maxWidth: 420, margin: 0 }}>
-            ASK is where YU students book barbers, tutors, personal trainers, and more — all on campus. Share your link and bring your friends in.
+            ASK is a campus app to find OR offer tutoring, barbers, fitness and more. Share your link and bring your friends in.
           </p>
+          {referralCode && (
+            <div style={{
+              marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 12,
+              color: 'rgba(255,255,255,0.5)',
+            }}>
+              uask.live/join/{referralCode.toLowerCase()}
+            </div>
+          )}
         </div>
 
         <div>
-          {/* Invite link display */}
-          {referralCode && (
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 10, padding: '9px 14px',
-              fontFamily: 'var(--font-mono)', fontSize: 12,
-              color: 'rgba(255,255,255,0.85)', marginBottom: 12,
-              wordBreak: 'break-all',
-            }}>
-              uask.live/join/{referralCode}
-            </div>
-          )}
-          <SharePanel referralCode={referralCode} />
+          <SharePanel referralCode={referralCode} university={user?.university} />
         </div>
       </div>
     </section>

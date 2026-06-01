@@ -64,7 +64,7 @@ export default function Referrals() {
           </span>
         </div>
 
-        <SharePanel referralCode={data?.code} />
+        <SharePanel referralCode={data?.code} university={user?.university} />
       </div>
 
       {/* ── Stats row ───────────────────────────────────────── */}
@@ -104,7 +104,7 @@ export default function Referrals() {
 
       {/* ── Contact importer ────────────────────────────────── */}
       <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
-        <ContactImporter referralCode={data?.code} />
+        <ContactImporter referralCode={data?.code} university={user?.university} />
       </div>
 
       {/* ── Invited users list ──────────────────────────────── */}

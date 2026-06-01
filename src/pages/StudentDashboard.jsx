@@ -295,7 +295,7 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      <InviteNudge referralCode={user?.referral_code} />
+      <InviteNudge referralCode={user?.referral_code} university={user?.university} />
       <ReferralStats userId={user?.id} />
       <GettingStarted hasBookings={!loading && bookings.length > 0} />
 

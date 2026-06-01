@@ -1,7 +1,5 @@
 import { useState, useRef } from 'react';
-
-const SHARE_TEXT = (link) =>
-  `Hey! I use ASK — the YU campus app for booking barbers, tutors, personal trainers, and more. Sign up with my link: ${link}`;
+import { buildShareText } from './SharePanel';
 
 // Contact Picker API — only in Android Chrome / WebView
 const hasContactAPI = typeof navigator !== 'undefined' && 'contacts' in navigator;
@@ -24,10 +22,10 @@ function smsHref(tel, shareText) {
   return `sms:${tel}?body=${encodeURIComponent(shareText)}`;
 }
 
-export default function ContactImporter({ referralCode }) {
+export default function ContactImporter({ referralCode, university }) {
   const code = String(referralCode || '').trim().toUpperCase();
   const link = code ? `https://uask.live/join/${encodeURIComponent(code)}` : '';
-  const shareText = SHARE_TEXT(link);
+  const shareText = buildShareText(link, university);
 
   const [contacts, setContacts] = useState([]); // { id, name, tel }
   const [manualVal, setManualVal] = useState('');

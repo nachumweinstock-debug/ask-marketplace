@@ -84,7 +84,7 @@ function BrowseReferralBanner({ user }) {
             color: 'rgba(255,255,255,0.72)', fontSize: 14,
             lineHeight: 1.65, margin: 0, maxWidth: 420,
           }}>
-            Share your link — they sign up, you're credited. Barbers, tutors, trainers, and more, all from YU students.
+            Share your link — they sign up, you're credited. Barbers, tutors, trainers, and more — all from students on your campus.
           </p>
           <div style={{
             marginTop: 12,
@@ -97,7 +97,7 @@ function BrowseReferralBanner({ user }) {
 
         {/* Right: share buttons */}
         <div>
-          <SharePanel referralCode={code} onShared={dismiss} />
+          <SharePanel referralCode={code} university={user?.university} onShared={dismiss} />
         </div>
       </div>
     </div>
