@@ -394,6 +394,12 @@ export function SignUp() {
 
   const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
+  useEffect(() => {
+    const code = referralCode.trim().toUpperCase();
+    if (!code) return;
+    try { localStorage.setItem('pendingReferral', code); } catch {}
+  }, [referralCode]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(''); setLoading(true);
@@ -408,6 +414,8 @@ export function SignUp() {
       return;
     }
     try {
+      let pendingReferral = referralCode.trim().toUpperCase();
+      try { pendingReferral = pendingReferral || localStorage.getItem('pendingReferral') || ''; } catch {}
       trackEvent('signup_started', { method: 'email', redirect: redirect || '', university: form.university.trim() });
       const { data } = await api.post('/auth/signup', {
         email: form.email.toLowerCase(),
@@ -416,11 +424,19 @@ export function SignUp() {
         phone: form.phone,
         university: form.university.trim(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        referralCode,
+        referralCode: pendingReferral,
         termsAccepted: true,
         termsVersion: TERMS_VERSION,
         privacyVersion: PRIVACY_VERSION,
       });
+      if (pendingReferral && data.user?.id) {
+        try {
+          await api.post('/referrals/redeem', { newUserId: data.user.id, referralCode: pendingReferral });
+        } catch {
+        } finally {
+          try { localStorage.removeItem('pendingReferral'); } catch {}
+        }
+      }
       await loginWithToken(data.token, data.user);
       trackEvent('signup_completed', { method: 'email', redirect: redirect || '', university: form.university.trim() });
       setCreatedAccount(data.user);

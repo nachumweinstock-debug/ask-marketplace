@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { RowSkeleton } from '../components/Skeletons';
-import { copyText } from '../lib/clipboard';
+import SharePanel from '../components/SharePanel';
+import ReferralStats from '../components/ReferralStats';
+import { useAuth } from '../context/AuthContext';
 
 export default function Referrals() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.get('/referrals/mine')
@@ -16,12 +18,6 @@ export default function Referrals() {
 
   if (loading) return <div className="page" style={{ maxWidth: 900 }}><RowSkeleton rows={5} /></div>;
 
-  async function copy() {
-    try { await copyText(data.invite_url); } catch { return; }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
-  }
-
   return (
     <div className="page" style={{ maxWidth: 960 }}>
       <div className="card" style={{ padding: 28, marginBottom: 16 }}>
@@ -30,18 +26,13 @@ export default function Referrals() {
         <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginTop: 10 }}>
           Share your link with classmates who need instructors or want to offer services. We track signups and bookings from your referral code.
         </p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+        <div style={{ display: 'grid', gap: 12, marginTop: 18 }}>
           <input readOnly value={data?.invite_url || ''} style={{ flex: 1, minWidth: 240, border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: 12 }} />
-          <button onClick={copy} style={{ border: 'none', borderRadius: 999, padding: '11px 18px', background: copied ? '#16A34A' : 'var(--text)', color: '#fff', fontWeight: 900, cursor: 'pointer' }}>
-            {copied ? 'Copied' : 'Copy link'}
-          </button>
-          {navigator.share && (
-            <button onClick={() => navigator.share({ title: 'Ask Marketplace', url: data.invite_url })} style={{ border: '1px solid var(--border)', borderRadius: 999, padding: '11px 18px', background: '#fff', fontWeight: 900, cursor: 'pointer' }}>
-              Share
-            </button>
-          )}
+          <SharePanel referralCode={data?.code} />
         </div>
       </div>
+
+      <ReferralStats userId={user?.id} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
         <Kpi label="Referral code" value={data?.code || '-'} small />

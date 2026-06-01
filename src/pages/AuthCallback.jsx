@@ -16,8 +16,7 @@ const inputStyle = {
 };
 
 function finishOAuth(token, dest) {
-  // /dashboard is a single-segment path — React loads fine there with base:'./'
-  // It redirects client-side to /dashboard/student or /dashboard/provider via the route.
+  // /dashboard redirects client-side to /dashboard/student or /dashboard/provider via the route.
   const target = '/dashboard';
 
   // Write for any polling loops (e.g. the PWA login page waiting for this result).

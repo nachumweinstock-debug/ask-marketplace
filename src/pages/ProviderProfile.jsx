@@ -228,6 +228,7 @@ export default function ProviderProfile() {
   const [reportingReview, setReportingReview] = useState(null);
   const [reportForm, setReportForm] = useState({ reason: 'spam', details: '' });
   const [notFound, setNotFound] = useState(false);
+  const [providerShareCopied, setProviderShareCopied] = useState(false);
 
   useEffect(() => {
     setNotFound(false);
@@ -371,6 +372,21 @@ export default function ProviderProfile() {
   const discount = discountPercent(provider);
   const displayPrice = discountedPrice(provider);
   const sitewideSale = discount > 0 && provider.first_time_discount_scope === 'sitewide';
+  const providerShareUrl = `https://uask.live/providers/${provider.id}`;
+  const providerServiceType = provider.subcategory || provider.custom_category || provider.title || provider.category || 'campus services';
+
+  async function copyProviderShareLink() {
+    try {
+      await copyText(providerShareUrl);
+      setProviderShareCopied(true);
+      setTimeout(() => setProviderShareCopied(false), 2000);
+    } catch {}
+  }
+
+  function openProviderWhatsAppShare() {
+    const text = `Book me on ASK for ${providerServiceType} at YU: ${providerShareUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  }
 
   // Separate real calendar dates from legacy day-name slots
   const realSlots    = availability.filter(s => /^\d{4}/.test(s.date));
@@ -625,6 +641,38 @@ export default function ProviderProfile() {
       </div>
 
       <ProfileTrustPanel provider={provider} />
+
+      {isOwner && (
+        <section className="mb-5 rounded-2xl border border-[#E8E3DA] border-l-4 border-l-[#1B3A6B] bg-[#FAF7F2] p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="font-['DM_Serif_Display'] text-3xl leading-tight text-[#1B3A6B]">
+              Grow your client base
+            </h2>
+            <p className="mt-2 font-['Outfit'] text-sm leading-6 text-[#5F5A50]">
+              Share your profile link and start getting bookings from new students
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={copyProviderShareLink}
+              className="rounded-xl bg-[#1B3A6B] px-5 py-3 font-['Outfit'] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              {providerShareCopied ? 'Copied!' : 'Copy Link'}
+            </button>
+            <button
+              type="button"
+              onClick={openProviderWhatsAppShare}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#1B3A6B] px-5 py-3 font-['Outfit'] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
+                <path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z" />
+              </svg>
+              WhatsApp
+            </button>
+          </div>
+        </section>
+      )}
 
       {(mediaItems.length > 0 || provider.intro_video_url || provider.portfolio_notes) && (
         <section className="card" style={{ padding: 24, borderRadius: 16, marginBottom: 20 }}>

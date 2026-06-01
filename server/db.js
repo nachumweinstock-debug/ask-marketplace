@@ -137,6 +137,17 @@ db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(us
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code_unique ON users(referral_code) WHERE referral_code IS NOT NULL');
 db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_user_id ON saved_tutors(user_id)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_saved_tutors_tutor_id ON saved_tutors(tutor_id)');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS referrals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referrer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    referred_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    redeemed INTEGER DEFAULT 0,
+    UNIQUE(referred_id)
+  );
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id)');
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('verification_codes')) {

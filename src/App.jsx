@@ -38,6 +38,7 @@ import SessionReminders from './components/SessionReminders';
 import StudyHangouts from './pages/StudyHangouts';
 import NotFound from './pages/NotFound';
 import Go from './pages/Go';
+import JoinReferral from './pages/JoinReferral';
 
 function ProtectedRoute({ children, role, developerOnly = false }) {
   const { user, loading } = useAuth();
@@ -179,6 +180,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/browse" element={<Layout><Browse /></Layout>} />
+        <Route path="/join/:referralCode" element={<Layout><JoinReferral /></Layout>} />
         <Route path="/support" element={<Layout><Support /></Layout>} />
         <Route path="/find-a-tutor" element={<Layout><FindTutor /></Layout>} />
         <Route path="/saved-tutors" element={<Layout><SavedTutors /></Layout>} />

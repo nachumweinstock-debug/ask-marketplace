@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomInt } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import db from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
 import { sendPasswordResetCode, sendWelcomeEmail, sendAdminNewUserNotification } from '../email.js';
@@ -43,9 +43,23 @@ function uniqueUsername(name, email) {
   return slug;
 }
 
-function referralCodeFor(name, id) {
-  const seed = (name || 'ask').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 8) || 'ask';
-  return `${seed}${id}`.slice(0, 20);
+const REFERRAL_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function createReferralCode() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const bytes = randomBytes(8);
+    const code = Array.from(bytes, b => REFERRAL_ALPHABET[b % REFERRAL_ALPHABET.length]).join('');
+    if (!db.prepare('SELECT 1 FROM users WHERE referral_code = ?').get(code)) return code;
+  }
+  throw new Error('Unable to generate referral code');
+}
+
+function ensureReferralCode(userId) {
+  const existing = db.prepare('SELECT referral_code FROM users WHERE id = ?').get(userId)?.referral_code;
+  if (existing) return existing;
+  const code = createReferralCode();
+  db.prepare('UPDATE users SET referral_code = ? WHERE id = ?').run(code, userId);
+  return code;
 }
 
 // POST /auth/signup — create account, log in immediately (no email verification)
@@ -81,9 +95,8 @@ router.post('/signup', async (req, res) => {
     const result = db.prepare(
       "INSERT INTO users (email, name, password, role, email_verified, phone, username, university, timezone, referred_by) VALUES (?, ?, ?, 'student', 1, ?, ?, ?, ?, ?)"
     ).run(cleanEmail, cleanName, hashed, cleanPhone || null, username, cleanUniversity, String(timezone || '').slice(0, 80) || null, referrer?.id || null);
-    const code = referralCodeFor(cleanName, result.lastInsertRowid);
-    db.prepare('UPDATE users SET referral_code = ? WHERE id = ?').run(code, result.lastInsertRowid);
-    user = db.prepare('SELECT id, email, name, role, token_version, username, university FROM users WHERE id = ?').get(result.lastInsertRowid);
+    ensureReferralCode(result.lastInsertRowid);
+    user = db.prepare('SELECT id, email, name, role, token_version, username, university, referral_code FROM users WHERE id = ?').get(result.lastInsertRowid);
     db.prepare(`
       INSERT INTO policy_acceptances (user_id, terms_version, privacy_version, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?)
@@ -307,7 +320,8 @@ router.get('/google/callback', async (req, res) => {
         const r = db.prepare(
           "INSERT INTO users (email, name, password, role, email_verified, google_id) VALUES (?, ?, '', 'student', 1, ?)"
         ).run(profile.email.toLowerCase(), profile.name || profile.email.split('@')[0], profile.id);
-        user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
+        ensureReferralCode(r.lastInsertRowid);
+        user = db.prepare('SELECT id, email, name, role, referral_code FROM users WHERE id = ?').get(r.lastInsertRowid);
         sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Google' }).catch(() => {});
         pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Google`, { screen: 'admin' }).catch(() => {});
       }
@@ -423,7 +437,8 @@ router.post('/apple/callback', async (req, res) => {
       const r = db.prepare(
         "INSERT INTO users (email, name, password, role, email_verified, apple_id) VALUES (?, ?, '', 'student', 1, ?)"
       ).run(finalEmail.toLowerCase(), finalName, appleId);
-      user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(r.lastInsertRowid);
+      ensureReferralCode(r.lastInsertRowid);
+      user = db.prepare('SELECT id, email, name, role, referral_code FROM users WHERE id = ?').get(r.lastInsertRowid);
       sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Apple' }).catch(() => {});
       pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Apple`, { screen: 'admin' }).catch(() => {});
     }
@@ -453,7 +468,7 @@ router.post('/apple/callback', async (req, res) => {
 
 // POST /auth/google/id-token — verify Google ID token from GIS/FedCM, return app JWT
 router.post('/google/id-token', async (req, res) => {
-  const { credential, redirect: redirectPath } = req.body;
+  const { credential } = req.body;
   if (!credential) return res.status(400).json({ error: 'credential required' });
 
   try {
@@ -481,7 +496,8 @@ router.post('/google/id-token', async (req, res) => {
         const ins = db.prepare(
           "INSERT INTO users (email, name, password, role, email_verified, google_id) VALUES (?, ?, '', 'student', 1, ?)"
         ).run(email.toLowerCase(), name, googleId);
-        user = db.prepare('SELECT id, email, name, role FROM users WHERE id = ?').get(ins.lastInsertRowid);
+        ensureReferralCode(ins.lastInsertRowid);
+        user = db.prepare('SELECT id, email, name, role, referral_code FROM users WHERE id = ?').get(ins.lastInsertRowid);
         sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Google (GIS)' }).catch(() => {});
         pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Google`, { screen: 'admin' }).catch(() => {});
       }
@@ -545,6 +561,7 @@ router.post('/apple/native', async (req, res) => {
       const r = db.prepare(
         "INSERT INTO users (email, name, password, role, email_verified, apple_id) VALUES (?, ?, '', 'student', 1, ?)"
       ).run(finalEmail.toLowerCase(), name, appleId);
+      ensureReferralCode(r.lastInsertRowid);
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
       sendAdminNewUserNotification({ name: user.name, email: user.email, method: 'Apple (native)' }).catch(() => {});
       pushToAdmins('New user signed up', `${user.name} (${user.email}) joined via Apple`, { screen: 'admin' }).catch(() => {});

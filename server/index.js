@@ -90,6 +90,7 @@ const RATE_LIMITED_AUTH = ['/login', '/signup', '/forgot-password', '/verify-res
 for (const path of RATE_LIMITED_AUTH) {
   app.use(`/api/auth${path}`, authLimiter);
 }
+app.use('/api/admin/bootstrap', authLimiter);
 
 app.use('/api', apiLimiter);
 
@@ -141,6 +142,17 @@ app.get('/api/health', (_, res) => {
     },
     uptime_seconds: Math.round(startedAt),
   });
+});
+
+app.get('/join/:referralCode', (req, res) => {
+  const code = String(req.params.referralCode || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{3,32}$/.test(code)) {
+    return res.status(400).json({ error: 'Invalid referral code' });
+  }
+  const user = db.prepare('SELECT id FROM users WHERE UPPER(referral_code) = ?').get(code);
+  if (!user) return res.status(404).json({ error: 'Referral code not found' });
+  const frontend = process.env.FRONTEND_URL || 'https://uask.live';
+  res.redirect(302, `${frontend.replace(/\/$/, '')}/signup?ref=${encodeURIComponent(code)}`);
 });
 
 

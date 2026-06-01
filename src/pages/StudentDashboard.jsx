@@ -98,6 +98,8 @@ function GettingStarted({ hasBookings }) {
 import { fmtTime, fmtDay } from '../lib/slots';
 import { RowSkeleton } from '../components/Skeletons';
 import PoweredByAsk from '../components/PoweredByAsk';
+import InviteNudge from '../components/InviteNudge';
+import ReferralStats from '../components/ReferralStats';
 
 const STATUS = {
   pending:   { label: 'Pending',   bg: '#FFF8E6', color: '#92600A' },
@@ -293,6 +295,8 @@ export default function StudentDashboard() {
         </button>
       </div>
 
+      <InviteNudge referralCode={user?.referral_code} />
+      <ReferralStats userId={user?.id} />
       <GettingStarted hasBookings={!loading && bookings.length > 0} />
 
       {/* Reschedule proposals */}

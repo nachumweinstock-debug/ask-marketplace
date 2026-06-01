@@ -12,6 +12,8 @@ import TrustBadges from '../components/TrustBadges';
 import { mediaUrl } from '../lib/media';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 import { copyText } from '../lib/clipboard';
+import InviteNudge from '../components/InviteNudge';
+import ReferralStats from '../components/ReferralStats';
 
 function AddToCalendarButton({ bookingId }) {
   const [open, setOpen] = useState(false);
@@ -473,6 +475,9 @@ export default function ProviderDashboard() {
           <strong>You're live!</strong> Add availability below so students can book you.
         </div>
       )}
+
+      <InviteNudge referralCode={user?.referral_code} />
+      <ReferralStats userId={user?.id} />
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>

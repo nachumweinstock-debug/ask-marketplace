@@ -6,7 +6,7 @@ const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:3001';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: './',
+  base: '/',
   build: {
     rollupOptions: {
       output: {

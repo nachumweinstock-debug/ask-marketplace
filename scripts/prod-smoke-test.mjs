@@ -1,5 +1,6 @@
 const API = process.env.API_BASE || 'https://ask-marketplace-production.up.railway.app/api';
 const stamp = process.env.SMOKE_STAMP || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const dmMarker = `smoke-dm-${stamp.split('-').at(-1)}`;
 const password = `SmokePass-${stamp}!`;
 
 const state = {
@@ -266,14 +267,14 @@ async function main() {
 
   const dmToProvider = await request('POST', `/dm/${state.provider.user.id}`, {
     token: state.student.token,
-    body: { body: `Smoke test DM ${stamp}` },
+    body: { body: `Smoke test DM ${dmMarker}` },
     label: 'student sends dm',
   });
   if (!dmToProvider.data.id) throw new Error('DM send missing id');
   const unread = await request('GET', '/dm/unread', { token: state.provider.token, label: 'provider dm unread' });
   if (unread.data.count < 1) throw new Error('provider unread count did not increment');
   const thread = await request('GET', `/dm/${state.student.user.id}`, { token: state.provider.token, label: 'provider reads dm thread' });
-  if (!thread.data.some((m) => m.body.includes(stamp))) throw new Error('DM thread missing sent message');
+  if (!thread.data.some((m) => m.body.includes(dmMarker))) throw new Error('DM thread missing sent message');
   log('direct messages send/unread/read');
 
   const connection = await request('POST', '/people/connections', {
