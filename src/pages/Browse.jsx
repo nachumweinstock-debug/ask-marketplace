@@ -8,8 +8,6 @@ import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
 
-const BROWSE_REFERRAL_DISMISSED_KEY = 'browse_referral_dismissed_v2';
-
 function uniLabel(u) {
   if (!u) return 'your campus';
   const map = { 'Yeshiva University': 'YU', 'Stern College for Women': 'Stern' };
@@ -72,83 +70,52 @@ function BrowseShareButtons({ referralCode, university }) {
 
 function BrowseReferralBanner({ user }) {
   const [code, setCode] = useState(null);
-  const [dismissed, setDismissed] = useState(
-    () => !!localStorage.getItem(BROWSE_REFERRAL_DISMISSED_KEY)
-  );
 
   useEffect(() => {
-    if (!user || dismissed) return;
+    if (!user) return;
     api.get('/referrals/mine')
       .then(r => setCode(r.data?.code || null))
       .catch(() => {});
-  }, [user, dismissed]);
+  }, [user?.id]);
 
-  if (!user || dismissed || !code) return null;
-
-  function dismiss() {
-    localStorage.setItem(BROWSE_REFERRAL_DISMISSED_KEY, '1');
-    setDismissed(true);
-  }
+  if (!user || !code) return null;
 
   return (
     <div style={{
       background: '#FFF1E8',
       border: '1.5px solid #F5D4BE',
       borderRadius: 18, marginBottom: 22,
-      position: 'relative',
     }}>
-      {/* Dismiss */}
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss"
-        style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 2,
-          width: 28, height: 28, borderRadius: '50%',
-          background: '#F5D4BE', border: 'none',
-          cursor: 'pointer', color: '#5F5A50',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0,1fr) minmax(0,340px)',
-        gap: 28, padding: '24px 28px', alignItems: 'center',
+        gap: 28, padding: '22px 26px', alignItems: 'center',
       }}
         className="referral-strip-grid"
       >
-        {/* Left */}
         <div>
           <div style={{
             fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
             textTransform: 'uppercase', color: '#F15A24',
-            fontFamily: 'var(--font-ui)', marginBottom: 10,
+            fontFamily: 'var(--font-ui)', marginBottom: 8,
           }}>
             ✦ Refer a Friend
           </div>
           <h2 style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(20px, 2.8vw, 30px)',
-            color: '#17130F', margin: '0 0 8px', lineHeight: 1.1,
+            fontSize: 'clamp(18px, 2.4vw, 26px)',
+            color: '#17130F', margin: '0 0 6px', lineHeight: 1.15,
           }}>
             Know someone who needs campus services?
           </h2>
-          <p style={{ color: '#5F5A50', fontSize: 13, lineHeight: 1.65, margin: 0, maxWidth: 380 }}>
-            Share your link — when they sign up you're credited. Barbers, tutors, trainers and more — all from students on your campus.
+          <p style={{ color: '#5F5A50', fontSize: 13, lineHeight: 1.6, margin: 0, maxWidth: 380 }}>
+            Share your link — when they sign up you're credited.
           </p>
-          <div style={{
-            marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 11, color: '#A09890',
-          }}>
+          <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: '#A09890' }}>
             uask.live/join/{code.toLowerCase()}
           </div>
         </div>
 
-        {/* Right: light-mode buttons */}
         <BrowseShareButtons referralCode={code} university={user?.university} />
       </div>
     </div>
