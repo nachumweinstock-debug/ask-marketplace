@@ -405,6 +405,7 @@ export default function Navbar() {
               </DrawerLink>
               <DrawerLink to="/saved-tutors" active={path === '/saved-tutors'} onClick={() => setMobileOpen(false)}>Saved</DrawerLink>
               <DrawerLink to="/people" active={isActive('/people')} onClick={() => setMobileOpen(false)}>People</DrawerLink>
+              <DrawerLink to="/referrals" active={path === '/referrals'} onClick={() => setMobileOpen(false)}>Refer a Friend</DrawerLink>
               <DrawerLink to="/create-listing" active={path === '/create-listing'} onClick={() => setMobileOpen(false)}>Post a listing</DrawerLink>
               <DrawerLink to="/help-wanted" active={path === '/help-wanted'} onClick={() => setMobileOpen(false)}>Help Wanted</DrawerLink>
               <div style={{ padding: '12px 20px', borderTop: '1px solid var(--cream-200)', marginTop: 4 }}>

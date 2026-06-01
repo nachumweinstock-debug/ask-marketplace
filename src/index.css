@@ -268,7 +268,7 @@ body {
   border-top: 1px solid var(--gray-200);
   padding: 0 0 16px;
   animation: slideDown 0.18s ease both;
-  max-height: calc(100vh - 64px);
+  max-height: calc(100vh - 64px - 56px - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
 }
 

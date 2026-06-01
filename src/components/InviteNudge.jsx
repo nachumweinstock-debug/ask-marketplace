@@ -25,11 +25,14 @@ export default function InviteNudge({ referralCode }) {
   return (
     <section className="mb-7 rounded-2xl border border-[#E8E3DA] bg-[#FAF7F2] p-6 shadow-sm">
       <div className="mb-4">
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1B3A6B', marginBottom: 8, fontFamily: 'var(--font-ui)' }}>
+          Refer a Friend
+        </div>
         <h2 className="font-['DM_Serif_Display'] text-3xl leading-tight text-[#1B3A6B]">
-          Invite your classmates to ASK
+          Know someone who needs campus services?
         </h2>
         <p className="mt-2 font-['Outfit'] text-sm leading-6 text-[#5F5A50]">
-          Bring more YU students into the community so everyone can find the help they need.
+          ASK is the YU marketplace for booking barbers, tutors, personal trainers, and more — all from students on campus. Share your link and invite classmates to join.
         </p>
       </div>
       <SharePanel referralCode={referralCode} onShared={dismiss} />
