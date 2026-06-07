@@ -109,43 +109,43 @@ function ProviderCard({ provider, index }) {
   return (
     <Link
       to={profileHref}
-      className="provider-card-home block rounded-[20px] border border-[rgba(27,58,107,0.07)] bg-white p-8 no-underline transition"
+      className="provider-card-home block min-h-[430px] rounded-[20px] border border-[rgba(27,58,107,0.07)] bg-white p-10 no-underline transition"
       style={{ animationDelay: `${0.05 + (index * 0.07)}s` }}
     >
       <div
-        className="mb-5 flex h-[50px] w-[50px] items-center justify-center rounded-[13px] text-[19px] text-white"
+        className="mb-6 flex h-[50px] w-[50px] items-center justify-center rounded-[13px] text-[19px] text-white"
         style={{ background: cardAccent(provider.name), fontFamily: '"DM Serif Display", serif', fontWeight: 400 }}
       >
         {initials(provider.name)}
       </div>
 
-      <div className="mb-[5px] text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: '#C9A84C' }}>
+      <div className="mb-[8px] text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: '#C9A84C' }}>
         Featured Provider
       </div>
 
-      <h3 className="provider-name-home mb-[10px] font-['DM_Serif_Display'] text-[22px] leading-none tracking-[-0.3px] text-[#112345]">
+      <h3 className="provider-name-home mb-[14px] font-['DM_Serif_Display'] text-[22px] leading-none tracking-[-0.3px] text-[#112345]">
         {provider.name}
       </h3>
 
-      <div className="mb-[22px] flex flex-wrap gap-[6px]">
+      <div className="mb-[30px] flex flex-wrap gap-[8px]">
         {services.map(service => (
-          <span key={service} className="rounded-[20px] bg-[#F2EDE4] px-[10px] py-[4px] text-[12px] font-medium text-[#3D3530]">
+          <span key={service} className="rounded-[20px] bg-[#F2EDE4] px-[12px] py-[5px] text-[12px] font-medium text-[#3D3530]">
             {service}
           </span>
         ))}
         {extraServices > 0 && (
-          <span className="rounded-[20px] bg-[#F2EDE4] px-[10px] py-[4px] text-[12px] font-medium text-[#3D3530]">
+          <span className="rounded-[20px] bg-[#F2EDE4] px-[12px] py-[5px] text-[12px] font-medium text-[#3D3530]">
             +{extraServices} more
           </span>
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[rgba(27,58,107,0.06)] pt-5">
+      <div className="mt-auto flex items-center justify-between border-t border-[rgba(27,58,107,0.06)] pt-6">
         <div>
           <div className="provider-price-home font-['DM_Serif_Display'] text-[26px] leading-none tracking-[-0.5px] text-[#1B3A6B]">
             {provider.lowestPrice ? `$${provider.lowestPrice}` : 'Ask'}
           </div>
-          <div className="mt-[3px] text-[12px] text-[#7A6E65]">
+          <div className="mt-[5px] text-[12px] text-[#7A6E65]">
             {provider.lowestPrice ? 'per session' : 'contact for price'}
             {Number.isFinite(rating) && rating > 0 && <> &middot; ★ {rating.toFixed(1)}</>}
           </div>
@@ -206,7 +206,7 @@ export default function Home() {
           transform: translateY(-3px);
           box-shadow: 0 12px 40px rgba(27,58,107,0.1);
         }
-        .provider-card-home {
+          .provider-card-home {
           animation: fadeUp 0.5s ease both;
         }
         .feature-card-home:hover {
@@ -240,7 +240,8 @@ export default function Home() {
             padding-bottom: 48px;
           }
           .provider-card-home {
-            padding: 20px;
+            min-height: 0;
+            padding: 22px;
           }
           .provider-name-home {
             font-size: 18px;
@@ -280,7 +281,7 @@ export default function Home() {
             padding-bottom: 48px;
           }
           .featured-provider-grid {
-            gap: 14px;
+            gap: 18px;
           }
           .section-header-home {
             align-items: flex-start;
