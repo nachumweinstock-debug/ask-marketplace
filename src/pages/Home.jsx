@@ -1,434 +1,468 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import FAQAccordion from '../components/FAQAccordion';
-import SharePanel from '../components/SharePanel';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api';
+import { providerUrl } from '../lib/providerUrl';
 
-const FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'tutor', label: 'Instructors' },
-  { id: 'barber', label: 'Barbers' },
-  { id: 'languages', label: 'Languages' },
-  { id: 'fitness', label: 'Fitness' },
-  { id: 'other', label: 'Other' },
+const ROTATION_WINDOW_MS = 1000 * 60 * 60 * 4;
+const FEATURED_PRIORITY = [
+  'jacob feit',
+  'joshua trauring',
+  'kenny shapiro',
 ];
 
-const COMMENTATOR_ARTICLE_URL =
-  'https://yucommentator.org/2026/05/final-exams-begin-next-week-need-help-organizing-your-studying/';
-
-const ACADEMIC_CATEGORIES = [
-  {
-    title: 'STEM instruction',
-    copy: 'Pre-health, engineering, CS, data, math, and lab-heavy classes without the endless group chat scramble.',
-    subjects: [
-      ['Biology', '/browse?search=biology'],
-      ['Chemistry', '/browse?search=chemistry'],
-      ['Organic Chemistry', '/browse?search=organic+chemistry'],
-      ['Physics', '/browse?search=physics'],
-      ['Calculus', '/browse?search=calculus'],
-      ['Statistics', '/browse?search=statistics'],
-      ['Computer Science', '/browse?search=computer+science'],
-      ['Engineering', '/browse?search=engineering'],
-      ['Data Science', '/browse?search=data+science'],
-    ],
-  },
-  {
-    title: 'Business instruction',
-    copy: 'Accounting, finance, economics, spreadsheets, test prep, and the classes where one missed concept wrecks the set.',
-    subjects: [
-      ['Accounting', '/browse?search=accounting'],
-      ['Finance', '/browse?search=finance'],
-      ['Economics', '/browse?search=economics'],
-    ],
-  },
-  {
-    title: 'Humanities instruction',
-    copy: 'Writing, research, reading-heavy courses, and social science help with people who can actually explain the assignment.',
-    subjects: [
-      ['Psychology', '/browse?search=psychology'],
-      ['Writing', '/browse?search=writing'],
-      ['History', '/browse?search=history'],
-      ['Political Science', '/browse?search=political+science'],
-    ],
-  },
-];
-
-// Light-mode share buttons for cream/orange backgrounds
-function ReferralShareButtons({ referralCode, university }) {
-  const [copied, setCopied] = useState(false);
-
-  const code = String(referralCode || '').trim().toUpperCase();
-  const link = code ? `https://uask.live/join/${encodeURIComponent(code)}` : '';
-
-  function uniLabel(u) {
-    if (!u) return 'your campus';
-    const map = { 'Yeshiva University': 'YU', 'Stern College for Women': 'Stern' };
-    return map[u] || u;
-  }
-  const text = link
-    ? `Hey! ASK is a campus app to find OR offer tutoring, barbers, fitness and more at ${uniLabel(university)}. Sign up with my link: ${link}`
-    : '';
-
-  const waHref  = text ? `https://wa.me/?text=${encodeURIComponent(text)}` : '#';
-  const smsHref = text ? `sms:?body=${encodeURIComponent(text)}` : '#';
-
-  async function handleCopy() {
-    if (!text) return;
-    try {
-      const { copyText } = await import('../lib/clipboard');
-      await copyText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {}
-  }
-
-  const btnBase = {
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-    padding: '13px 20px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-    fontFamily: 'var(--font-ui)', cursor: 'pointer', textDecoration: 'none',
-    transition: 'all .15s', border: 'none', whiteSpace: 'nowrap',
-  };
-  const primaryBtn = { ...btnBase, background: '#F15A24', color: '#fff' };
-  const secondaryBtn = { ...btnBase, background: '#fff', color: '#17130F', border: '1.5px solid #E8E3DA' };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <a href={smsHref} style={primaryBtn}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          iMessage
-        </a>
-        <a href={waHref} target="_blank" rel="noopener noreferrer" style={secondaryBtn}>
-          <svg width="16" height="16" viewBox="0 0 32 32"><path fill="currentColor" d="M16.02 3.2A12.7 12.7 0 0 0 5.05 22.3L3.2 28.8l6.68-1.75A12.66 12.66 0 0 0 16.02 28.6 12.7 12.7 0 1 0 16.02 3.2Zm0 23.25c-2.02 0-4-.58-5.7-1.67l-.4-.25-3.95 1.03 1.05-3.82-.27-.42a10.55 10.55 0 1 1 9.27 5.13Zm5.8-7.9c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.71.16-.21.31-.82 1.03-1 1.24-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.72-.98-2.35-.26-.62-.52-.53-.71-.54h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.42 4.8.76.33 1.35.53 1.81.68.76.24 1.45.21 2 .13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37Z"/></svg>
-          WhatsApp
-        </a>
-      </div>
-      <button type="button" onClick={handleCopy} disabled={!text} style={
-        copied
-          ? { ...secondaryBtn, background: '#F0FDF4', borderColor: '#BBF7D0', color: '#15803d' }
-          : { ...secondaryBtn, justifyContent: 'center', opacity: text ? 1 : 0.5 }
-      }>
-        {copied ? (
-          <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
-        ) : (
-          <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy message &amp; link</>
-        )}
-      </button>
-    </div>
-  );
+function initials(name) {
+  return String(name || '?')
+    .trim()
+    .split(/\s+/)
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-function ReferralStrip() {
-  const { user } = useAuth();
-  const [referralCode, setReferralCode] = useState(null);
+function serviceLabel(provider) {
+  return provider.title || provider.subcategory || provider.custom_category || {
+    tutor: 'Tutoring',
+    barber: 'Barber',
+    'hebrew tutor': 'Hebrew tutoring',
+    fitness: 'Fitness',
+    tennis: 'Tennis',
+    other: 'Campus service',
+  }[provider.category] || 'Campus service';
+}
 
-  useEffect(() => {
-    api.get('/referrals/mine')
-      .then(r => setReferralCode(r.data?.code || null))
-      .catch(() => {});
-  }, []);
+function dedupeFeaturedProviders(providers) {
+  const grouped = new Map();
+
+  for (const provider of providers) {
+    if (!provider?.id || !provider?.name) continue;
+    const key = String(provider.user_id || provider.username || provider.name).toLowerCase();
+    const current = grouped.get(key);
+    const service = serviceLabel(provider);
+    const price = Number(provider.price_per_session);
+
+    if (!current) {
+      grouped.set(key, {
+        ...provider,
+        services: service ? [service] : [],
+        lowestPrice: Number.isFinite(price) && price > 0 ? price : null,
+      });
+      continue;
+    }
+
+    if (service && !current.services.includes(service)) current.services.push(service);
+    if (Number.isFinite(price) && price > 0) {
+      current.lowestPrice = current.lowestPrice === null ? price : Math.min(current.lowestPrice, price);
+    }
+
+    const currentScore = Number(current.review_count || 0) * 10 + Number(current.rating || 0);
+    const nextScore = Number(provider.review_count || 0) * 10 + Number(provider.rating || 0);
+    if (nextScore > currentScore) {
+      Object.assign(current, {
+        ...provider,
+        services: current.services,
+        lowestPrice: current.lowestPrice,
+      });
+    }
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const aPriority = FEATURED_PRIORITY.indexOf(String(a.name || '').toLowerCase());
+    const bPriority = FEATURED_PRIORITY.indexOf(String(b.name || '').toLowerCase());
+    if (aPriority !== -1 || bPriority !== -1) {
+      if (aPriority === -1) return 1;
+      if (bPriority === -1) return -1;
+      return aPriority - bPriority;
+    }
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}
+
+function selectFeaturedProviders(providers) {
+  const uniqueProviders = dedupeFeaturedProviders(providers);
+  if (uniqueProviders.length <= 3) return uniqueProviders;
+
+  const priorityCount = Math.min(3, uniqueProviders.length);
+  const pinned = uniqueProviders.slice(0, priorityCount);
+  const rotatable = uniqueProviders.slice(priorityCount);
+  if (!rotatable.length) return pinned;
+
+  const rotation = Math.floor(Date.now() / ROTATION_WINDOW_MS);
+  const offset = rotation % rotatable.length;
+  const rotated = Array.from({ length: Math.min(rotatable.length, 3) }, (_, index) => rotatable[(offset + index) % rotatable.length]);
+  return [...pinned.slice(0, Math.max(0, 3 - rotated.length)), ...rotated].slice(0, 3);
+}
+
+function cardAccent(name) {
+  const lower = String(name || '').toLowerCase();
+  if (lower.includes('joshua')) return '#2C5F8A';
+  if (lower.includes('kenny')) return '#3D5A80';
+  return '#1B3A6B';
+}
+
+function ProviderCard({ provider, index }) {
+  const profileHref = providerUrl(provider.name, provider.id, provider.username);
+  const rating = Number(provider.rating);
+  const services = provider.services?.slice(0, 2) || [];
+  const extraServices = Math.max(0, (provider.services?.length || 0) - services.length);
 
   return (
-    <section style={{
-      background: '#FFF1E8',
-      borderTop: '1px solid #F5D4BE',
-      borderBottom: '1px solid #F5D4BE',
-      padding: '44px 24px',
-    }}>
-      <div style={{
-        maxWidth: 1100, margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)',
-        gap: 48, alignItems: 'center',
-      }}
-        className="referral-strip-grid"
+    <Link
+      to={profileHref}
+      className="provider-card-home block rounded-[20px] border border-[rgba(27,58,107,0.07)] bg-white p-8 no-underline transition"
+      style={{ animationDelay: `${0.05 + (index * 0.07)}s` }}
+    >
+      <div
+        className="mb-5 flex h-[50px] w-[50px] items-center justify-center rounded-[13px] text-[19px] text-white"
+        style={{ background: cardAccent(provider.name), fontFamily: '"DM Serif Display", serif', fontWeight: 400 }}
       >
-        <div>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: '#F15A24', fontFamily: 'var(--font-ui)',
-            marginBottom: 12,
-          }}>
-            ✦ Refer a Friend
-          </div>
-          <h2 style={{
-            fontFamily: 'var(--font-display)', fontSize: 'clamp(28px,3.5vw,44px)',
-            color: '#17130F', lineHeight: 1.05, margin: '0 0 14px',
-          }}>
-            Invite your classmates to ASK
-          </h2>
-          <p style={{ color: '#5F5A50', fontSize: 15, lineHeight: 1.7, maxWidth: 440, margin: 0 }}>
-            ASK is a campus app to find OR offer tutoring, barbers, fitness and more. Share your personal link — when they sign up, you're credited.
-          </p>
-          {referralCode && (
-            <div style={{
-              marginTop: 16,
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: '#fff', border: '1px solid #F5D4BE',
-              borderRadius: 8, padding: '7px 14px',
-            }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#5F5A50' }}>
-                uask.live/join/{referralCode.toLowerCase()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <ReferralShareButtons referralCode={referralCode} university={user?.university} />
-        </div>
+        {initials(provider.name)}
       </div>
-    </section>
-  );
-}
 
-function HangoutsStrip() {
-  const [count, setCount] = useState(null);
-  useEffect(() => {
-    api.get('/hangouts').then(({ data }) => setCount(data.length)).catch(() => {});
-  }, []);
-
-  return (
-    <section style={{
-      background: '#1B3A6B',
-      padding: '36px 24px',
-    }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%', background: '#4ADE80', display: 'inline-block',
-              boxShadow: '0 0 0 3px rgba(74,222,128,0.25)',
-            }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#93C5FD', letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'var(--font-ui)' }}>
-              Live now
-            </span>
-          </div>
-          <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(24px,4vw,36px)', color: '#FAF7F2', fontWeight: 400, margin: 0, lineHeight: 1.15 }}>
-            🪩 StudyParty
-          </h2>
-          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, color: '#93C5FD', marginTop: 6 }}>
-            {count === null
-              ? "See who's studying right now — show up and join."
-              : count === 0
-              ? 'No sessions running yet — be the first one out.'
-              : `${count} active session${count !== 1 ? 's' : ''} happening right now.`}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link to="/studyparty" style={{
-            padding: '11px 24px', borderRadius: 99,
-            background: '#FAF7F2', color: '#1B3A6B',
-            fontSize: 14, fontWeight: 700, textDecoration: 'none',
-            fontFamily: "'Outfit', sans-serif",
-            transition: 'opacity 0.15s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
-          >
-            Join a session
-          </Link>
-          <Link to="/studyparty" state={{ openModal: true }} style={{
-            padding: '11px 24px', borderRadius: 99,
-            background: 'transparent', color: '#FAF7F2',
-            border: '1.5px solid rgba(250,247,242,0.35)',
-            fontSize: 14, fontWeight: 600, textDecoration: 'none',
-            fontFamily: "'Outfit', sans-serif",
-            transition: 'border-color 0.15s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(250,247,242,0.7)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,247,242,0.35)'; }}
-          >
-            Start one
-          </Link>
-        </div>
+      <div className="mb-[5px] text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: '#C9A84C' }}>
+        Featured Provider
       </div>
-    </section>
+
+      <h3 className="provider-name-home mb-[10px] font-['DM_Serif_Display'] text-[22px] leading-none tracking-[-0.3px] text-[#112345]">
+        {provider.name}
+      </h3>
+
+      <div className="mb-[22px] flex flex-wrap gap-[6px]">
+        {services.map(service => (
+          <span key={service} className="rounded-[20px] bg-[#F2EDE4] px-[10px] py-[4px] text-[12px] font-medium text-[#3D3530]">
+            {service}
+          </span>
+        ))}
+        {extraServices > 0 && (
+          <span className="rounded-[20px] bg-[#F2EDE4] px-[10px] py-[4px] text-[12px] font-medium text-[#3D3530]">
+            +{extraServices} more
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-[rgba(27,58,107,0.06)] pt-5">
+        <div>
+          <div className="provider-price-home font-['DM_Serif_Display'] text-[26px] leading-none tracking-[-0.5px] text-[#1B3A6B]">
+            {provider.lowestPrice ? `$${provider.lowestPrice}` : 'Ask'}
+          </div>
+          <div className="mt-[3px] text-[12px] text-[#7A6E65]">
+            {provider.lowestPrice ? 'per session' : 'contact for price'}
+            {Number.isFinite(rating) && rating > 0 && <> &middot; ★ {rating.toFixed(1)}</>}
+          </div>
+        </div>
+        <span className="rounded-[8px] bg-[#1B3A6B] px-[18px] py-[9px] text-[13px] font-semibold text-white">
+          Book
+        </span>
+      </div>
+    </Link>
   );
 }
 
 export default function Home() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [query, setQuery] = useState('');
+  const [providers, setProviders] = useState([]);
 
-  function submitSearch(e) {
-    e.preventDefault();
-    const trimmed = query.trim();
-    navigate(trimmed ? `/browse?search=${encodeURIComponent(trimmed)}` : '/browse');
-  }
+  useEffect(() => {
+    let mounted = true;
+
+    api.get('/providers', { params: { sort: 'rating' } })
+      .then(({ data }) => {
+        if (mounted) setProviders(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (mounted) setProviders([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const featuredProviders = useMemo(() => selectFeaturedProviders(providers), [providers]);
 
   return (
-    <div className="home-shell">
-      <section className="home-hero">
-        <div className="fade-up">
-          <div className="home-eyebrow">Live campus marketplace</div>
-          <h1 className="home-title">
-            Find tutors and services <span>on campus.</span>
-          </h1>
-          <p className="home-copy">
-            Browse YU students offering tutoring, haircuts, fitness, Hebrew, and more. Filter by campus, format, price, and availability.
-          </p>
+    <div className="min-h-screen bg-[#FAF7F2] text-[#3D3530]">
+      <style>{`
+        .home-shell {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding-left: 48px;
+          padding-right: 48px;
+        }
+        .home-hero {
+          padding-top: 136px;
+          padding-bottom: 132px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 112px;
+          align-items: center;
+        }
+        .hero-left {
+          animation: fadeUp 0.55s ease both;
+        }
+        .hero-right {
+          animation: fadeUp 0.55s 0.08s ease both;
+        }
+        .provider-card-home:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 40px rgba(27,58,107,0.1);
+        }
+        .provider-card-home {
+          animation: fadeUp 0.5s ease both;
+        }
+        .feature-card-home:hover {
+          box-shadow: 0 8px 32px rgba(27,58,107,0.09);
+          transform: translateY(-2px);
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 1024px) {
+          .home-shell {
+            padding-left: 24px;
+            padding-right: 24px;
+          }
+          .home-hero {
+            grid-template-columns: 1fr;
+            gap: 68px;
+            padding-top: 92px;
+            padding-bottom: 96px;
+          }
+        }
+        @media (max-width: 768px) {
+          .home-shell {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+          .home-hero {
+            gap: 22px;
+            padding-top: 44px;
+            padding-bottom: 48px;
+          }
+          .provider-card-home {
+            padding: 20px;
+          }
+          .provider-name-home {
+            font-size: 18px;
+          }
+          .provider-price-home {
+            font-size: 22px;
+          }
+          .feature-card-home {
+            padding: 18px 18px 18px 16px;
+            gap: 12px;
+          }
+          .feature-card-home h2 {
+            font-size: 16px;
+          }
+          .feature-card-home p {
+            font-size: 12.5px;
+          }
+          .hero-title-home {
+            font-size: 36px;
+            line-height: 1.08;
+          }
+          .hero-copy-home {
+            font-size: 14px;
+            max-width: 100%;
+          }
+          .hero-actions-home {
+            margin-top: 24px;
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .hero-actions-home a {
+            width: 100%;
+            text-align: center;
+          }
+          .home-shell section {
+            padding-top: 48px;
+            padding-bottom: 48px;
+          }
+          .featured-provider-grid {
+            gap: 14px;
+          }
+          .section-header-home {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+          .section-header-home h2 {
+            font-size: 30px;
+          }
+          .how-grid-home {
+            gap: 24px;
+          }
+          .how-grid-home h3 {
+            font-size: 20px;
+          }
+          .how-grid-home p {
+            font-size: 13px;
+          }
+          .provider-cta-home {
+            padding-top: 88px;
+            padding-bottom: 88px;
+          }
+          .provider-cta-home h2 {
+            font-size: 38px;
+          }
+          .provider-cta-home p {
+            font-size: 14px;
+          }
+        }
+      `}</style>
 
-          <div className="home-actions">
-            <button className="ask-button-primary" onClick={() => navigate('/browse')}>
-              Browse listings
-            </button>
-            <button
-              className="ask-button-secondary"
-              data-analytics-event="become_tutor_clicked"
-              data-analytics-label="hero_post_service"
-              onClick={() => navigate(user ? '/create-listing' : '/signup')}
-            >
-              Post a service
-            </button>
-          </div>
+      <section className="overflow-hidden">
+        <div className="home-shell">
+          <div className="home-hero">
+            <div className="hero-left">
+              <div className="mb-6 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#1B3A6B] opacity-65">
+                <span className="block h-px w-6 bg-[#1B3A6B]" />
+                ASK Marketplace
+              </div>
 
-          <div className="home-search-panel">
-            <form onSubmit={submitSearch}>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Try finance, calculus, barber, Hebrew..."
-                aria-label="Search Ask Marketplace"
-              />
-              <button className="ask-button-primary" type="submit">Search</button>
-            </form>
-            <div className="home-proof-row" aria-label="Marketplace stats">
-              <div><strong>24</strong><span>active listings</span></div>
-              <div><strong>7</strong><span>service categories</span></div>
-              <div><strong>0%</strong><span>platform commission</span></div>
+              <h1 className="hero-title-home font-['DM_Serif_Display'] text-[62px] leading-[1.06] tracking-[-1.5px] text-[#112345]">
+                Find the right
+                <br />
+                student service,
+                <br />
+                <em className="italic text-[#1B3A6B]">without the noise.</em>
+              </h1>
+
+              <p className="hero-copy-home mt-6 max-w-[400px] text-[17px] font-light leading-[1.65] text-[#7A6E65]">
+                Tutors, barbers, trainers, language help, and more. Search by subject, price, or availability and book directly on campus.
+              </p>
+
+              <div className="hero-actions-home mt-10 flex flex-wrap items-center gap-4">
+                <Link
+                  to="/browse"
+                  className="inline-block rounded-[10px] bg-[#1B3A6B] px-7 py-[14px] text-[15px] font-semibold text-white no-underline transition hover:-translate-y-[1px] hover:bg-[#112345]"
+                >
+                  Browse providers
+                </Link>
+                <Link
+                  to="/become-a-provider"
+                  className="border-b border-[rgba(27,58,107,0.3)] pb-[2px] text-[15px] font-medium text-[#1B3A6B] no-underline"
+                >
+                  Become a provider →
+                </Link>
+              </div>
+            </div>
+
+            <div className="hero-right flex flex-col gap-[14px]">
+              {[
+                ['Fast search', 'Search by subject, service, price, or plain-English need.'],
+                ['Verified booking flow', 'Book through ASK so reviews stay tied to real sessions.'],
+                ['Campus-first payments', 'Handle payment directly with Zelle or Venmo after booking.'],
+              ].map(([title, copy], index) => (
+                <div
+                  key={title}
+                  className="feature-card-home flex items-start gap-[18px] rounded-[16px] border border-[rgba(27,58,107,0.07)] bg-white px-7 py-[26px] transition"
+                >
+                  <div className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#1B3A6B] text-[12px] font-bold text-white">
+                    0{index + 1}
+                  </div>
+                  <div>
+                    <h2 className="font-['DM_Serif_Display'] text-[18px] text-[#112345]">
+                      {title}
+                    </h2>
+                    <p className="mt-1 text-[13.5px] font-light leading-[1.5] text-[#7A6E65]">
+                      {copy}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-
-        <aside className="home-campus-panel fade-up-delay" aria-label="Browse campus options">
-          <div>
-            <div className="section-label">Campus marketplace</div>
-            <h2>Pick the right place first.</h2>
-            <p>
-              Browse students by campus, online availability, or category without digging through unrelated posts.
-            </p>
-          </div>
-          <div className="home-campus-actions">
-            <button onClick={() => navigate('/browse?campus=WILF')}>WILF listings</button>
-            <button onClick={() => navigate('/browse?campus=BEREN')}>BEREN listings</button>
-            <button onClick={() => navigate('/browse?session_type=zoom')}>Online help</button>
-            <button onClick={() => navigate(user ? '/create-listing' : '/signup')}>Post a service</button>
-          </div>
-        </aside>
       </section>
 
-      <section className="home-section">
-        <div className="home-section-inner">
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'end', flexWrap: 'wrap', marginBottom: 18 }}>
+      <div className="home-shell border-t border-[rgba(27,58,107,0.07)]" />
+
+      <section className="py-[144px]">
+        <div className="home-shell">
+          <div className="section-header-home mb-16 flex items-end justify-between gap-10">
             <div>
-              <div className="section-label">Browse by category</div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 58px)', lineHeight: 0.95, marginTop: 8 }}>
-                Start with what you need.
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#1B3A6B] opacity-60">
+                Featured on campus
+              </div>
+              <h2 className="font-['DM_Serif_Display'] text-[42px] leading-[1.1] tracking-[-0.8px] text-[#112345]">
+                Real providers,
+                <br />
+                <em className="italic text-[#1B3A6B]">without the repeat cards.</em>
               </h2>
             </div>
-            <Link className="ask-button-secondary" to="/browse">Browse all listings</Link>
+            <Link
+              to="/browse"
+              className="mb-2 whitespace-nowrap border-b border-[rgba(27,58,107,0.25)] pb-[2px] text-[14px] font-medium text-[#1B3A6B] no-underline"
+            >
+              See all providers →
+            </Link>
           </div>
-          <div className="pill-row">
-            {FILTERS.map(({ id, label }) => (
-              <button
-                key={id}
-                className="home-category-pill"
-                onClick={() => navigate(id === 'all' ? '/browse' : `/browse?category=${id}`)}
-              >
-                {label}
-              </button>
+
+          <div className="featured-provider-grid grid gap-8 lg:grid-cols-3">
+            {featuredProviders.map((provider, index) => (
+              <ProviderCard key={provider.user_id || provider.username || provider.id} provider={provider} index={index} />
             ))}
           </div>
         </div>
       </section>
 
-      {user && <ReferralStrip />}
-
-      <HangoutsStrip />
-
-      <section className="home-section" style={{ background: '#fff' }}>
-        <div className="home-section-inner">
-          <div className="section-label" style={{ marginBottom: 12 }}>College instruction</div>
-          <div className="home-category-grid">
-            {ACADEMIC_CATEGORIES.map((category) => (
-              <section className="home-category-card" key={category.title}>
-                <div>
-                  <h2>{category.title}</h2>
-                  <p>{category.copy}</p>
-                </div>
-                <div className="home-subject-links">
-                  {category.subjects.map(([label, to]) => (
-                    <Link key={to} to={to} className="home-category-pill">{label}</Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="home-section">
-        <div className="home-section-inner" style={{ maxWidth: 920 }}>
-          <FAQAccordion title="Ask Marketplace FAQ" schemaId="home-faq-schema" />
-        </div>
-      </section>
-
-      <section className="home-section home-press-section">
-        <div className="home-section-inner">
-          <a
-            className="home-press-link"
-            href={COMMENTATOR_ARTICLE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className="home-press-mark" aria-hidden="true">YU</div>
-            <div className="home-press-copy">
-              <div className="section-label">Featured in The YU Commentator</div>
-              <h2>Ask was featured for helping students organize finals week.</h2>
-              <p>Read the Commentator piece on finding study help before exams.</p>
+      <section className="bg-[#F2EDE4] py-[144px]">
+        <div className="home-shell">
+          <div className="mb-16">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#1B3A6B] opacity-60">
+              How it works
             </div>
-            <span>Read the article -&gt;</span>
-          </a>
+            <h2 className="font-['DM_Serif_Display'] text-[42px] leading-[1.1] tracking-[-0.8px] text-[#112345]">
+              Three steps,
+              <br />
+              <em className="italic text-[#1B3A6B]">zero friction.</em>
+            </h2>
+          </div>
+
+          <div className="how-grid-home grid gap-14 lg:grid-cols-3">
+            {[
+              ['01', 'Browse', 'Search by subject, service, price, format, and availability. Real providers with real reviews.'],
+              ['02', 'Book', 'Lock in a time and message directly through the platform. No back-and-forth DMs needed.'],
+              ['03', 'Pay offline', 'Handle payment with Zelle or Venmo once the session is confirmed. Simple.'],
+            ].map(([num, title, copy]) => (
+              <div key={title}>
+                <div className="mb-3 font-['DM_Serif_Display'] text-[52px] leading-none tracking-[-2px] text-[rgba(27,58,107,0.10)]">
+                  {num}
+                </div>
+                <h3 className="font-['DM_Serif_Display'] text-[21px] tracking-[-0.3px] text-[#112345]">
+                  {title}
+                </h3>
+                <p className="mt-3 text-[14px] font-light leading-[1.65] text-[#7A6E65]">
+                  {copy}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="home-section" style={{ background: '#17130F', color: '#fff' }}>
-        <div className="home-section-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-          <div>
-            <div className="section-label" style={{ color: '#F3C74F' }}>For providers</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 60px)', lineHeight: 0.95, marginTop: 8 }}>
-              Good at something?
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.68)', maxWidth: 560, marginTop: 12, fontSize: 17 }}>
-              Post the service, set your price, add availability, and let people book you without the back-and-forth.
-            </p>
+      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[144px] text-center sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[600px]">
+          <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgba(255,255,255,0.4)]">
+            For providers
           </div>
+          <h2 className="font-['DM_Serif_Display'] text-[52px] leading-[1.08] tracking-[-1.2px] text-white">
+            Turn your skill into
+            <br />
+            <em className="italic text-[rgba(255,255,255,0.6)]">booked sessions.</em>
+          </h2>
+          <p className="mx-auto mt-5 max-w-[460px] text-[16px] font-light leading-[1.65] text-[rgba(255,255,255,0.55)]">
+            Post a listing, set your availability, and grow your profile with verified reviews from every session.
+          </p>
           <Link
-            to={user ? '/create-listing' : '/signup'}
-            className="ask-button-primary"
-            data-analytics-event="become_tutor_clicked"
-            data-analytics-label="home_bottom_post_listing"
-            style={{ background: '#fff', color: '#17130F', borderColor: '#fff' }}
+            to="/become-a-provider"
+            className="mt-10 inline-block rounded-[10px] bg-white px-8 py-[14px] text-[15px] font-semibold text-[#1B3A6B] no-underline transition hover:-translate-y-[1px] hover:bg-[#FAF7F2]"
           >
-            Post a service
+            Become a provider
           </Link>
         </div>
       </section>
-
-      <footer style={{
-        borderTop: '1px solid var(--border)', background: '#F8F7F3',
-        padding: '22px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
-      }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>ASK</span>
-        <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 700 }}>
-          Student marketplace for instruction and services.
-        </span>
-      </footer>
     </div>
   );
 }
