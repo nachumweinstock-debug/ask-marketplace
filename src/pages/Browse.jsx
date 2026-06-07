@@ -574,6 +574,105 @@ export default function Browse() {
   return (
     <div className="page" style={{ paddingTop: 26 }}>
 
+      {/* ── Concierge hero ── */}
+      <div
+        id="ask-concierge"
+        style={{
+          position: 'relative',
+          marginBottom: 24,
+          border: '1px solid rgba(17,12,30,0.10)',
+          borderRadius: 28,
+          background: 'linear-gradient(135deg, #17131F 0%, #241A4D 46%, #0E7490 100%)',
+          boxShadow: '0 28px 80px rgba(17,12,30,0.22)',
+          padding: 28,
+          overflow: 'hidden',
+          scrollMarginTop: 112,
+        }}>
+        <div style={{ position: 'absolute', right: -28, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,122,89,0.30)', filter: 'blur(56px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', left: 40, bottom: -40, width: 140, height: 140, borderRadius: '50%', background: 'rgba(34,211,238,0.20)', filter: 'blur(52px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 56%)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ padding: '6px 12px', borderRadius: 999, background: '#FFD166', color: '#20163E', fontSize: 11, fontWeight: 950, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            Ask Concierge
+          </div>
+          <div style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.76)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', backdropFilter: 'blur(8px)' }}>
+            Plain-English search
+          </div>
+        </div>
+        <div style={{ position: 'relative', maxWidth: 860, marginBottom: 18 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 4.4vw, 58px)', lineHeight: 0.94, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>
+            Don’t browse like a filter robot.
+          </div>
+          <div style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(255,255,255,0.76)', fontWeight: 500, maxWidth: 760 }}>
+            Describe the need the way you’d actually say it. ASK pushes the search toward the right category, format, and results.
+          </div>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <input
+            type="text"
+            value={conciergePrompt}
+            onChange={(e) => setConciergePrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleConciergeSubmit(conciergePrompt); }}
+            placeholder="Need a calculus tutor who can meet on campus this week"
+            style={{
+              flex: '1 1 360px',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 16,
+              padding: '15px 16px',
+              fontSize: 15,
+              outline: 'none',
+              fontFamily: 'var(--font-ui)',
+              background: 'rgba(255,255,255,0.10)',
+              color: '#fff',
+              backdropFilter: 'blur(12px)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => handleConciergeSubmit(conciergePrompt)}
+            style={{
+              border: 'none',
+              borderRadius: 16,
+              padding: '15px 18px',
+              background: '#FF7A59',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 900,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+              boxShadow: '0 16px 38px rgba(255,122,89,0.35)',
+            }}
+          >
+            Find providers
+          </button>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {CONCIERGE_EXAMPLES.map(example => (
+            <button
+              key={example}
+              type="button"
+              onClick={() => handleConciergeSubmit(example)}
+              style={{
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 999,
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.10)',
+                color: 'rgba(255,255,255,0.84)',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-ui)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <BrowseReferralBanner user={user} />
 
       {/* ── Header row ── */}
@@ -662,105 +761,6 @@ export default function Browse() {
           </div>
         </div>
       )}
-
-      {/* ── Search bar ── */}
-      <div
-        id="ask-concierge"
-        style={{
-        position: 'relative',
-        marginBottom: 16,
-        border: '1px solid rgba(17,12,30,0.10)',
-        borderRadius: 24,
-        background: 'linear-gradient(135deg, #17131F 0%, #241A4D 46%, #0E7490 100%)',
-        boxShadow: '0 28px 80px rgba(17,12,30,0.22)',
-        padding: 22,
-        overflow: 'hidden',
-        scrollMarginTop: 112,
-      }}>
-        <div style={{ position: 'absolute', right: -28, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,122,89,0.30)', filter: 'blur(56px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', left: 40, bottom: -40, width: 140, height: 140, borderRadius: '50%', background: 'rgba(34,211,238,0.20)', filter: 'blur(52px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 56%)', pointerEvents: 'none' }} />
-
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-          <div style={{ padding: '6px 12px', borderRadius: 999, background: '#FFD166', color: '#20163E', fontSize: 11, fontWeight: 950, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-            Ask Concierge
-          </div>
-          <div style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.76)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', backdropFilter: 'blur(8px)' }}>
-            Plain-English search
-          </div>
-        </div>
-        <div style={{ position: 'relative', maxWidth: 760, marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 0.96, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>
-            Don’t browse like a filter robot.
-          </div>
-          <div style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.74)', fontWeight: 500 }}>
-            Describe the need the way you’d actually say it. ASK will push the search toward the right category, format, and results.
-          </div>
-        </div>
-        <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-          <input
-            type="text"
-            value={conciergePrompt}
-            onChange={(e) => setConciergePrompt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleConciergeSubmit(conciergePrompt); }}
-            placeholder="Need a calculus tutor who can meet on campus this week"
-            style={{
-              flex: '1 1 360px',
-              border: '1px solid rgba(255,255,255,0.14)',
-              borderRadius: 16,
-              padding: '15px 16px',
-              fontSize: 15,
-              outline: 'none',
-              fontFamily: 'var(--font-ui)',
-              background: 'rgba(255,255,255,0.10)',
-              color: '#fff',
-              backdropFilter: 'blur(12px)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => handleConciergeSubmit(conciergePrompt)}
-            style={{
-              border: 'none',
-              borderRadius: 16,
-              padding: '15px 18px',
-              background: '#FF7A59',
-              color: '#fff',
-              fontSize: 13,
-              fontWeight: 900,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-ui)',
-              boxShadow: '0 16px 38px rgba(255,122,89,0.35)',
-            }}
-          >
-            Find providers
-          </button>
-        </div>
-        <div style={{ position: 'relative', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {CONCIERGE_EXAMPLES.map(example => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => handleConciergeSubmit(example)}
-              style={{
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 999,
-                padding: '8px 12px',
-                background: 'rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.84)',
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-ui)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              {example}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div style={{ marginBottom: 12 }}>
         <form onSubmit={handleSearch} style={{

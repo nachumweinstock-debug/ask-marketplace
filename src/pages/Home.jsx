@@ -362,15 +362,6 @@ export default function Home() {
                   Become a provider →
                 </Link>
               </div>
-              <div className="mt-4">
-                <Link
-                  to="/browse#ask-concierge"
-                  className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#1B3A6B] no-underline"
-                >
-                  Need help finding the right person?
-                  <span className="border-b border-[rgba(27,58,107,0.3)] pb-[2px]">Try Ask Concierge →</span>
-                </Link>
-              </div>
             </div>
 
             <div className="hero-right flex flex-col gap-[14px]">
