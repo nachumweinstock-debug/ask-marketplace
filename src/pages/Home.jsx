@@ -310,11 +310,16 @@ export default function Home() {
             padding-top: 88px;
             padding-bottom: 88px;
           }
+          .provider-cta-home > div {
+            padding: 22px 18px 24px;
+          }
           .provider-cta-home h2 {
-            font-size: 38px;
+            font-size: 36px;
+            line-height: 1.05;
           }
           .provider-cta-home p {
             font-size: 14px;
+            line-height: 1.65;
           }
           .section-spacer-home {
             height: 40px;
@@ -458,21 +463,21 @@ export default function Home() {
       <div className="section-spacer-home" />
 
       <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[180px] text-center sm:px-10 lg:px-12">
-        <div className="mx-auto max-w-[600px]">
-          <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgba(255,255,255,0.4)]">
+        <div className="mx-auto max-w-[760px] rounded-[36px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-6 py-16 sm:px-10 lg:px-16 lg:py-20">
+          <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(255,255,255,0.4)]">
             For providers
           </div>
-          <h2 className="font-['DM_Serif_Display'] text-[52px] leading-[1.08] tracking-[-1.2px] text-white">
+          <h2 className="mx-auto max-w-[620px] font-['DM_Serif_Display'] text-[54px] leading-[1.02] tracking-[-1.3px] text-white">
             Turn your skill into
             <br />
             <em className="italic text-[rgba(255,255,255,0.6)]">booked sessions.</em>
           </h2>
-          <p className="mx-auto mt-5 max-w-[460px] text-[16px] font-light leading-[1.65] text-[rgba(255,255,255,0.55)]">
+          <p className="mx-auto mt-6 max-w-[520px] text-[17px] font-light leading-[1.7] text-[rgba(255,255,255,0.62)]">
             Post a listing, set your availability, and grow your profile with verified reviews from every session.
           </p>
           <Link
             to="/become-a-provider"
-            className="mt-10 inline-block rounded-[10px] bg-white px-8 py-[14px] text-[15px] font-semibold text-[#1B3A6B] no-underline transition hover:-translate-y-[1px] hover:bg-[#FAF7F2]"
+            className="mt-12 inline-block rounded-[12px] bg-white px-9 py-[15px] text-[15px] font-semibold text-[#1B3A6B] no-underline transition hover:-translate-y-[1px] hover:bg-[#FAF7F2]"
           >
             Become a provider
           </Link>
