@@ -379,7 +379,7 @@ export default function Home() {
 
       <div className="home-shell border-t border-[rgba(27,58,107,0.07)]" />
 
-      <section className="py-[144px]">
+      <section className="py-[176px]">
         <div className="home-shell">
           <div className="section-header-home mb-16 flex items-end justify-between gap-10">
             <div>
@@ -408,7 +408,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#F2EDE4] py-[144px]">
+      <section className="bg-[#F2EDE4] py-[180px]">
         <div className="home-shell">
           <div className="mb-16">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#1B3A6B] opacity-60">
@@ -443,7 +443,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[144px] text-center sm:px-10 lg:px-12">
+      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[180px] text-center sm:px-10 lg:px-12">
         <div className="mx-auto max-w-[600px]">
           <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgba(255,255,255,0.4)]">
             For providers
