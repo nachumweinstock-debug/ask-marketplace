@@ -119,11 +119,11 @@ function ProviderCard({ provider, index }) {
         {initials(provider.name)}
       </div>
 
-      <div className="mb-[8px] text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: '#C9A84C' }}>
+      <div className="mb-[2px] text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: '#C9A84C' }}>
         Featured Provider
       </div>
 
-      <h3 className="provider-name-home mb-[14px] font-['DM_Serif_Display'] text-[28px] leading-[0.98] tracking-[-0.5px] text-[#112345]">
+      <h3 className="provider-name-home mt-[15px] mb-[14px] font-['DM_Serif_Display'] text-[28px] leading-[0.98] tracking-[-0.5px] text-[#112345]">
         {provider.name}
       </h3>
 
