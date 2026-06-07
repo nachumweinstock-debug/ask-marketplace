@@ -196,6 +196,10 @@ export default function Home() {
           gap: 112px;
           align-items: center;
         }
+        .section-spacer-home {
+          height: 96px;
+          background: #FAF7F2;
+        }
         .hero-left {
           animation: fadeUp 0.55s ease both;
         }
@@ -227,6 +231,9 @@ export default function Home() {
             gap: 68px;
             padding-top: 92px;
             padding-bottom: 96px;
+          }
+          .section-spacer-home {
+            height: 56px;
           }
         }
         @media (max-width: 768px) {
@@ -308,6 +315,9 @@ export default function Home() {
           }
           .provider-cta-home p {
             font-size: 14px;
+          }
+          .section-spacer-home {
+            height: 40px;
           }
         }
       `}</style>
@@ -408,6 +418,8 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="section-spacer-home" />
+
       <section className="bg-[#F2EDE4] py-[180px]">
         <div className="home-shell">
           <div className="mb-16">
@@ -442,6 +454,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <div className="section-spacer-home" />
 
       <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[180px] text-center sm:px-10 lg:px-12">
         <div className="mx-auto max-w-[600px]">
