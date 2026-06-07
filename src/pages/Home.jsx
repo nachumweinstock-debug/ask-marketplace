@@ -109,7 +109,7 @@ function ProviderCard({ provider, index }) {
   return (
     <Link
       to={profileHref}
-      className="provider-card-home block min-h-[430px] rounded-[20px] border border-[rgba(27,58,107,0.07)] bg-white p-10 no-underline transition"
+      className="provider-card-home flex h-full flex-col rounded-[20px] border border-[rgba(27,58,107,0.07)] bg-white p-10 no-underline transition"
       style={{ animationDelay: `${0.05 + (index * 0.07)}s` }}
     >
       <div
@@ -123,7 +123,7 @@ function ProviderCard({ provider, index }) {
         Featured Provider
       </div>
 
-      <h3 className="provider-name-home mb-[14px] font-['DM_Serif_Display'] text-[22px] leading-none tracking-[-0.3px] text-[#112345]">
+      <h3 className="provider-name-home mb-[14px] font-['DM_Serif_Display'] text-[28px] leading-[0.98] tracking-[-0.5px] text-[#112345]">
         {provider.name}
       </h3>
 
@@ -142,7 +142,7 @@ function ProviderCard({ provider, index }) {
 
       <div className="mt-auto flex items-center justify-between border-t border-[rgba(27,58,107,0.06)] pt-6">
         <div>
-          <div className="provider-price-home font-['DM_Serif_Display'] text-[26px] leading-none tracking-[-0.5px] text-[#1B3A6B]">
+          <div className="provider-price-home font-['DM_Serif_Display'] text-[21px] leading-none tracking-[-0.4px] text-[#1B3A6B]">
             {provider.lowestPrice ? `$${provider.lowestPrice}` : 'Ask'}
           </div>
           <div className="mt-[5px] text-[12px] text-[#7A6E65]">
@@ -244,10 +244,10 @@ export default function Home() {
             padding: 22px;
           }
           .provider-name-home {
-            font-size: 18px;
+            font-size: 22px;
           }
           .provider-price-home {
-            font-size: 22px;
+            font-size: 18px;
           }
           .feature-card-home {
             padding: 18px 18px 18px 16px;
