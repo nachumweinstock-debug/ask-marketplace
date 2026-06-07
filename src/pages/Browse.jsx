@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
@@ -7,6 +7,7 @@ import { trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
+import { providerUrl } from '../lib/providerUrl';
 
 function uniLabel(u) {
   if (!u) return 'your campus';
@@ -166,11 +167,22 @@ const CATEGORY_SEO = {
 };
 
 const CONCIERGE_EXAMPLES = [
-  'Need an Excel tutor before finals',
-  'Looking for a barber on campus',
-  'Need a math tutor tonight',
+  'Need a calculus tutor tonight',
+  'Looking for a barber on WILF before Shabbos',
   'Want tennis lessons on Sundays',
+  'Need a Hebrew tutor for conversation practice',
+  'Looking for an Excel tutor for a job interview',
 ];
+
+function initials(name) {
+  return String(name || '?')
+    .trim()
+    .split(/\s+/)
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 function finderParamsFromPrompt(prompt) {
   const text = String(prompt || '').trim();
@@ -280,6 +292,8 @@ export default function Browse() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
   const [conciergePrompt, setConciergePrompt] = useState(searchParams.get('search') || '');
+  const [conciergeSubmittedPrompt, setConciergeSubmittedPrompt] = useState('');
+  const [conciergeSearching, setConciergeSearching] = useState(false);
   // Dynamic meta per category for SEO
   useEffect(() => {
     const seo = CATEGORY_SEO[category];
@@ -471,11 +485,13 @@ export default function Browse() {
     fetchProviders(search);
   }
 
-  function handleConciergeSubmit(prompt) {
+  async function handleConciergeSubmit(prompt) {
     const next = finderParamsFromPrompt(prompt);
     if (!next.search) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setConciergePrompt(next.search);
+    setConciergeSubmittedPrompt(next.search);
+    setConciergeSearching(true);
     setSearch(next.search);
     setCategory(next.category || 'all');
     setSubcategory('all');
@@ -489,13 +505,17 @@ export default function Browse() {
       session_type: next.session_type || 'all',
       campus: nextCampus,
     });
-    fetchProviders(next.search, {
-      search: next.search,
-      category: next.category || 'all',
-      subcategory: 'all',
-      session_type: next.session_type || 'all',
-      campus: nextCampus,
-    });
+    try {
+      await fetchProviders(next.search, {
+        search: next.search,
+        category: next.category || 'all',
+        subcategory: 'all',
+        session_type: next.session_type || 'all',
+        campus: nextCampus,
+      });
+    } finally {
+      setConciergeSearching(false);
+    }
   }
 
   function handleCategory(cat) {
@@ -563,6 +583,8 @@ export default function Browse() {
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
   const sitewideSaleActive = providers.some(p => p.first_time_discount_scope === 'sitewide');
   const visibleProviders = dedupeProvidersByUser(providers);
+  const conciergeMatches = conciergeSubmittedPrompt ? visibleProviders.slice(0, 3) : [];
+  const conciergePromptLabel = conciergeSubmittedPrompt || 'Tell ASK what you need in plain English.';
   const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
   const emptyTitle = campusName
     ? `No ${campusName} listings yet.`
@@ -579,7 +601,7 @@ export default function Browse() {
         id="ask-concierge"
         style={{
           position: 'relative',
-          marginBottom: 24,
+          marginBottom: 30,
           border: '1px solid rgba(17,12,30,0.10)',
           borderRadius: 28,
           background: 'linear-gradient(135deg, #17131F 0%, #241A4D 46%, #0E7490 100%)',
@@ -670,6 +692,91 @@ export default function Browse() {
               {example}
             </button>
           ))}
+        </div>
+
+        <div style={{
+          position: 'relative',
+          marginTop: 18,
+          borderRadius: 22,
+          border: '1px solid rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(12px)',
+          padding: 18,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 800, fontSize: 13 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 999, background: conciergeSearching ? '#F59E0B' : '#22C55E', boxShadow: conciergeSearching ? '0 0 0 6px rgba(245,158,11,0.15)' : '0 0 0 6px rgba(34,197,94,0.15)' }} />
+              {conciergeSearching ? 'ASK is searching...' : conciergeSubmittedPrompt ? 'ASK found matches' : 'Try a question above'}
+            </div>
+            {conciergeSubmittedPrompt && (
+              <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, fontWeight: 500 }}>
+                for “{conciergePromptLabel}”
+              </div>
+            )}
+          </div>
+
+          <div style={{ color: 'rgba(255,255,255,0.86)', fontSize: 14, lineHeight: 1.65, marginBottom: conciergeMatches.length ? 14 : 0 }}>
+            {conciergeSearching
+              ? 'Holding the search to the best fit categories and updating the results right here.'
+              : conciergeSubmittedPrompt
+                ? (conciergeMatches.length
+                  ? `I found ${conciergeMatches.length} strong match${conciergeMatches.length !== 1 ? 'es' : ''}. The closest options are below.`
+                  : 'No exact match yet. Try widening the request or switching the category words.')
+                : 'Type a request like “Need a calculus tutor tonight” or tap one of the examples.'}
+          </div>
+
+          {conciergeMatches.length > 0 && (
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+              {conciergeMatches.map(provider => {
+                const href = providerUrl(provider.name, provider.id, provider.username);
+                return (
+                  <Link
+                    key={provider.user_id || provider.username || provider.id}
+                    to={href}
+                    style={{
+                      textDecoration: 'none',
+                      borderRadius: 18,
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'rgba(255,255,255,0.10)',
+                      padding: 14,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      background: '#1B3A6B',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 17,
+                      flexShrink: 0,
+                    }}>
+                      {initials(provider.name)}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, lineHeight: 1.05, marginBottom: 4, color: '#fff' }}>
+                        {provider.name}
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.74)', fontSize: 12.5, lineHeight: 1.4 }}>
+                        {(provider.merged_services?.[0] || provider.subcategory || provider.custom_category || 'Campus service')}
+                      </div>
+                      <div style={{ marginTop: 6, color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 700 }}>
+                        {provider.merged_min_price ? `$${provider.merged_min_price}` : 'Ask'}
+                        <span style={{ color: 'rgba(255,255,255,0.64)', fontWeight: 500 }}> per session</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
