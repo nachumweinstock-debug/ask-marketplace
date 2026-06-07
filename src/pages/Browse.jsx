@@ -165,6 +165,76 @@ const CATEGORY_SEO = {
   'Torah Studies':{ title: 'Torah Studies & Gemara Tutors at YU | ASK Marketplace', desc: 'Find Gemara, Chumash, Halacha, Mishna, and Tanach tutors and chavruta partners at Yeshiva University.' },
 };
 
+const CONCIERGE_EXAMPLES = [
+  'Need an Excel tutor before finals',
+  'Looking for a barber on campus',
+  'Need a math tutor tonight',
+  'Want tennis lessons on Sundays',
+];
+
+function finderParamsFromPrompt(prompt) {
+  const text = String(prompt || '').trim();
+  const lower = text.toLowerCase();
+  const next = { search: text };
+
+  if (/\bbarber|haircut|fade|taper|beard\b/.test(lower)) next.category = 'barber';
+  else if (/\btennis|trainer|fitness|workout|boxing|yoga|basketball|soccer|running|golf\b/.test(lower)) next.category = 'fitness';
+  else if (/\bhebrew|spanish|french|arabic|language|ivrit|yiddish\b/.test(lower)) next.category = 'languages';
+  else if (/\bguitar|piano|violin|drums|vocal|music\b/.test(lower)) next.category = 'music';
+  else if (/\bgemara|halacha|chumash|torah|tanach|mishna\b/.test(lower)) next.category = 'Torah Studies';
+  else if (/\btutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats\b/.test(lower)) next.category = 'tutor';
+
+  if (/\bonline|virtual|zoom\b/.test(lower)) next.session_type = 'zoom';
+  else if (/\bin person|on campus|near me\b/.test(lower)) next.session_type = 'in-person';
+
+  return next;
+}
+
+function listingSummary(provider) {
+  return provider.title || provider.subcategory || provider.custom_category ||
+    { tutor: 'Instruction', barber: 'Haircuts', 'hebrew tutor': 'Hebrew Instruction', fitness: 'Fitness', tennis: 'Fitness' }[provider.category] || provider.category;
+}
+
+function dedupeProvidersByUser(rows) {
+  const grouped = new Map();
+
+  for (const provider of rows) {
+    const key = String(provider.user_id || provider.username || provider.id);
+    const current = grouped.get(key);
+    const service = listingSummary(provider);
+    const numericPrice = Number(provider.price_per_session);
+
+    if (!current) {
+      grouped.set(key, {
+        ...provider,
+        merged_listing_count: 1,
+        merged_services: service ? [service] : [],
+        merged_min_price: Number.isFinite(numericPrice) && numericPrice > 0 ? numericPrice : null,
+      });
+      continue;
+    }
+
+    current.merged_listing_count += 1;
+    if (service && !current.merged_services.includes(service)) current.merged_services.push(service);
+    if (Number.isFinite(numericPrice) && numericPrice > 0) {
+      current.merged_min_price = current.merged_min_price === null ? numericPrice : Math.min(current.merged_min_price, numericPrice);
+    }
+
+    const currentScore = Number(current.review_count || 0) * 10 + Number(current.rating || 0);
+    const nextScore = Number(provider.review_count || 0) * 10 + Number(provider.rating || 0);
+    if (nextScore > currentScore) {
+      Object.assign(current, {
+        ...provider,
+        merged_listing_count: current.merged_listing_count,
+        merged_services: current.merged_services,
+        merged_min_price: current.merged_min_price,
+      });
+    }
+  }
+
+  return Array.from(grouped.values());
+}
+
 function TextSuggestion({ value, onApply }) {
   if (!value || !hasSuggestion(value)) return null;
   const suggestion = suggestText(value);
@@ -209,6 +279,7 @@ export default function Browse() {
   const [editModal, setEditModal] = useState(null); // { profileId, isAdminEdit, form }
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [conciergePrompt, setConciergePrompt] = useState(searchParams.get('search') || '');
   // Dynamic meta per category for SEO
   useEffect(() => {
     const seo = CATEGORY_SEO[category];
@@ -294,21 +365,29 @@ export default function Browse() {
     }, 200);
   }
 
-  async function fetchProviders(searchVal) {
+  async function fetchProviders(searchVal, overrides = {}) {
     setLoading(true);
     try {
       const params = {};
-      if (category !== 'all') params.category = category;
-      if (subcategory !== 'all') params.subcategory = subcategory;
-      if (sessionType !== 'all') params.session_type = sessionType;
-      if (campus !== 'all') params.campus = campus;
-      if (minPrice) params.min_price = minPrice;
-      if (maxPrice) params.max_price = maxPrice;
-      if (minRating) params.min_rating = minRating;
-      if (availability !== 'all') params.availability = availability;
-      const q = searchVal !== undefined ? searchVal : search;
+      const nextCategory = overrides.category ?? category;
+      const nextSubcategory = overrides.subcategory ?? subcategory;
+      const nextSessionType = overrides.session_type ?? sessionType;
+      const nextCampus = overrides.campus ?? campus;
+      const nextMinPrice = overrides.min_price ?? minPrice;
+      const nextMaxPrice = overrides.max_price ?? maxPrice;
+      const nextMinRating = overrides.min_rating ?? minRating;
+      const nextAvailability = overrides.availability ?? availability;
+      if (nextCategory !== 'all') params.category = nextCategory;
+      if (nextSubcategory !== 'all') params.subcategory = nextSubcategory;
+      if (nextSessionType !== 'all') params.session_type = nextSessionType;
+      if (nextCampus !== 'all') params.campus = nextCampus;
+      if (nextMinPrice) params.min_price = nextMinPrice;
+      if (nextMaxPrice) params.max_price = nextMaxPrice;
+      if (nextMinRating) params.min_rating = nextMinRating;
+      if (nextAvailability !== 'all') params.availability = nextAvailability;
+      const q = searchVal !== undefined ? searchVal : (overrides.search ?? search);
       if (q) params.search = q;
-      params.sort = sort;
+      params.sort = overrides.sort ?? sort;
       const { data } = await api.get('/providers', { params });
       setProviders(data);
     } catch (err) {
@@ -392,6 +471,33 @@ export default function Browse() {
     fetchProviders(search);
   }
 
+  function handleConciergeSubmit(prompt) {
+    const next = finderParamsFromPrompt(prompt);
+    if (!next.search) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setConciergePrompt(next.search);
+    setSearch(next.search);
+    setCategory(next.category || 'all');
+    setSubcategory('all');
+    setSessionType(next.session_type || 'all');
+    if (next.session_type === 'zoom') setCampus('all');
+    const nextCampus = next.session_type === 'zoom' ? 'all' : campus;
+    syncParams({
+      search: next.search,
+      category: next.category || 'all',
+      subcategory: 'all',
+      session_type: next.session_type || 'all',
+      campus: nextCampus,
+    });
+    fetchProviders(next.search, {
+      search: next.search,
+      category: next.category || 'all',
+      subcategory: 'all',
+      session_type: next.session_type || 'all',
+      campus: nextCampus,
+    });
+  }
+
   function handleCategory(cat) {
     setCategory(cat);
     setSubcategory('all');
@@ -456,6 +562,7 @@ export default function Browse() {
   const baseIds = new Set(BASE_FILTERS.map(f => f.id.toLowerCase()));
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
   const sitewideSaleActive = providers.some(p => p.first_time_discount_scope === 'sitewide');
+  const visibleProviders = dedupeProvidersByUser(providers);
   const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
   const emptyTitle = campusName
     ? `No ${campusName} listings yet.`
@@ -487,7 +594,8 @@ export default function Browse() {
           </h1>
           {!loading && (
             <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 7, fontFamily: 'var(--font-ui)', fontWeight: 650 }}>
-              {providers.length} listing{providers.length !== 1 ? 's' : ''}
+              {visibleProviders.length} provider{visibleProviders.length !== 1 ? 's' : ''}
+              {providers.length !== visibleProviders.length ? ` across ${providers.length} listing${providers.length !== 1 ? 's' : ''}` : ''}
             </p>
           )}
         </div>
@@ -556,6 +664,104 @@ export default function Browse() {
       )}
 
       {/* ── Search bar ── */}
+      <div
+        id="ask-concierge"
+        style={{
+        position: 'relative',
+        marginBottom: 16,
+        border: '1px solid rgba(17,12,30,0.10)',
+        borderRadius: 24,
+        background: 'linear-gradient(135deg, #17131F 0%, #241A4D 46%, #0E7490 100%)',
+        boxShadow: '0 28px 80px rgba(17,12,30,0.22)',
+        padding: 22,
+        overflow: 'hidden',
+        scrollMarginTop: 112,
+      }}>
+        <div style={{ position: 'absolute', right: -28, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,122,89,0.30)', filter: 'blur(56px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', left: 40, bottom: -40, width: 140, height: 140, borderRadius: '50%', background: 'rgba(34,211,238,0.20)', filter: 'blur(52px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 56%)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div style={{ padding: '6px 12px', borderRadius: 999, background: '#FFD166', color: '#20163E', fontSize: 11, fontWeight: 950, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            Ask Concierge
+          </div>
+          <div style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.76)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', backdropFilter: 'blur(8px)' }}>
+            Plain-English search
+          </div>
+        </div>
+        <div style={{ position: 'relative', maxWidth: 760, marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 0.96, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>
+            Don’t browse like a filter robot.
+          </div>
+          <div style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.74)', fontWeight: 500 }}>
+            Describe the need the way you’d actually say it. ASK will push the search toward the right category, format, and results.
+          </div>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+          <input
+            type="text"
+            value={conciergePrompt}
+            onChange={(e) => setConciergePrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleConciergeSubmit(conciergePrompt); }}
+            placeholder="Need a calculus tutor who can meet on campus this week"
+            style={{
+              flex: '1 1 360px',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 16,
+              padding: '15px 16px',
+              fontSize: 15,
+              outline: 'none',
+              fontFamily: 'var(--font-ui)',
+              background: 'rgba(255,255,255,0.10)',
+              color: '#fff',
+              backdropFilter: 'blur(12px)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => handleConciergeSubmit(conciergePrompt)}
+            style={{
+              border: 'none',
+              borderRadius: 16,
+              padding: '15px 18px',
+              background: '#FF7A59',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 900,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+              boxShadow: '0 16px 38px rgba(255,122,89,0.35)',
+            }}
+          >
+            Find providers
+          </button>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {CONCIERGE_EXAMPLES.map(example => (
+            <button
+              key={example}
+              type="button"
+              onClick={() => handleConciergeSubmit(example)}
+              style={{
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 999,
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.10)',
+                color: 'rgba(255,255,255,0.84)',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-ui)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ marginBottom: 12 }}>
         <form onSubmit={handleSearch} style={{
           display: 'flex', alignItems: 'center',
@@ -783,7 +989,7 @@ export default function Browse() {
             <TutorCardSkeleton key={i} />
           ))}
         </div>
-      ) : providers.length === 0 ? (
+      ) : visibleProviders.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '64px 20px',
@@ -849,9 +1055,9 @@ export default function Browse() {
         </div>
       ) : (
         <div className="provider-grid">
-          {providers.map(p => (
+          {visibleProviders.map(p => (
             <ProviderCard
-              key={p.id}
+              key={p.user_id || p.id}
               provider={p}
               isOwn={!!user && user.id === p.user_id}
               isAdmin={!!user?.is_admin}
