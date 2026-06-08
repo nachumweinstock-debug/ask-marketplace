@@ -180,6 +180,30 @@ const CONCIERGE_STOPWORDS = new Set([
   'help', 'find', 'me', 'wanting', 'need', 'tonight', 'today', 'tomorrow', 'week',
 ]);
 
+const CONCIERGE_SUBJECT_ALIASES = [
+  { category: 'tutor', subcategory: 'Calculus', aliases: ['calc', 'calculus', 'derivative', 'derivatives', 'integral', 'integrals', 'limits', 'chain rule', 'optimization', 'related rates', 'series'] },
+  { category: 'tutor', subcategory: 'Statistics', aliases: ['stats', 'statistics', 'probability', 'regression', 'data analysis'] },
+  { category: 'tutor', subcategory: 'Accounting', aliases: ['accounting', 'accountant', 'bookkeeping', 'journal entry', 'journal entries', 'balance sheet', 'cash flow', 'ledger'] },
+  { category: 'tutor', subcategory: 'Finance', aliases: ['finance', 'financial', 'valuation', 'investing', 'investments', 'portfolio', 'markets'] },
+  { category: 'tutor', subcategory: 'Excel', aliases: ['excel', 'spreadsheet', 'spreadsheets', 'vlookup', 'pivot table', 'pivot tables', 'xlookup'] },
+  { category: 'tutor', subcategory: 'Coding', aliases: ['coding', 'programming', 'python', 'java', 'javascript', 'sql', 'algorithms', 'data structures', 'debugging', 'loops', 'functions'] },
+  { category: 'tutor', subcategory: 'Chemistry', aliases: ['chemistry', 'stoichiometry', 'organic chemistry', 'equilibrium', 'thermodynamics'] },
+  { category: 'tutor', subcategory: 'Biology', aliases: ['biology', 'cell', 'cells', 'genetics', 'dna', 'anatomy', 'physiology'] },
+  { category: 'tutor', subcategory: 'Physics', aliases: ['physics', 'mechanics', 'electricity', 'optics', 'forces', 'motion'] },
+  { category: 'tutor', subcategory: 'English', aliases: ['english', 'essay', 'essays', 'writing', 'literature', 'reading comprehension'] },
+  { category: 'tutor', subcategory: 'History', aliases: ['history', 'historical', 'historiography'] },
+  { category: 'tutor', subcategory: 'Math', aliases: ['math', 'mathematics', 'algebra', 'trigonometry', 'geometry'] },
+  { category: 'languages', subcategory: 'Hebrew', aliases: ['hebrew', 'ivrit', 'conversation practice', 'grammar practice'] },
+  { category: 'music', subcategory: 'Guitar', aliases: ['guitar', 'guitar lessons'] },
+  { category: 'music', subcategory: 'Piano', aliases: ['piano', 'keyboard'] },
+  { category: 'music', subcategory: 'Violin', aliases: ['violin', 'fiddle'] },
+  { category: 'fitness', subcategory: 'Tennis', aliases: ['tennis', 'serve', 'backhand', 'forehand'] },
+  { category: 'Torah Studies', subcategory: 'Gemara', aliases: ['gemara', 'gemorah', 'chavruta', 'daf yomi'] },
+  { category: 'Torah Studies', subcategory: 'Halacha', aliases: ['halacha', 'halakhah', 'shabbos', 'kashrus'] },
+  { category: 'Torah Studies', subcategory: 'Chumash', aliases: ['chumash', 'parsha', 'humash'] },
+  { category: 'Torah Studies', subcategory: 'Mishna', aliases: ['mishna', 'mishnah'] },
+];
+
 function initials(name) {
   return String(name || '?')
     .trim()
@@ -194,6 +218,11 @@ function finderParamsFromPrompt(prompt) {
   const text = String(prompt || '').trim();
   const lower = text.toLowerCase();
   const next = { search: text };
+  const aliasHit = CONCIERGE_SUBJECT_ALIASES.find(entry => entry.aliases.some(alias => lower.includes(alias)));
+  if (aliasHit) {
+    next.category = aliasHit.category;
+    next.subcategory = aliasHit.subcategory;
+  }
 
   if (/\bbarber|haircut|fade|taper|beard\b/.test(lower)) next.category = 'barber';
   else if (/\btennis|trainer|fitness|workout|boxing|yoga|basketball|soccer|running|golf\b/.test(lower)) next.category = 'fitness';
@@ -205,6 +234,21 @@ function finderParamsFromPrompt(prompt) {
 
   if (/\bonline|virtual|zoom\b/.test(lower)) next.session_type = 'zoom';
   else if (/\bin person|on campus|near me\b/.test(lower)) next.session_type = 'in-person';
+
+  if (!next.subcategory && next.category === 'tutor') {
+    if (/\bcalc|calculus|derivative|integral|limits|series\b/.test(lower)) next.subcategory = 'Calculus';
+    else if (/\bstats|statistics|probability|regression\b/.test(lower)) next.subcategory = 'Statistics';
+    else if (/\baccounting|accountant|ledger|balance sheet|cash flow\b/.test(lower)) next.subcategory = 'Accounting';
+    else if (/\bfinance|investing|valuation|portfolio\b/.test(lower)) next.subcategory = 'Finance';
+    else if (/\bexcel|spreadsheet|vlookup|pivot table|xlookup\b/.test(lower)) next.subcategory = 'Excel';
+    else if (/\bpython|java|javascript|sql|coding|programming|algorithms|data structures\b/.test(lower)) next.subcategory = 'Coding';
+    else if (/\bchemistry|stoichiometry|organic chemistry\b/.test(lower)) next.subcategory = 'Chemistry';
+    else if (/\bbiology|genetics|dna|anatomy|physiology\b/.test(lower)) next.subcategory = 'Biology';
+    else if (/\bphysics|mechanics|electricity|optics|forces\b/.test(lower)) next.subcategory = 'Physics';
+    else if (/\benglish|essay|writing|literature|reading comprehension\b/.test(lower)) next.subcategory = 'English';
+    else if (/\bhistory|historical\b/.test(lower)) next.subcategory = 'History';
+    else if (/\bmath|algebra|trigonometry|geometry\b/.test(lower)) next.subcategory = 'Math';
+  }
 
   return next;
 }
@@ -244,6 +288,7 @@ function findConciergeMatches(prompt, rows) {
 
   const parsed = finderParamsFromPrompt(text);
   const targetCategory = String(parsed.category || conciergeSemanticCategory(text) || '').toLowerCase();
+  const targetSubcategory = String(parsed.subcategory || '').toLowerCase();
   const tokens = conciergeTokens(text);
   const semanticCategory = conciergeSemanticCategory(text);
   const lower = text.toLowerCase();
@@ -263,6 +308,19 @@ function findConciergeMatches(prompt, rows) {
         if (customCategory.includes(targetCategory)) score += 8;
         if (subcategory.includes(lower) || lower.includes(subcategory)) score += 5;
         if (title.includes(targetCategory)) score += 3;
+      }
+
+      if (targetSubcategory) {
+        const category = String(provider.category || '').toLowerCase();
+        const customCategory = String(provider.custom_category || '').toLowerCase();
+        const subcategory = String(provider.subcategory || '').toLowerCase();
+        const title = String(provider.title || '').toLowerCase();
+        const subjectHaystack = `${category} ${customCategory} ${subcategory} ${title} ${haystack}`;
+        if (subcategory === targetSubcategory) score += 14;
+        if (subcategory.includes(targetSubcategory) || targetSubcategory.includes(subcategory)) score += 10;
+        if (title.includes(targetSubcategory)) score += 6;
+        if (customCategory.includes(targetSubcategory)) score += 5;
+        if (subjectHaystack.includes(targetSubcategory)) score += 4;
       }
 
       if (semanticCategory && semanticCategory !== 'all') {

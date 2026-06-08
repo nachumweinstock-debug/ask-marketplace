@@ -130,6 +130,23 @@ async function smokeConcierge(token) {
   if (exact.data.category !== 'tutor') throw new Error(`concierge exact parse expected tutor, got ${exact.data.category}`);
   log('concierge exact parse', `${exact.data.category}${exact.data.subcategory ? `/${exact.data.subcategory}` : ''}`);
 
+  const calculusPrompt = 'Need calculus help for an exam';
+  const calculus = await request('POST', '/providers/concierge', {
+    token,
+    body: {
+      text: calculusPrompt,
+      analytics: {
+        visitor_id: conciergeVisitorId,
+        session_id: conciergeSessionId,
+      },
+    },
+    label: 'concierge calculus parse',
+  });
+  if (!calculus.data.answer || !calculus.data.search) throw new Error('concierge calculus parse missing answer/search');
+  if (calculus.data.category !== 'tutor') throw new Error(`concierge calculus parse expected tutor, got ${calculus.data.category}`);
+  if (String(calculus.data.subcategory || '').toLowerCase() !== 'calculus') throw new Error(`concierge calculus parse expected Calculus, got ${calculus.data.subcategory}`);
+  log('concierge calculus parse', `${calculus.data.category}${calculus.data.subcategory ? `/${calculus.data.subcategory}` : ''}`);
+
   await seedConciergeMemory(token, exactPrompt);
   await request('POST', '/analytics/events', {
     token,

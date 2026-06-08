@@ -73,6 +73,30 @@ const CONCIERGE_SUBCATEGORY_HINTS = {
   'Torah Studies': ['Gemara', 'Halacha', 'Chumash', 'Mishna'],
 };
 
+const CONCIERGE_SUBJECT_ALIASES = [
+  { category: 'tutor', subcategory: 'Calculus', aliases: ['calc', 'calculus', 'derivative', 'derivatives', 'integral', 'integrals', 'limits', 'chain rule', 'optimization', 'related rates', 'series'] },
+  { category: 'tutor', subcategory: 'Statistics', aliases: ['stats', 'statistics', 'probability', 'regression', 'data analysis'] },
+  { category: 'tutor', subcategory: 'Accounting', aliases: ['accounting', 'accountant', 'bookkeeping', 'journal entry', 'journal entries', 'balance sheet', 'cash flow', 'ledger'] },
+  { category: 'tutor', subcategory: 'Finance', aliases: ['finance', 'financial', 'investing', 'investments', 'valuation', 'portfolio', 'markets'] },
+  { category: 'tutor', subcategory: 'Excel', aliases: ['excel', 'spreadsheet', 'spreadsheets', 'vlookup', 'pivot table', 'pivot tables', 'xlookup'] },
+  { category: 'tutor', subcategory: 'Coding', aliases: ['coding', 'programming', 'python', 'java', 'javascript', 'sql', 'algorithms', 'data structures', 'debugging', 'loops', 'functions'] },
+  { category: 'tutor', subcategory: 'Chemistry', aliases: ['chemistry', 'stoichiometry', 'organic chemistry', 'equilibrium', 'thermodynamics'] },
+  { category: 'tutor', subcategory: 'Biology', aliases: ['biology', 'cell', 'cells', 'genetics', 'dna', 'anatomy', 'physiology'] },
+  { category: 'tutor', subcategory: 'Physics', aliases: ['physics', 'mechanics', 'electricity', 'optics', 'forces', 'motion'] },
+  { category: 'tutor', subcategory: 'English', aliases: ['english', 'essay', 'essays', 'writing', 'literature', 'reading comprehension'] },
+  { category: 'tutor', subcategory: 'History', aliases: ['history', 'historical', 'historiography'] },
+  { category: 'tutor', subcategory: 'Math', aliases: ['math', 'mathematics', 'algebra', 'trigonometry', 'geometry'] },
+  { category: 'languages', subcategory: 'Hebrew', aliases: ['hebrew', 'ivrit', 'conversation practice', 'grammar practice'] },
+  { category: 'music', subcategory: 'Guitar', aliases: ['guitar', 'guitar lessons'] },
+  { category: 'music', subcategory: 'Piano', aliases: ['piano', 'keyboard'] },
+  { category: 'music', subcategory: 'Violin', aliases: ['violin', 'fiddle'] },
+  { category: 'fitness', subcategory: 'Tennis', aliases: ['tennis', 'serve', 'backhand', 'forehand'] },
+  { category: 'Torah Studies', subcategory: 'Gemara', aliases: ['gemara', 'gemorah', 'chavruta', 'daf yomi'] },
+  { category: 'Torah Studies', subcategory: 'Halacha', aliases: ['halacha', 'halakhah', 'shabbos', 'kashrus'] },
+  { category: 'Torah Studies', subcategory: 'Chumash', aliases: ['chumash', 'parsha', 'humash'] },
+  { category: 'Torah Studies', subcategory: 'Mishna', aliases: ['mishna', 'mishnah'] },
+];
+
 const CONCIERGE_FOLLOW_UP_RE = /\b(same kind|same thing|that again|another one|more like that|like before|similar one|again)\b/i;
 
 function latestDraftProfile(userId) {
@@ -130,6 +154,29 @@ function inferConciergeCategory(text) {
   return 'all';
 }
 
+function inferConciergeSubcategory(text, category = inferConciergeCategory(text)) {
+  const lower = String(text || '').toLowerCase();
+  const aliasHit = CONCIERGE_SUBJECT_ALIASES.find(entry => (!category || category === 'all' || entry.category === category) && entry.aliases.some(alias => lower.includes(alias)));
+  if (aliasHit) return aliasHit.subcategory;
+
+  if (category === 'tutor') {
+    if (/\bcalc|calculus|derivative|integral|limits|series\b/.test(lower)) return 'Calculus';
+    if (/\bstats|statistics|probability|regression\b/.test(lower)) return 'Statistics';
+    if (/\baccounting|accountant|ledger|balance sheet|cash flow\b/.test(lower)) return 'Accounting';
+    if (/\bfinance|investing|valuation|portfolio\b/.test(lower)) return 'Finance';
+    if (/\bexcel|spreadsheet|vlookup|pivot table|xlookup\b/.test(lower)) return 'Excel';
+    if (/\bpython|java|javascript|sql|coding|programming|algorithms|data structures\b/.test(lower)) return 'Coding';
+    if (/\bchemistry|stoichiometry|organic chemistry\b/.test(lower)) return 'Chemistry';
+    if (/\bbiology|genetics|dna|anatomy|physiology\b/.test(lower)) return 'Biology';
+    if (/\bphysics|mechanics|electricity|optics|forces\b/.test(lower)) return 'Physics';
+    if (/\benglish|essay|writing|literature|reading comprehension\b/.test(lower)) return 'English';
+    if (/\bhistory|historical\b/.test(lower)) return 'History';
+    if (/\bmath|algebra|trigonometry|geometry\b/.test(lower)) return 'Math';
+  }
+
+  return '';
+}
+
 function normalizeConciergeResult(raw, fallbackText) {
   const text = String(fallbackText || '').trim();
   const search = String(raw?.search || text).trim();
@@ -179,14 +226,9 @@ function localConciergeParse(text) {
   else if (/\bgemara|halacha|chumash|torah|tanach|mishna\b/.test(lower)) result.category = 'Torah Studies';
   else if (/\btutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats\b/.test(lower)) result.category = 'tutor';
 
+  result.subcategory = inferConciergeSubcategory(text, result.category);
   if (/\bonline|virtual|zoom\b/.test(lower)) result.session_type = 'zoom';
   else if (/\bin person|on campus|near me\b/.test(lower)) result.session_type = 'in-person';
-
-  if (/\bcalculus\b/.test(lower)) result.subcategory = 'Calculus';
-  else if (/\bexcel\b/.test(lower)) result.subcategory = 'Excel';
-  else if (/\bhebrew\b/.test(lower)) result.subcategory = 'Hebrew';
-  else if (/\btennis\b/.test(lower)) result.subcategory = 'Tennis';
-  else if (/\bbarber|haircut|fade|taper\b/.test(lower)) result.subcategory = 'Haircut';
 
   if (/\bwilf\b/.test(lower)) result.campus = 'WILF';
   else if (/\bberen\b|\bberean\b/.test(lower)) result.campus = 'BEREN';
@@ -355,8 +397,9 @@ function buildConciergeModel() {
   const providerBoosts = new Map();
 
   const providerRows = db.prepare(`
-    SELECT id, user_id, username, name, title, bio, category, custom_category, subcategory, price_per_session, session_type, campus
-    FROM provider_profiles
+    SELECT pp.id, pp.user_id, u.name, u.username, pp.title, pp.bio, pp.category, pp.custom_category, pp.subcategory, pp.price_per_session, pp.session_type, pp.campus
+    FROM provider_profiles pp
+    JOIN users u ON pp.user_id = u.id
   `).all();
 
   for (const provider of providerRows) {
@@ -469,6 +512,8 @@ function pickConciergeCategory(prompt, model, memoryExample) {
 
 function pickConciergeSubcategory(prompt, category, model, memoryExample) {
   const lower = String(prompt || '').toLowerCase();
+  const inferred = inferConciergeSubcategory(prompt, category);
+  if (inferred) return inferred;
   if (memoryExample && CONCIERGE_FOLLOW_UP_RE.test(lower)) {
     const memorySubcategory = String(memoryExample.provider_subcategory || '').trim();
     if (memorySubcategory) return memorySubcategory;

@@ -197,7 +197,7 @@ export default function Home() {
           align-items: center;
         }
         .section-spacer-home {
-          height: 96px;
+          height: 128px;
           background: #FAF7F2;
         }
         .hero-left {
@@ -233,7 +233,7 @@ export default function Home() {
             padding-bottom: 96px;
           }
           .section-spacer-home {
-            height: 56px;
+            height: 72px;
           }
         }
         @media (max-width: 768px) {
@@ -307,11 +307,12 @@ export default function Home() {
             font-size: 13px;
           }
           .provider-cta-home {
-            padding-top: 88px;
-            padding-bottom: 88px;
+            padding-top: 112px;
+            padding-bottom: 112px;
           }
           .provider-cta-home > div {
-            padding: 22px 18px 24px;
+            max-width: 640px;
+            padding: 30px 28px 32px;
           }
           .provider-cta-home h2 {
             font-size: 36px;
@@ -322,7 +323,7 @@ export default function Home() {
             line-height: 1.65;
           }
           .section-spacer-home {
-            height: 40px;
+            height: 56px;
           }
         }
       `}</style>
@@ -462,8 +463,8 @@ export default function Home() {
 
       <div className="section-spacer-home" />
 
-      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[180px] text-center sm:px-10 lg:px-12">
-        <div className="mx-auto max-w-[760px] rounded-[36px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-6 py-16 sm:px-10 lg:px-16 lg:py-20">
+      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[220px] text-center sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[640px] rounded-[40px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-8 py-20 shadow-[0_20px_60px_rgba(0,0,0,0.08)] sm:px-12 lg:px-16 lg:py-24">
           <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(255,255,255,0.4)]">
             For providers
           </div>
