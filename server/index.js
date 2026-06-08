@@ -131,7 +131,7 @@ app.get('/api/health', (_, res) => {
     storage = err.message || 'error';
   }
   const requiredEnv = ['JWT_SECRET'];
-  const optionalEnv = ['FRONTEND_URL', 'EMAIL_HOST', 'RESEND_API_KEY', 'POSTHOG_API_KEY'];
+  const optionalEnv = ['FRONTEND_URL', 'EMAIL_HOST', 'RESEND_API_KEY', 'POSTHOG_API_KEY', 'GEMINI_API_KEY'];
   res.json({
     status: database === 'ok' && storage === 'ok' ? 'ok' : 'degraded',
     database,

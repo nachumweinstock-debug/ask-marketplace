@@ -44,6 +44,19 @@ function redactPublicListing(provider) {
 
 const router = Router();
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'fitness', 'tennis', 'other'];
+const CURRENT_PROVIDER_TERMS = '2026-06-06';
+const CONCIERGE_MODEL = process.env.GEMINI_CONCIERGE_MODEL || 'gemini-2.5-flash-lite';
+
+function latestDraftProfile(userId) {
+  return db.prepare(`
+    SELECT *
+    FROM provider_profiles
+    WHERE user_id = ?
+      AND COALESCE(LENGTH(TRIM(bio)), 0) < 20
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(userId);
+}
 
 function normalizeCampus(value) {
   if (value === undefined) return undefined;
@@ -52,6 +65,178 @@ function normalizeCampus(value) {
   if (clean === 'WILF') return 'WILF';
   if (clean === 'BEREN' || clean === 'BEREAN') return 'BEREN';
   return null;
+}
+
+function normalizeConciergeCategory(value) {
+  const text = String(value || '').trim();
+  const lower = text.toLowerCase();
+  if (!text || lower === 'all' || lower === 'any') return 'all';
+  if (['tutor', 'barber', 'fitness', 'languages', 'music'].includes(lower)) return lower;
+  if (['torah', 'torah studies', 'gemara'].includes(lower)) return 'Torah Studies';
+  return 'all';
+}
+
+function normalizeConciergeSessionType(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (text === 'zoom' || text === 'online' || text === 'virtual') return 'zoom';
+  if (text === 'in-person' || text === 'in person' || text === 'campus') return 'in-person';
+  return 'all';
+}
+
+function normalizeConciergeCampus(value) {
+  const text = String(value || '').trim().toUpperCase();
+  if (text === 'WILF') return 'WILF';
+  if (text === 'BEREN' || text === 'BEREAN') return 'BEREN';
+  return 'all';
+}
+
+function normalizeConciergeResult(raw, fallbackText) {
+  const text = String(fallbackText || '').trim();
+  const search = String(raw?.search || text).trim();
+  return {
+    answer: String(raw?.answer || `I’m pulling the closest matches for “${search || text}”.`).trim(),
+    search: search || text,
+    category: normalizeConciergeCategory(raw?.category),
+    subcategory: String(raw?.subcategory || '').trim(),
+    session_type: normalizeConciergeSessionType(raw?.session_type),
+    campus: normalizeConciergeCampus(raw?.campus),
+    should_search: raw?.should_search !== false,
+    source: raw?.source || 'fallback',
+  };
+}
+
+function recentConciergePrompts() {
+  try {
+    const rows = db.prepare(`
+      SELECT metadata, created_at
+      FROM analytics_events
+      WHERE event_name = 'concierge_prompt_submitted'
+      ORDER BY created_at DESC
+      LIMIT 25
+    `).all();
+
+    const seen = new Set();
+    const prompts = [];
+    for (const row of rows) {
+      try {
+        const meta = JSON.parse(row.metadata || '{}');
+        const prompt = String(meta?.prompt || meta?.query || meta?.text || '').trim();
+        if (!prompt || seen.has(prompt.toLowerCase())) continue;
+        seen.add(prompt.toLowerCase());
+        prompts.push(prompt);
+      } catch {}
+    }
+    return prompts.slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
+function localConciergeParse(text) {
+  const lower = String(text || '').toLowerCase();
+  const result = {
+    search: String(text || '').trim(),
+    category: 'all',
+    subcategory: '',
+    session_type: 'all',
+    campus: 'all',
+    should_search: true,
+    answer: 'I’m narrowing the search and pulling the closest providers.',
+    source: 'local',
+  };
+
+  if (/\bbarber|haircut|fade|taper|beard\b/.test(lower)) result.category = 'barber';
+  else if (/\btennis|trainer|fitness|workout|boxing|yoga|basketball|soccer|running|golf\b/.test(lower)) result.category = 'fitness';
+  else if (/\bhebrew|spanish|french|arabic|language|ivrit|yiddish\b/.test(lower)) result.category = 'languages';
+  else if (/\bguitar|piano|violin|drums|vocal|music\b/.test(lower)) result.category = 'music';
+  else if (/\bgemara|halacha|chumash|torah|tanach|mishna\b/.test(lower)) result.category = 'Torah Studies';
+  else if (/\btutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats\b/.test(lower)) result.category = 'tutor';
+
+  if (/\bonline|virtual|zoom\b/.test(lower)) result.session_type = 'zoom';
+  else if (/\bin person|on campus|near me\b/.test(lower)) result.session_type = 'in-person';
+
+  if (/\bcalculus\b/.test(lower)) result.subcategory = 'Calculus';
+  else if (/\bexcel\b/.test(lower)) result.subcategory = 'Excel';
+  else if (/\bhebrew\b/.test(lower)) result.subcategory = 'Hebrew';
+  else if (/\btennis\b/.test(lower)) result.subcategory = 'Tennis';
+  else if (/\bbarber|haircut|fade|taper\b/.test(lower)) result.subcategory = 'Haircut';
+
+  if (/\bwilf\b/.test(lower)) result.campus = 'WILF';
+  else if (/\bberen\b|\bberean\b/.test(lower)) result.campus = 'BEREN';
+
+  return result;
+}
+
+async function parseConciergeWithGemini(text) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return localConciergeParse(text);
+  const pastPrompts = recentConciergePrompts();
+  const memoryBlock = pastPrompts.length
+    ? `Recent successful ASK prompts from this marketplace:\n${pastPrompts.map(prompt => `- ${prompt}`).join('\n')}\nUse these as style examples only.`
+    : 'No historical prompts available.';
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${CONCIERGE_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{
+              text: [
+                'You are the ASK Marketplace concierge parser.',
+                'Interpret the user request into a concise browse query and filters.',
+                'Return JSON only.',
+                'If the user mentions a service, school context, campus, or format, map it to the closest browse filters.',
+                'Keep the answer short and practical.',
+                memoryBlock,
+                `User request: ${text}`,
+              ].join('\n'),
+            }],
+          },
+        ],
+        generationConfig: {
+          responseFormat: {
+            text: {
+              mimeType: 'application/json',
+              schema: {
+                type: 'object',
+                properties: {
+                  answer: { type: 'string', description: 'Short response to show in the concierge panel.' },
+                  search: { type: 'string', description: 'Normalized search query to send to browse.' },
+                  category: { type: 'string', description: 'Best matching ASK category.' },
+                  subcategory: { type: 'string', description: 'Best matching ASK subcategory if any.' },
+                  session_type: { type: 'string', description: 'all, zoom, or in-person.' },
+                  campus: { type: 'string', description: 'all, WILF, or BEREN.' },
+                  should_search: { type: 'boolean', description: 'Whether the user wants provider matches.' },
+                },
+                required: ['answer', 'search', 'category', 'subcategory', 'session_type', 'campus', 'should_search'],
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(7000),
+    }
+  );
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Gemini request failed (${response.status})`);
+  }
+
+  const payload = await response.json();
+  const rawText = payload?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('') || '';
+  const normalized = String(rawText).trim();
+  const jsonSlice = normalized.includes('{')
+    ? normalized.slice(normalized.indexOf('{'), normalized.lastIndexOf('}') + 1)
+    : normalized;
+  return normalizeConciergeResult(JSON.parse(jsonSlice), text);
 }
 
 // ── Named routes (must come before /:id) ──────────────────────────────────────
@@ -103,6 +288,22 @@ router.get('/subcategories', (req, res) => {
     rows = db.prepare(`SELECT DISTINCT subcategory FROM provider_profiles WHERE category = ? AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory`).all(category);
   }
   res.json(rows.map(r => r.subcategory));
+});
+
+router.post('/concierge', async (req, res) => {
+  const text = String(req.body?.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'text required' });
+
+  try {
+    const parsed = await parseConciergeWithGemini(text);
+    res.json(normalizeConciergeResult(parsed, text));
+  } catch (err) {
+    try {
+      res.json(normalizeConciergeResult(localConciergeParse(text), text));
+    } catch (fallbackErr) {
+      res.status(502).json({ error: fallbackErr.message || err.message || 'Failed to parse concierge request' });
+    }
+  }
 });
 
 // GET /providers/photo-suggestions?query=guitar
@@ -288,6 +489,7 @@ router.get('/', optionalAuth, (req, res) => {
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
     WHERE 1=1
+      AND COALESCE(LENGTH(TRIM(pp.bio)), 0) >= 20
   `;
   const params = [];
   if (category && category !== 'all') {
@@ -347,15 +549,14 @@ router.get('/', optionalAuth, (req, res) => {
 
 // POST /providers/become — create a new listing (always creates new, no longer a toggle)
 router.post('/become', requireAuth, (req, res) => {
-  const { providerTermsVersion } = req.body || {};
-  const CURRENT_PROVIDER_TERMS = '2026-06-01';
+  const { providerTermsVersion, providerTermsAccepted } = req.body || {};
 
   // Check if terms already accepted on a prior listing creation
   const termsRow = db.prepare('SELECT provider_terms_version FROM users WHERE id = ?').get(req.user.id);
   const alreadyAccepted = termsRow?.provider_terms_version === CURRENT_PROVIDER_TERMS;
 
   if (!alreadyAccepted) {
-    if (!providerTermsVersion) {
+    if (!providerTermsAccepted || !providerTermsVersion) {
       return res.status(403).json({ error: 'provider_terms_required', currentVersion: CURRENT_PROVIDER_TERMS });
     }
     if (providerTermsVersion !== CURRENT_PROVIDER_TERMS) {
@@ -365,7 +566,19 @@ router.post('/become', requireAuth, (req, res) => {
       .run(providerTermsVersion, req.user.id);
   }
 
-  db.prepare("INSERT INTO provider_profiles (user_id, category, created_at) VALUES (?, ?, datetime('now'))").run(req.user.id, 'other');
+  const draft = latestDraftProfile(req.user.id);
+  if (draft) {
+    db.prepare(`
+      UPDATE provider_profiles
+      SET tos_accepted_at = COALESCE(tos_accepted_at, datetime('now'))
+      WHERE id = ?
+    `).run(draft.id);
+  } else {
+    db.prepare(`
+      INSERT INTO provider_profiles (user_id, category, created_at, tos_accepted_at)
+      VALUES (?, ?, datetime('now'), datetime('now'))
+    `).run(req.user.id, 'other');
+  }
   db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
   // Auto-assign username if not already set
   const existing = db.prepare('SELECT username, name FROM users WHERE id = ?').get(req.user.id);
@@ -385,6 +598,35 @@ router.post('/become', requireAuth, (req, res) => {
   });
 
   res.json({ user, profile_id: profile.id });
+});
+
+router.post('/terms/accept', requireAuth, (req, res) => {
+  const { providerTermsVersion } = req.body || {};
+  if (providerTermsVersion !== CURRENT_PROVIDER_TERMS) {
+    return res.status(403).json({ error: 'provider_terms_outdated', currentVersion: CURRENT_PROVIDER_TERMS });
+  }
+
+  let profile = latestDraftProfile(req.user.id);
+  if (!profile) {
+    db.prepare(`
+      INSERT INTO provider_profiles (user_id, category, created_at, tos_accepted_at)
+      VALUES (?, 'other', datetime('now'), datetime('now'))
+    `).run(req.user.id);
+    profile = db.prepare('SELECT * FROM provider_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
+  } else {
+    db.prepare('UPDATE provider_profiles SET tos_accepted_at = datetime(\'now\') WHERE id = ?').run(profile.id);
+    profile = db.prepare('SELECT * FROM provider_profiles WHERE id = ?').get(profile.id);
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET role = 'provider',
+        provider_terms_version = ?,
+        provider_terms_at = datetime('now')
+    WHERE id = ?
+  `).run(CURRENT_PROVIDER_TERMS, req.user.id);
+
+  res.json({ profile_id: profile.id, tos_accepted_at: profile.tos_accepted_at || new Date().toISOString(), currentVersion: CURRENT_PROVIDER_TERMS });
 });
 
 // PUT /providers/me — update most recent listing (backwards compat for CreateListing)
@@ -451,6 +693,9 @@ router.get('/:id', optionalAuth, (req, res) => {
 async function updateProfile(req, res, profile) {
   try {
     const { bio, category, price_per_session, zelle, venmo, custom_category, subcategory, listing_image_data_url, session_type, campus, title, college, allow_group, max_group_size, intro_video_url, portfolio_notes } = req.body;
+    if (!profile.tos_accepted_at) {
+      return res.status(403).json({ error: 'provider_terms_required', currentVersion: CURRENT_PROVIDER_TERMS });
+    }
     if (price_per_session !== undefined && (isNaN(price_per_session) || price_per_session < 0 || price_per_session > 10000)) {
       return res.status(400).json({ error: 'Price must be between $0 and $10,000' });
     }
@@ -536,6 +781,7 @@ async function updateProfile(req, res, profile) {
     res.status(500).json({ error: 'Failed to save listing' });
   }
 }
+
 
 function deleteProfile(userId, profileId, res) {
   db.prepare('DELETE FROM provider_profiles WHERE id = ?').run(profileId);

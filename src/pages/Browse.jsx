@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -167,12 +167,18 @@ const CATEGORY_SEO = {
 };
 
 const CONCIERGE_EXAMPLES = [
-  'Need a calculus tutor tonight',
+  'Need a calculus tutor before an exam',
   'Looking for a barber on WILF before Shabbos',
-  'Want tennis lessons on Sundays',
   'Need a Hebrew tutor for conversation practice',
-  'Looking for an Excel tutor for a job interview',
+  'Want tennis lessons on Sundays',
+  'Need Excel help for a job interview',
 ];
+
+const CONCIERGE_STOPWORDS = new Set([
+  'need', 'looking', 'look', 'want', 'for', 'a', 'an', 'the', 'to', 'on', 'in', 'my',
+  'who', 'can', 'with', 'before', 'after', 'this', 'that', 'and', 'or', 'please',
+  'help', 'find', 'me', 'wanting', 'need', 'tonight', 'today', 'tomorrow', 'week',
+]);
 
 function initials(name) {
   return String(name || '?')
@@ -200,6 +206,74 @@ function finderParamsFromPrompt(prompt) {
   else if (/\bin person|on campus|near me\b/.test(lower)) next.session_type = 'in-person';
 
   return next;
+}
+
+function conciergeText(provider) {
+  return [
+    provider.name,
+    provider.title,
+    provider.subcategory,
+    provider.custom_category,
+    provider.bio,
+    provider.category,
+    Array.isArray(provider.merged_services) ? provider.merged_services.join(' ') : '',
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function conciergeTokens(prompt) {
+  return String(prompt || '')
+    .toLowerCase()
+    .split(/[^a-z0-9+]+/)
+    .map(token => token.trim())
+    .filter(token => token.length > 2 && !CONCIERGE_STOPWORDS.has(token));
+}
+
+function findConciergeMatches(prompt, rows) {
+  const text = String(prompt || '').trim();
+  if (!text) return [];
+
+  const parsed = finderParamsFromPrompt(text);
+  const targetCategory = String(parsed.category || '').toLowerCase();
+  const tokens = conciergeTokens(text);
+
+  return dedupeProvidersByUser(rows)
+    .map(provider => {
+      const haystack = conciergeText(provider);
+      let score = 0;
+
+      if (targetCategory && targetCategory !== 'all') {
+        const category = String(provider.category || '').toLowerCase();
+        const customCategory = String(provider.custom_category || '').toLowerCase();
+        const subcategory = String(provider.subcategory || '').toLowerCase();
+        const title = String(provider.title || '').toLowerCase();
+
+        if (category === targetCategory) score += 10;
+        if (customCategory.includes(targetCategory)) score += 8;
+        if (subcategory.includes(text.toLowerCase()) || text.toLowerCase().includes(subcategory)) score += 5;
+        if (title.includes(targetCategory)) score += 3;
+      }
+
+      for (const token of tokens) {
+        if (haystack.includes(token)) score += 2;
+      }
+
+      if (text.toLowerCase().includes('online') || text.toLowerCase().includes('zoom') || text.toLowerCase().includes('virtual')) {
+        if (provider.session_type === 'zoom') score += 5;
+      }
+
+      if (text.toLowerCase().includes('on campus') || text.toLowerCase().includes('in person') || text.toLowerCase().includes('near me')) {
+        if (provider.session_type !== 'zoom') score += 2;
+      }
+
+      if (text.toLowerCase().includes('tonight') || text.toLowerCase().includes('today') || text.toLowerCase().includes('this week') || text.toLowerCase().includes('before')) {
+        if (provider.availability) score += 1;
+      }
+
+      return { provider, score };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || String(a.provider.name || '').localeCompare(String(b.provider.name || '')))
+    .map(item => item.provider);
 }
 
 function listingSummary(provider) {
@@ -293,7 +367,9 @@ export default function Browse() {
   const [editError, setEditError] = useState('');
   const [conciergePrompt, setConciergePrompt] = useState(searchParams.get('search') || '');
   const [conciergeSubmittedPrompt, setConciergeSubmittedPrompt] = useState('');
+  const [conciergeAnswer, setConciergeAnswer] = useState('');
   const [conciergeSearching, setConciergeSearching] = useState(false);
+  const conciergeDebounceRef = useRef(null);
   // Dynamic meta per category for SEO
   useEffect(() => {
     const seo = CATEGORY_SEO[category];
@@ -315,6 +391,13 @@ export default function Browse() {
     api.get('/providers/categories')
       .then(({ data }) => setCustomCats(data))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (conciergeDebounceRef.current) clearTimeout(conciergeDebounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -377,6 +460,24 @@ export default function Browse() {
       }
       fetchProviders(val);
     }, 200);
+  }
+
+  function shouldAutoTriggerConcierge(prompt) {
+    const text = String(prompt || '').trim();
+    if (text.length < 3) return false;
+    const next = finderParamsFromPrompt(text);
+    if (next.category || next.session_type) return true;
+    return /\b(calculus|math|excel|barber|haircut|tutor|tutoring|hebrew|english|guitar|piano|tennis|fitness|workout|music|gemara|halacha|chumash|statistics|stats|chemistry|biology|physics|coding|economics|history)\b/i.test(text);
+  }
+
+  function handleConciergeInput(val) {
+    setConciergePrompt(val);
+    setConciergeAnswer('');
+    if (conciergeDebounceRef.current) clearTimeout(conciergeDebounceRef.current);
+    if (!shouldAutoTriggerConcierge(val)) return;
+    conciergeDebounceRef.current = setTimeout(() => {
+      handleConciergeSubmit(val);
+    }, 450);
   }
 
   async function fetchProviders(searchVal, overrides = {}) {
@@ -486,33 +587,79 @@ export default function Browse() {
   }
 
   async function handleConciergeSubmit(prompt) {
-    const next = finderParamsFromPrompt(prompt);
-    if (!next.search) return;
+    const text = String(prompt || '').trim();
+    if (!text) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    setConciergePrompt(next.search);
-    setConciergeSubmittedPrompt(next.search);
+    setConciergePrompt(text);
+    setConciergeSubmittedPrompt(text);
     setConciergeSearching(true);
-    setSearch(next.search);
-    setCategory(next.category || 'all');
-    setSubcategory('all');
-    setSessionType(next.session_type || 'all');
-    if (next.session_type === 'zoom') setCampus('all');
-    const nextCampus = next.session_type === 'zoom' ? 'all' : campus;
-    syncParams({
-      search: next.search,
-      category: next.category || 'all',
-      subcategory: 'all',
-      session_type: next.session_type || 'all',
-      campus: nextCampus,
+    trackEvent('concierge_prompt_submitted', {
+      prompt: text,
+      prompt_length: text.length,
+      detected_category: finderParamsFromPrompt(text).category || 'all',
     });
     try {
-      await fetchProviders(next.search, {
-        search: next.search,
-        category: next.category || 'all',
-        subcategory: 'all',
-        session_type: next.session_type || 'all',
+      const { data } = await api.post('/providers/concierge', { text });
+      const nextSearch = String(data?.search || text).trim();
+      const nextCategory = data?.category || 'all';
+      const nextSubcategory = data?.subcategory || 'all';
+      const nextSessionType = data?.session_type || 'all';
+      const nextCampus = data?.campus || (nextSessionType === 'zoom' ? 'all' : campus);
+
+      setConciergeAnswer(String(data?.answer || ''));
+      setSearch(nextSearch);
+      setCategory(nextCategory);
+      setSubcategory(nextSubcategory || 'all');
+      setSessionType(nextSessionType);
+      if (nextSessionType === 'zoom') setCampus('all');
+
+      syncParams({
+        search: nextSearch,
+        category: nextCategory,
+        subcategory: nextSubcategory || 'all',
+        session_type: nextSessionType,
         campus: nextCampus,
       });
+
+      if (data?.should_search !== false) {
+        await fetchProviders(nextSearch, {
+          search: nextSearch,
+          category: nextCategory,
+          subcategory: nextSubcategory || 'all',
+          session_type: nextSessionType,
+          campus: nextCampus,
+        });
+      }
+    } catch (err) {
+      const fallback = finderParamsFromPrompt(text);
+      const nextSearch = fallback.search || text;
+      const nextCategory = fallback.category || 'all';
+      const nextSessionType = fallback.session_type || 'all';
+      const nextCampus = nextSessionType === 'zoom' ? 'all' : campus;
+      setConciergeAnswer('I’m narrowing the search and pulling the closest providers.');
+      setSearch(nextSearch);
+      setCategory(nextCategory);
+      setSubcategory('all');
+      setSessionType(nextSessionType);
+      if (nextSessionType === 'zoom') setCampus('all');
+      syncParams({
+        search: nextSearch,
+        category: nextCategory,
+        subcategory: 'all',
+        session_type: nextSessionType,
+        campus: nextCampus,
+      });
+      try {
+        await fetchProviders(nextSearch, {
+          search: nextSearch,
+          category: nextCategory,
+          subcategory: 'all',
+          session_type: nextSessionType,
+          campus: nextCampus,
+        });
+      } catch (fallbackErr) {
+        console.error(fallbackErr || err);
+      }
     } finally {
       setConciergeSearching(false);
     }
@@ -583,8 +730,11 @@ export default function Browse() {
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
   const sitewideSaleActive = providers.some(p => p.first_time_discount_scope === 'sitewide');
   const visibleProviders = dedupeProvidersByUser(providers);
-  const conciergeMatches = conciergeSubmittedPrompt ? visibleProviders.slice(0, 3) : [];
-  const conciergePromptLabel = conciergeSubmittedPrompt || 'Tell ASK what you need in plain English.';
+  const conciergeMatches = useMemo(
+    () => findConciergeMatches(conciergePrompt || conciergeSubmittedPrompt, visibleProviders).slice(0, 3),
+    [conciergePrompt, conciergeSubmittedPrompt, visibleProviders]
+  );
+  const conciergePromptLabel = conciergeSubmittedPrompt || conciergePrompt || 'Tell ASK what you need in plain English.';
   const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
   const emptyTitle = campusName
     ? `No ${campusName} listings yet.`
@@ -602,53 +752,53 @@ export default function Browse() {
         style={{
           position: 'relative',
           marginBottom: 30,
-          border: '1px solid rgba(17,12,30,0.10)',
-          borderRadius: 28,
-          background: 'linear-gradient(135deg, #17131F 0%, #241A4D 46%, #0E7490 100%)',
-          boxShadow: '0 28px 80px rgba(17,12,30,0.22)',
-          padding: 28,
+          border: '1px solid rgba(27,58,107,0.10)',
+          borderRadius: 30,
+          background: 'linear-gradient(180deg, #FFFDF8 0%, #FFF8EE 100%)',
+          boxShadow: '0 24px 60px rgba(27,58,107,0.08)',
+          padding: '28px 28px 24px',
           overflow: 'hidden',
           scrollMarginTop: 112,
         }}>
-        <div style={{ position: 'absolute', right: -28, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,122,89,0.30)', filter: 'blur(56px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', left: 40, bottom: -40, width: 140, height: 140, borderRadius: '50%', background: 'rgba(34,211,238,0.20)', filter: 'blur(52px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 56%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', right: -40, top: -54, width: 180, height: 180, borderRadius: '50%', background: 'rgba(201,168,76,0.18)', filter: 'blur(56px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', left: 36, bottom: -50, width: 150, height: 150, borderRadius: '50%', background: 'rgba(27,58,107,0.08)', filter: 'blur(56px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(255,255,255,0.85), transparent 24%), linear-gradient(180deg, rgba(255,255,255,0.65), transparent 58%)', pointerEvents: 'none' }} />
 
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-          <div style={{ padding: '6px 12px', borderRadius: 999, background: '#FFD166', color: '#20163E', fontSize: 11, fontWeight: 950, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ padding: '6px 12px', borderRadius: 999, background: '#1B3A6B', color: '#fff', fontSize: 11, fontWeight: 950, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
             Ask Concierge
           </div>
-          <div style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.76)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', backdropFilter: 'blur(8px)' }}>
+          <div style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(27,58,107,0.12)', background: 'rgba(255,255,255,0.68)', color: 'rgba(27,58,107,0.74)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', backdropFilter: 'blur(8px)' }}>
             Plain-English search
           </div>
         </div>
         <div style={{ position: 'relative', maxWidth: 860, marginBottom: 18 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 4.4vw, 58px)', lineHeight: 0.94, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>
-            Don’t browse like a filter robot.
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 4.2vw, 58px)', lineHeight: 0.94, color: '#112345', letterSpacing: '-0.04em', marginBottom: 10 }}>
+            Ask it like a person. Get the right providers.
           </div>
-          <div style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(255,255,255,0.76)', fontWeight: 500, maxWidth: 760 }}>
-            Describe the need the way you’d actually say it. ASK pushes the search toward the right category, format, and results.
+          <div style={{ fontSize: 16, lineHeight: 1.72, color: '#7A6E65', fontWeight: 400, maxWidth: 760 }}>
+            Say what you need in plain English. ASK will pull the search toward the right service, format, and campus context without making you fight filters.
           </div>
         </div>
-        <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div style={{ position: 'relative', display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
           <input
             type="text"
             value={conciergePrompt}
-            onChange={(e) => setConciergePrompt(e.target.value)}
+            onChange={(e) => handleConciergeInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleConciergeSubmit(conciergePrompt); }}
             placeholder="Need a calculus tutor who can meet on campus this week"
             style={{
               flex: '1 1 360px',
-              border: '1px solid rgba(255,255,255,0.14)',
-              borderRadius: 16,
-              padding: '15px 16px',
+              border: '1px solid rgba(27,58,107,0.12)',
+              borderRadius: 18,
+              padding: '16px 18px',
               fontSize: 15,
               outline: 'none',
               fontFamily: 'var(--font-ui)',
-              background: 'rgba(255,255,255,0.10)',
-              color: '#fff',
+              background: '#fff',
+              color: '#17130F',
               backdropFilter: 'blur(12px)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.8), inset 0 1px 0 rgba(255,255,255,0.9)',
             }}
           />
           <button
@@ -656,37 +806,38 @@ export default function Browse() {
             onClick={() => handleConciergeSubmit(conciergePrompt)}
             style={{
               border: 'none',
-              borderRadius: 16,
-              padding: '15px 18px',
-              background: '#FF7A59',
+              borderRadius: 18,
+              padding: '15px 20px',
+              background: '#1B3A6B',
               color: '#fff',
               fontSize: 13,
               fontWeight: 900,
               cursor: 'pointer',
               fontFamily: 'var(--font-ui)',
-              boxShadow: '0 16px 38px rgba(255,122,89,0.35)',
+              boxShadow: '0 14px 30px rgba(27,58,107,0.18)',
             }}
           >
             Find providers
           </button>
         </div>
-        <div style={{ position: 'relative', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {CONCIERGE_EXAMPLES.map(example => (
             <button
               key={example}
               type="button"
               onClick={() => handleConciergeSubmit(example)}
               style={{
-                border: '1px solid rgba(255,255,255,0.16)',
+                border: '1px solid rgba(27,58,107,0.10)',
                 borderRadius: 999,
-                padding: '8px 12px',
-                background: 'rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.84)',
+                padding: '9px 13px',
+                background: 'rgba(255,255,255,0.82)',
+                color: '#1B3A6B',
                 fontSize: 12,
                 fontWeight: 800,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-ui)',
                 backdropFilter: 'blur(8px)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.7)',
               }}
             >
               {example}
@@ -696,37 +847,39 @@ export default function Browse() {
 
         <div style={{
           position: 'relative',
-          marginTop: 18,
-          borderRadius: 22,
-          border: '1px solid rgba(255,255,255,0.12)',
-          background: 'rgba(255,255,255,0.08)',
+          marginTop: 20,
+          borderRadius: 24,
+          border: '1px solid rgba(27,58,107,0.10)',
+          background: 'rgba(255,255,255,0.94)',
           backdropFilter: 'blur(12px)',
           padding: 18,
+          boxShadow: '0 18px 50px rgba(27,58,107,0.08)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 800, fontSize: 13 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: conciergeSearching ? '#F59E0B' : '#22C55E', boxShadow: conciergeSearching ? '0 0 0 6px rgba(245,158,11,0.15)' : '0 0 0 6px rgba(34,197,94,0.15)' }} />
-              {conciergeSearching ? 'ASK is searching...' : conciergeSubmittedPrompt ? 'ASK found matches' : 'Try a question above'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#112345', fontWeight: 800, fontSize: 13 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 999, background: conciergeSearching ? '#C9A84C' : '#22C55E', boxShadow: conciergeSearching ? '0 0 0 6px rgba(201,168,76,0.16)' : '0 0 0 6px rgba(34,197,94,0.14)' }} />
+              {conciergeSearching ? 'ASK is searching...' : conciergePrompt.trim() ? 'ASK is matching providers' : 'Try a question above'}
             </div>
-            {conciergeSubmittedPrompt && (
-              <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, fontWeight: 500 }}>
+            {conciergePrompt.trim() && (
+              <div style={{ color: '#7A6E65', fontSize: 13, fontWeight: 500 }}>
                 for “{conciergePromptLabel}”
               </div>
             )}
           </div>
 
-          <div style={{ color: 'rgba(255,255,255,0.86)', fontSize: 14, lineHeight: 1.65, marginBottom: conciergeMatches.length ? 14 : 0 }}>
+          <div style={{ color: '#5F5A50', fontSize: 14, lineHeight: 1.65, marginBottom: conciergeMatches.length ? 14 : 0 }}>
             {conciergeSearching
-              ? 'Holding the search to the best fit categories and updating the results right here.'
-              : conciergeSubmittedPrompt
+              ? 'Tuning toward the best-fit category, service, and campus signals.'
+              : conciergePrompt.trim()
                 ? (conciergeMatches.length
                   ? `I found ${conciergeMatches.length} strong match${conciergeMatches.length !== 1 ? 'es' : ''}. The closest options are below.`
-                  : 'No exact match yet. Try widening the request or switching the category words.')
+                  : 'No exact match yet. Try widening the request or changing the service words.')
                 : 'Type a request like “Need a calculus tutor tonight” or tap one of the examples.'}
+            {!conciergeSearching && conciergeAnswer ? ` ${conciergeAnswer}` : ''}
           </div>
 
           {conciergeMatches.length > 0 && (
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
               {conciergeMatches.map(provider => {
                 const href = providerUrl(provider.name, provider.id, provider.username);
                 return (
@@ -736,13 +889,14 @@ export default function Browse() {
                     style={{
                       textDecoration: 'none',
                       borderRadius: 18,
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(255,255,255,0.10)',
+                      border: '1px solid rgba(27,58,107,0.10)',
+                      background: '#fff',
                       padding: 14,
-                      color: '#fff',
+                      color: '#112345',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 12,
+                      boxShadow: '0 12px 28px rgba(27,58,107,0.06)',
                     }}
                   >
                     <div style={{
@@ -761,15 +915,15 @@ export default function Browse() {
                       {initials(provider.name)}
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, lineHeight: 1.05, marginBottom: 4, color: '#fff' }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, lineHeight: 1.05, marginBottom: 4, color: '#112345' }}>
                         {provider.name}
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.74)', fontSize: 12.5, lineHeight: 1.4 }}>
+                      <div style={{ color: '#7A6E65', fontSize: 12.5, lineHeight: 1.4 }}>
                         {(provider.merged_services?.[0] || provider.subcategory || provider.custom_category || 'Campus service')}
                       </div>
-                      <div style={{ marginTop: 6, color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 700 }}>
+                      <div style={{ marginTop: 6, color: '#1B3A6B', fontSize: 13, fontWeight: 700 }}>
                         {provider.merged_min_price ? `$${provider.merged_min_price}` : 'Ask'}
-                        <span style={{ color: 'rgba(255,255,255,0.64)', fontWeight: 500 }}> per session</span>
+                        <span style={{ color: '#7A6E65', fontWeight: 500 }}> per session</span>
                       </div>
                     </div>
                   </Link>
