@@ -61,71 +61,82 @@ const COMMENTATOR_ARTICLE_URL = 'https://yucommentator.org/2026/05/final-exams-b
 
 function Footer() {
   const footerLink = {
-    fontSize: 12,
-    color: 'var(--muted)',
+    fontSize: 14,
+    color: 'rgba(27,58,107,0.70)',
     textDecoration: 'none',
   };
 
   return (
     <footer className="app-footer" style={{
-      borderTop: '1px solid var(--border)',
-      padding: '20px 24px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: 24, flexWrap: 'wrap',
+      borderTop: '1px solid rgba(27,58,107,0.10)',
+      padding: '40px 32px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
     }}>
-      <span style={{ fontSize: 12, color: 'var(--muted)' }}>© {new Date().getFullYear()} ASK</span>
-      <Link to="/faq" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        FAQ
-      </Link>
-      <Link to="/legal" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Legal
-      </Link>
-      <Link to="/terms" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Terms
-      </Link>
-      <Link to="/privacy" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Privacy
-      </Link>
-      <Link to="/cookies" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Cookies
-      </Link>
-      <Link to="/refund-policy" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Refunds
-      </Link>
-      <Link to="/community-guidelines" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Guidelines
-      </Link>
-      <Link to="/help-wanted" style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Request a service
-      </Link>
-      <a href={COMMENTATOR_ARTICLE_URL} target="_blank" rel="noopener noreferrer"
-        style={footerLink}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Featured in The YU Commentator
-      </a>
-      <a href={IG_URL} target="_blank" rel="noopener noreferrer"
-        style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#bc1888'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
-        Instagram
-      </a>
+      <span style={{ fontSize: 14, color: 'rgba(27,58,107,0.70)', marginBottom: 4 }}>© {new Date().getFullYear()} ASK</span>
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: '8px 24px',
+        maxWidth: 1100,
+      }}>
+        <Link to="/faq" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          FAQ
+        </Link>
+        <Link to="/legal" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Legal
+        </Link>
+        <Link to="/terms" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Terms
+        </Link>
+        <Link to="/privacy" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Privacy
+        </Link>
+        <Link to="/cookies" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Cookies
+        </Link>
+        <Link to="/refund-policy" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Refunds
+        </Link>
+        <Link to="/community-guidelines" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Guidelines
+        </Link>
+        <Link to="/help-wanted" style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Request a service
+        </Link>
+        <a href={COMMENTATOR_ARTICLE_URL} target="_blank" rel="noopener noreferrer"
+          style={footerLink}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Featured in The YU Commentator
+        </a>
+        <a href={IG_URL} target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 14, color: 'rgba(27,58,107,0.70)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+          onMouseEnter={e => e.currentTarget.style.color = '#bc1888'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(27,58,107,0.70)'}>
+          Instagram
+        </a>
+      </div>
     </footer>
   );
 }
@@ -186,6 +197,7 @@ function AppRoutes() {
         <Route path="/saved-tutors" element={<Layout><SavedTutors /></Layout>} />
         <Route path="/legal" element={<Layout><LegalHub /></Layout>} />
         <Route path="/terms" element={<Layout><LegalDocument type="terms" /></Layout>} />
+        <Route path="/terms-provider" element={<Layout><LegalDocument type="terms-provider" /></Layout>} />
         <Route path="/privacy" element={<Layout><LegalDocument type="privacy" /></Layout>} />
         <Route path="/cookies" element={<Layout><LegalDocument type="cookies" /></Layout>} />
         <Route path="/refund-policy" element={<Layout><LegalDocument type="refunds" /></Layout>} />
@@ -298,6 +310,26 @@ function AppRoutes() {
             <ProtectedRoute>
               <Layout><CreateListing /></Layout>
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post-listing"
+          element={
+            <ProtectedRoute>
+              <Layout><CreateListing /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/become-a-provider"
+          element={
+            user
+              ? (
+                <ProtectedRoute>
+                  <Layout><CreateListing /></Layout>
+                </ProtectedRoute>
+              )
+              : <Navigate to="/signup" replace />
           }
         />
         <Route

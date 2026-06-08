@@ -120,6 +120,10 @@ if (!ppCols.includes('custom_category')) db.exec('ALTER TABLE provider_profiles 
 if (!ppCols.includes('listing_image'))   db.exec('ALTER TABLE provider_profiles ADD COLUMN listing_image TEXT');
 if (!ppCols.includes('session_type'))    db.exec("ALTER TABLE provider_profiles ADD COLUMN session_type TEXT NOT NULL DEFAULT 'in-person'");
 if (!ppCols.includes('campus'))          db.exec("ALTER TABLE provider_profiles ADD COLUMN campus TEXT");
+if (!ppCols.includes('is_active')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN is_active INTEGER DEFAULT 1');
+  db.exec('UPDATE provider_profiles SET is_active = 1 WHERE is_active IS NULL');
+}
 
 if (!cols.includes('phone'))        db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
 if (!cols.includes('contact_pref')) db.exec("ALTER TABLE users ADD COLUMN contact_pref TEXT DEFAULT 'imessage'");
@@ -293,6 +297,12 @@ if (!ppColsFinal.includes('created_at')) {
 if (!ppColsFinal.includes('last_no_availability_reminder_at')) {
   db.exec('ALTER TABLE provider_profiles ADD COLUMN last_no_availability_reminder_at DATETIME');
 }
+if (!ppColsFinal.includes('tos_accepted_at')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN tos_accepted_at DATETIME');
+}
+if (!ppColsFinal.includes('onboarding_nudge_sent_at')) {
+  db.exec('ALTER TABLE provider_profiles ADD COLUMN onboarding_nudge_sent_at DATETIME');
+}
 
 const reviewCols = db.pragma('table_info(reviews)').map(c => c.name);
 if (!reviewCols.includes('hidden')) db.exec('ALTER TABLE reviews ADD COLUMN hidden INTEGER DEFAULT 0');
@@ -378,6 +388,34 @@ if (!tablesAll.includes('booking_group_invites')) {
 
 // Rename legacy 'tennis' category to 'fitness'
 db.prepare("UPDATE provider_profiles SET category = 'fitness' WHERE category = 'tennis'").run();
+db.exec(`
+  UPDATE provider_profiles
+  SET tos_accepted_at = (
+    SELECT u.provider_terms_at
+    FROM users u
+    WHERE u.id = provider_profiles.user_id
+  )
+  WHERE tos_accepted_at IS NULL
+    AND EXISTS (
+      SELECT 1
+      FROM users u
+      WHERE u.id = provider_profiles.user_id
+        AND u.provider_terms_at IS NOT NULL
+    )
+`);
+
+// Backfill a draft provider row for provider-role users who do not yet have a listing row.
+db.exec(`
+  INSERT INTO provider_profiles (user_id, category, created_at)
+  SELECT u.id, 'other', COALESCE(u.created_at, CURRENT_TIMESTAMP)
+  FROM users u
+  WHERE u.role = 'provider'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM provider_profiles pp
+      WHERE pp.user_id = u.id
+    )
+`);
 
 // Existing in-person-capable listings predate campus selection; default them to Wilf.
 db.prepare(`

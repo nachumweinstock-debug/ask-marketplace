@@ -114,6 +114,19 @@ async function seedConciergeMemory(token, prompt) {
 }
 
 async function smokeConcierge(token) {
+  const searchContext = await request('GET', '/providers/search-context', {
+    token,
+    label: 'concierge search-context',
+  });
+  if (!Array.isArray(searchContext.data) || !searchContext.data.length) {
+    throw new Error('search-context returned no providers');
+  }
+  const searchContextSample = searchContext.data.find(p => p?.name && p?.service_type);
+  if (!searchContextSample || !Array.isArray(searchContextSample.tags)) {
+    throw new Error('search-context missing provider fields');
+  }
+  log('concierge search-context', `${searchContextSample.name}/${searchContextSample.service_type}`);
+
   const exactPrompt = 'Need Excel help for a job interview';
   const exact = await request('POST', '/providers/concierge', {
     token,

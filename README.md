@@ -60,12 +60,13 @@ Important variables:
 - `FRONTEND_URL` canonical frontend origin
 - `VITE_API_URL` frontend API base URL in deployed environments
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for browser Supabase access
+- `VITE_OPENROUTER_KEY` for the Ask Concierge prompt router
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for server-side integrations
 
 Optional but expected in production:
 
 - `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`
-- `GEMINI_API_KEY` for the availability parser only; Ask Concierge is now local and trained from ASK history
+- `GEMINI_API_KEY` for the availability parser only
 - `RESEND_API_KEY`
 - `POSTHOG_API_KEY`
 - `PEXELS_API_KEY`

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth, optionalAuth } from '../auth.js';
+import { requireAuth, optionalAuth, supabaseAdmin } from '../auth.js';
 import { storeImage } from '../storage.js';
 import posthog from '../posthog.js';
 import { attachTrust } from '../trust.js';
@@ -98,6 +98,167 @@ const CONCIERGE_SUBJECT_ALIASES = [
 ];
 
 const CONCIERGE_FOLLOW_UP_RE = /\b(same kind|same thing|that again|another one|more like that|like before|similar one|again)\b/i;
+
+function conciergeSafeText(value, max = 180) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
+function conciergeDayLabel(dateValue) {
+  const value = String(dateValue || '').slice(0, 10);
+  if (!value) return '';
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return '';
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getUTCDay()];
+}
+
+function conciergeAvailabilityLabel(rows = []) {
+  const days = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const label = conciergeDayLabel(row.date);
+    if (label && !seen.has(label)) {
+      seen.add(label);
+      days.push(label);
+    }
+  }
+  if (!days.length) return 'No listed availability';
+  if (days.length === 1) return days[0];
+  if (days.length === 2) return `${days[0]} and ${days[1]}`;
+  return `${days.slice(0, 2).join(' and ')} +${days.length - 2} more`;
+}
+
+function conciergeSearchServiceType(provider) {
+  const category = conciergeCanonicalCategory(provider.category, provider.custom_category);
+  const subcategory = conciergeSafeText(provider.subcategory, 60);
+  if (subcategory && category === 'tutor') return `tutor / ${subcategory}`;
+  if (subcategory) return `${category} / ${subcategory}`;
+  if (category === 'languages') return 'languages';
+  if (category === 'Torah Studies') return 'Torah Studies';
+  return category === 'all' ? 'other' : category;
+}
+
+function conciergeSearchTags(provider, user) {
+  const tags = [
+    provider.category,
+    provider.custom_category,
+    provider.subcategory,
+    provider.session_type,
+    provider.campus,
+    user?.username,
+    user?.name,
+  ]
+    .concat(Array.isArray(provider.merged_services) ? provider.merged_services : [])
+    .filter(Boolean)
+    .map(tag => String(tag).trim())
+    .filter(Boolean);
+
+  return [...new Set(tags)].slice(0, 8);
+}
+
+function conciergeBuildSearchContextProvider(provider, user, availabilityRows) {
+  const rate = Number(provider.price_per_session);
+  return {
+    name: conciergeSafeText(user?.name || user?.username || 'ASK provider', 60),
+    service_type: conciergeSafeText(conciergeSearchServiceType(provider), 80),
+    bio: conciergeSafeText(provider.bio || '', 180),
+    rate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+    availability: conciergeAvailabilityLabel(availabilityRows),
+    tags: conciergeSearchTags(provider, user),
+  };
+}
+
+function conciergeLocalSearchContext() {
+  const providerRows = db.prepare(`
+    SELECT pp.id, pp.user_id, u.name, u.username, pp.bio, pp.category, pp.custom_category, pp.subcategory, pp.price_per_session, pp.session_type, pp.campus
+    FROM provider_profiles pp
+    JOIN users u ON pp.user_id = u.id
+    WHERE COALESCE(pp.is_active, 1) = 1
+    ORDER BY LOWER(COALESCE(u.name, u.username, ''))
+  `).all();
+  if (!providerRows.length) return [];
+
+  const users = db.prepare(`
+    SELECT id, name, username
+    FROM users
+  `).all();
+  const userMap = new Map(users.map(user => [String(user.id), user]));
+
+  const slots = db.prepare(`
+    SELECT provider_id, date, start_time, end_time, is_booked
+    FROM availability
+    WHERE COALESCE(is_booked, 0) = 0
+  `).all();
+  const slotsByProvider = new Map();
+  for (const slot of slots) {
+    const key = String(slot.provider_id);
+    const current = slotsByProvider.get(key) || [];
+    current.push(slot);
+    slotsByProvider.set(key, current);
+  }
+
+  return providerRows.map(provider => conciergeBuildSearchContextProvider(
+    provider,
+    userMap.get(String(provider.user_id)) || provider,
+    slotsByProvider.get(String(provider.id)) || []
+  ));
+}
+
+async function conciergeSupabaseSearchContext() {
+  if (!supabaseAdmin) return null;
+  try {
+    const [
+      providersResponse,
+      usersResponse,
+      availabilityResponse,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('provider_profiles')
+        .select('id,user_id,bio,category,custom_category,subcategory,price_per_session,session_type,campus,is_active')
+        .eq('is_active', true)
+        .order('id', { ascending: true }),
+      supabaseAdmin
+        .from('users')
+        .select('id,name,username'),
+      supabaseAdmin
+        .from('availability')
+        .select('provider_id,date,start_time,end_time,is_booked')
+        .eq('is_booked', false),
+    ]);
+
+    if (providersResponse.error || usersResponse.error || availabilityResponse.error) {
+      throw new Error(
+        providersResponse.error?.message ||
+        usersResponse.error?.message ||
+        availabilityResponse.error?.message ||
+        'Failed to load search context'
+      );
+    }
+
+    const userMap = new Map((usersResponse.data || []).map(user => [String(user.id), user]));
+    const slotsByProvider = new Map();
+    for (const slot of availabilityResponse.data || []) {
+      const key = String(slot.provider_id);
+      const current = slotsByProvider.get(key) || [];
+      current.push(slot);
+      slotsByProvider.set(key, current);
+    }
+
+    return (providersResponse.data || []).map(provider => conciergeBuildSearchContextProvider(
+      provider,
+      userMap.get(String(provider.user_id)) || provider,
+      slotsByProvider.get(String(provider.id)) || []
+    ));
+  } catch (err) {
+    console.warn('[search-context] supabase lookup failed, falling back to sqlite:', err?.message || err);
+    return null;
+  }
+}
+
+async function loadConciergeSearchContext() {
+  return (await conciergeSupabaseSearchContext()) || conciergeLocalSearchContext();
+}
 
 function latestDraftProfile(userId) {
   return db.prepare(`
@@ -385,7 +546,7 @@ let conciergeModelCache = { key: '', builtAt: 0, model: null };
 function conciergeModelSignature() {
   const row = db.prepare(`
     SELECT
-      (SELECT COUNT(*) FROM provider_profiles) AS provider_count,
+      (SELECT COUNT(*) FROM provider_profiles WHERE COALESCE(is_active, 1) = 1) AS provider_count,
       COALESCE((SELECT MAX(created_at) FROM analytics_events WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')), '') AS latest_event
   `).get();
   return `${row?.provider_count || 0}:${row?.latest_event || ''}`;
@@ -400,6 +561,7 @@ function buildConciergeModel() {
     SELECT pp.id, pp.user_id, u.name, u.username, pp.title, pp.bio, pp.category, pp.custom_category, pp.subcategory, pp.price_per_session, pp.session_type, pp.campus
     FROM provider_profiles pp
     JOIN users u ON pp.user_id = u.id
+    WHERE COALESCE(pp.is_active, 1) = 1
   `).all();
 
   for (const provider of providerRows) {
@@ -665,6 +827,16 @@ router.post('/concierge', async (req, res) => {
     } catch (fallbackErr) {
       res.status(502).json({ error: fallbackErr.message || err.message || 'Failed to parse concierge request' });
     }
+  }
+});
+
+router.get('/search-context', async (_req, res) => {
+  try {
+    const providers = await loadConciergeSearchContext();
+    res.json(providers);
+  } catch (err) {
+    console.error('[search-context] failed', err);
+    res.status(502).json({ error: err.message || 'Failed to load search context' });
   }
 });
 

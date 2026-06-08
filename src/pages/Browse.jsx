@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
-import { getAnalyticsContext, trackEvent } from '../lib/analytics';
+import { trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
-import { providerUrl } from '../lib/providerUrl';
 
 function uniLabel(u) {
   if (!u) return 'your campus';
@@ -174,12 +173,6 @@ const CONCIERGE_EXAMPLES = [
   'Need Excel help for a job interview',
 ];
 
-const CONCIERGE_STOPWORDS = new Set([
-  'need', 'looking', 'look', 'want', 'for', 'a', 'an', 'the', 'to', 'on', 'in', 'my',
-  'who', 'can', 'with', 'before', 'after', 'this', 'that', 'and', 'or', 'please',
-  'help', 'find', 'me', 'wanting', 'need', 'tonight', 'today', 'tomorrow', 'week',
-]);
-
 const CONCIERGE_SUBJECT_ALIASES = [
   { category: 'tutor', subcategory: 'Calculus', aliases: ['calc', 'calculus', 'derivative', 'derivatives', 'integral', 'integrals', 'limits', 'chain rule', 'optimization', 'related rates', 'series'] },
   { category: 'tutor', subcategory: 'Statistics', aliases: ['stats', 'statistics', 'probability', 'regression', 'data analysis'] },
@@ -253,114 +246,96 @@ function finderParamsFromPrompt(prompt) {
   return next;
 }
 
-function conciergeText(provider) {
-  return [
-    provider.name,
-    provider.title,
-    provider.subcategory,
-    provider.custom_category,
-    provider.bio,
-    provider.category,
-    Array.isArray(provider.merged_services) ? provider.merged_services.join(' ') : '',
-  ].filter(Boolean).join(' ').toLowerCase();
-}
-
-function conciergeSemanticCategory(prompt) {
-  const parsed = finderParamsFromPrompt(prompt);
-  if (parsed.category && parsed.category !== 'all') return parsed.category;
-  const lower = String(prompt || '').toLowerCase();
-  if (/\b(problem set|problemset|lecture|syllabus|exam|test|quiz|midterm|final|homework|assignment|class|course|topic|chapter|section)\b/.test(lower)) return 'tutor';
-  if (/\bhelp me with|explain|understand|study for|prepare for|prep for\b/.test(lower)) return 'tutor';
-  return 'all';
-}
-
-function conciergeTokens(prompt) {
-  return String(prompt || '')
+function normalizeConciergeKey(value) {
+  return String(value || '')
     .toLowerCase()
-    .split(/[^a-z0-9+]+/)
-    .map(token => token.trim())
-    .filter(token => token.length > 2 && !CONCIERGE_STOPWORDS.has(token));
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
-function findConciergeMatches(prompt, rows) {
-  const text = String(prompt || '').trim();
+function stripJsonMarkdown(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/i, '')
+    .trim();
+}
+
+function parseConciergeResults(raw) {
+  const text = stripJsonMarkdown(raw);
   if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.matches) ? parsed.matches : [];
+    return rows
+      .map((row) => ({
+        name: String(row?.name || row?.provider_name || '').trim(),
+        service_type: String(row?.service_type || row?.service || row?.category || '').trim(),
+        rate: Number(row?.rate || row?.price || row?.cost || 0) || 0,
+        why: String(row?.why || row?.reason || row?.answer || '').trim(),
+      }))
+      .filter(row => row.name);
+  } catch {
+    return [];
+  }
+}
 
-  const parsed = finderParamsFromPrompt(text);
-  const targetCategory = String(parsed.category || conciergeSemanticCategory(text) || '').toLowerCase();
-  const targetSubcategory = String(parsed.subcategory || '').toLowerCase();
-  const tokens = conciergeTokens(text);
-  const semanticCategory = conciergeSemanticCategory(text);
-  const lower = text.toLowerCase();
+async function loadOpenRouterConciergeResults(prompt, providers) {
+  const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
+  if (!apiKey) throw new Error('OpenRouter key missing');
 
-  return dedupeProvidersByUser(rows)
-    .map(provider => {
-      const haystack = conciergeText(provider);
-      let score = 1;
+  const systemPrompt = `
+You are the ASK Marketplace concierge for Yeshiva University students.
+Your job is to match student requests to the right providers.
 
-      if (targetCategory && targetCategory !== 'all') {
-        const category = String(provider.category || '').toLowerCase();
-        const customCategory = String(provider.custom_category || '').toLowerCase();
-        const subcategory = String(provider.subcategory || '').toLowerCase();
-        const title = String(provider.title || '').toLowerCase();
+Here are all currently active providers:
+${JSON.stringify(providers, null, 2)}
 
-        if (category === targetCategory) score += 10;
-        if (customCategory.includes(targetCategory)) score += 8;
-        if (subcategory.includes(lower) || lower.includes(subcategory)) score += 5;
-        if (title.includes(targetCategory)) score += 3;
-      }
+When a student submits a request, return the 1-3 best matching providers as JSON:
+[{ "name": "...", "service_type": "...", "rate": ..., "why": "one sentence reason" }]
 
-      if (targetSubcategory) {
-        const category = String(provider.category || '').toLowerCase();
-        const customCategory = String(provider.custom_category || '').toLowerCase();
-        const subcategory = String(provider.subcategory || '').toLowerCase();
-        const title = String(provider.title || '').toLowerCase();
-        const subjectHaystack = `${category} ${customCategory} ${subcategory} ${title} ${haystack}`;
-        if (subcategory === targetSubcategory) score += 14;
-        if (subcategory.includes(targetSubcategory) || targetSubcategory.includes(subcategory)) score += 10;
-        if (title.includes(targetSubcategory)) score += 6;
-        if (customCategory.includes(targetSubcategory)) score += 5;
-        if (subjectHaystack.includes(targetSubcategory)) score += 4;
-      }
+If no match exists, say so honestly in one sentence. Never hallucinate providers.
+Return only JSON, no markdown, no preamble.
+`.trim();
 
-      if (semanticCategory && semanticCategory !== 'all') {
-        const category = String(provider.category || '').toLowerCase();
-        const customCategory = String(provider.custom_category || '').toLowerCase();
-        if (semanticCategory === 'tutor' && ['tutor', 'hebrew tutor'].includes(category)) score += 7;
-        if (semanticCategory === 'fitness' && ['fitness', 'tennis'].includes(category)) score += 7;
-        if (semanticCategory === 'languages' && (category === 'hebrew tutor' || customCategory.includes('language'))) score += 7;
-        if (semanticCategory === 'music' && customCategory.includes('music')) score += 7;
-        if (semanticCategory === 'Torah Studies' && customCategory.includes('torah')) score += 7;
-      }
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'ASK Marketplace',
+    },
+    body: JSON.stringify({
+      model: 'mistralai/mistral-7b-instruct:free',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.1,
+    }),
+  });
 
-      for (const token of tokens) {
-        if (haystack.includes(token)) score += 2;
-      }
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(errorText || `OpenRouter request failed (${response.status})`);
+  }
 
-      if (/(\bexam\b|\btest\b|\bquiz\b|\bmidterm\b|\bfinal\b|\bhomework\b|\bassignment\b|\bstudy\b|\bclass\b|\bcourse\b|\blecture\b)/.test(lower)) {
-        if (['tutor', 'hebrew tutor'].includes(String(provider.category || '').toLowerCase()) || String(provider.custom_category || '').toLowerCase().includes('language')) score += 6;
-      }
+  const payload = await response.json();
+  const content = payload?.choices?.[0]?.message?.content || '';
+  return parseConciergeResults(content);
+}
 
-      if (/(\bpython\b|\bjava\b|\bjavascript\b|\bsql\b|\bcoding\b|\bprogramming\b|\bdata structures\b|\balgorithms\b)/.test(lower)) {
-        if (['tutor', 'hebrew tutor'].includes(String(provider.category || '').toLowerCase()) || String(provider.title || '').toLowerCase().includes('coding') || String(provider.subcategory || '').toLowerCase().includes('coding')) score += 7;
-      }
+async function loadConciergeProviderContext() {
+  try {
+    const { data } = await api.get('/providers/search-context');
+    if (Array.isArray(data) && data.length) return data;
+  } catch (err) {
+    console.warn('[concierge] search-context fetch failed, falling back to all providers:', err?.message || err);
+  }
 
-      if (text.toLowerCase().includes('online') || text.toLowerCase().includes('zoom') || text.toLowerCase().includes('virtual')) {
-        if (provider.session_type === 'zoom') score += 5;
-      }
-
-      if (text.toLowerCase().includes('on campus') || text.toLowerCase().includes('in person') || text.toLowerCase().includes('near me')) {
-        if (provider.session_type !== 'zoom') score += 2;
-      }
-
-      if (text.toLowerCase().includes('tonight') || text.toLowerCase().includes('today') || text.toLowerCase().includes('this week') || text.toLowerCase().includes('before')) {
-        if (provider.availability) score += 1;
-      }
-
-      return { provider, score };
-    })
-    .sort((a, b) => b.score - a.score || String(a.provider.name || '').localeCompare(String(b.provider.name || '')))
-    .map(item => item.provider);
+  const { data } = await api.get('/providers', { params: { sort: 'rating' } });
+  return Array.isArray(data) ? data : [];
 }
 
 function listingSummary(provider) {
@@ -455,6 +430,9 @@ export default function Browse() {
   const [conciergePrompt, setConciergePrompt] = useState(searchParams.get('search') || '');
   const [conciergeSubmittedPrompt, setConciergeSubmittedPrompt] = useState('');
   const [conciergeAnswer, setConciergeAnswer] = useState('');
+  const [conciergeContextProviders, setConciergeContextProviders] = useState([]);
+  const [conciergeResults, setConciergeResults] = useState([]);
+  const [conciergeError, setConciergeError] = useState('');
   const [conciergeSearching, setConciergeSearching] = useState(false);
   const conciergeDebounceRef = useRef(null);
   // Dynamic meta per category for SEO
@@ -484,6 +462,20 @@ export default function Browse() {
     return () => {
       if (conciergeDebounceRef.current) clearTimeout(conciergeDebounceRef.current);
       if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadConciergeProviderContext()
+      .then((data) => {
+        if (mounted) setConciergeContextProviders(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (mounted) setConciergeContextProviders([]);
+      });
+    return () => {
+      mounted = false;
     };
   }, []);
 
@@ -560,6 +552,8 @@ export default function Browse() {
   function handleConciergeInput(val) {
     setConciergePrompt(val);
     setConciergeAnswer('');
+    setConciergeError('');
+    setConciergeResults([]);
     if (conciergeDebounceRef.current) clearTimeout(conciergeDebounceRef.current);
     if (!shouldAutoTriggerConcierge(val)) return;
     conciergeDebounceRef.current = setTimeout(() => {
@@ -680,74 +674,51 @@ export default function Browse() {
     setConciergePrompt(text);
     setConciergeSubmittedPrompt(text);
     setConciergeSearching(true);
-    const analyticsContext = getAnalyticsContext();
+    setConciergeError('');
     trackEvent('concierge_prompt_submitted', {
       prompt: text,
       prompt_length: text.length,
       detected_category: finderParamsFromPrompt(text).category || 'all',
     });
     try {
-      const { data } = await api.post('/providers/concierge', { text, analytics: analyticsContext });
-      const nextSearch = String(data?.search || text).trim();
-      const nextCategory = data?.category || 'all';
-      const nextSubcategory = data?.subcategory || 'all';
-      const nextSessionType = data?.session_type || 'all';
-      const nextCampus = data?.campus || (nextSessionType === 'zoom' ? 'all' : campus);
+      const providerContext = Array.isArray(conciergeContextProviders) && conciergeContextProviders.length
+        ? conciergeContextProviders
+        : await loadConciergeProviderContext();
+      setConciergeContextProviders(providerContext);
 
-      setConciergeAnswer(String(data?.answer || ''));
-      setSearch(nextSearch);
-      setCategory(nextCategory);
-      setSubcategory(nextSubcategory || 'all');
-      setSessionType(nextSessionType);
-      if (nextSessionType === 'zoom') setCampus('all');
+      const results = await loadOpenRouterConciergeResults(text, providerContext);
+      const ranked = results
+        .map((result, index) => {
+          const resultKey = normalizeConciergeKey(result.name);
+          const providerMatch = providers.find(provider => normalizeConciergeKey(provider.name) === resultKey)
+            || visibleProviders.find(provider => normalizeConciergeKey(provider.name) === resultKey)
+            || null;
+          return {
+            ...result,
+            rate: Number.isFinite(result.rate) && result.rate > 0
+              ? result.rate
+              : Number(providerMatch?.price_per_session || providerMatch?.merged_min_price || 0) || 0,
+            service_type: result.service_type || providerMatch?.subcategory || providerMatch?.custom_category || providerMatch?.category || 'Campus service',
+            provider: providerMatch,
+            order: index,
+          };
+        })
+        .filter(result => result.name)
+        .slice(0, 3);
 
-      syncParams({
-        search: nextSearch,
-        category: nextCategory,
-        subcategory: nextSubcategory || 'all',
-        session_type: nextSessionType,
-        campus: nextCampus,
-      });
-
-      if (data?.should_search !== false) {
-        await fetchProviders(nextSearch, {
-          search: nextSearch,
-          category: nextCategory,
-          subcategory: nextSubcategory || 'all',
-          session_type: nextSessionType,
-          campus: nextCampus,
-        });
-      }
+      setConciergeResults(ranked);
+      setConciergeAnswer(
+        ranked.length
+          ? `I found ${ranked.length} match${ranked.length !== 1 ? 'es' : ''}.`
+          : 'No current provider is a close fit.'
+      );
+      setSearch(text);
+      syncParams({ search: text });
     } catch (err) {
-      const fallback = finderParamsFromPrompt(text);
-      const nextSearch = fallback.search || text;
-      const nextCategory = fallback.category || 'all';
-      const nextSessionType = fallback.session_type || 'all';
-      const nextCampus = nextSessionType === 'zoom' ? 'all' : campus;
-      setConciergeAnswer('I’m narrowing the search and pulling the closest providers.');
-      setSearch(nextSearch);
-      setCategory(nextCategory);
-      setSubcategory('all');
-      setSessionType(nextSessionType);
-      if (nextSessionType === 'zoom') setCampus('all');
-      syncParams({
-        search: nextSearch,
-        category: nextCategory,
-        subcategory: 'all',
-        session_type: nextSessionType,
-        campus: nextCampus,
-      });
-      try {
-        await fetchProviders(nextSearch, {
-          search: nextSearch,
-          category: nextCategory,
-          subcategory: 'all',
-          session_type: nextSessionType,
-          campus: nextCampus,
-        });
-      } catch (fallbackErr) {
-        console.error(fallbackErr || err);
-      }
+      console.error('[concierge] search failed', err);
+      setConciergeResults([]);
+      setConciergeAnswer('');
+      setConciergeError('Search is temporarily unavailable — browse providers manually.');
     } finally {
       setConciergeSearching(false);
     }
@@ -818,10 +789,6 @@ export default function Browse() {
   const allFilters = [...BASE_FILTERS, ...customCats.filter(c => !baseIds.has(c.toLowerCase())).map(c => ({ id: c, label: c }))];
   const sitewideSaleActive = providers.some(p => p.first_time_discount_scope === 'sitewide');
   const visibleProviders = dedupeProvidersByUser(providers);
-  const conciergeMatches = useMemo(
-    () => findConciergeMatches(conciergePrompt || conciergeSubmittedPrompt, visibleProviders).slice(0, 3),
-    [conciergePrompt, conciergeSubmittedPrompt, visibleProviders]
-  );
   const conciergePromptLabel = conciergeSubmittedPrompt || conciergePrompt || 'Tell ASK what you need in plain English.';
   const campusName = campus === 'BEREN' ? 'BEREN' : campus === 'WILF' ? 'WILF' : '';
   const emptyTitle = campusName
@@ -955,73 +922,70 @@ export default function Browse() {
             )}
           </div>
 
-          <div style={{ color: '#5F5A50', fontSize: 14, lineHeight: 1.65, marginBottom: conciergeMatches.length ? 14 : 0 }}>
-            {conciergeSearching
-              ? 'Tuning toward the best-fit category, service, and campus signals.'
-              : conciergePrompt.trim()
-                ? (conciergeMatches.length
-                  ? `I found ${conciergeMatches.length} strong match${conciergeMatches.length !== 1 ? 'es' : ''}. The closest options are below.`
-                  : 'No exact match yet. Try widening the request or changing the service words.')
-                : 'Type a request like “Need a calculus tutor tonight” or tap one of the examples.'}
-            {!conciergeSearching && conciergeAnswer ? ` ${conciergeAnswer}` : ''}
+          <div style={{ color: '#5F5A50', fontSize: 14, lineHeight: 1.65, marginBottom: conciergeResults.length ? 14 : 0 }}>
+            {conciergeError || (
+              conciergeSearching
+                ? 'Checking the live provider list and tuning the match.'
+                : conciergePrompt.trim()
+                  ? conciergeAnswer || 'ASK is checking the live provider list.'
+                  : 'Type a request like “Need a calculus tutor tonight” or tap one of the examples.'
+            )}
           </div>
 
-          {conciergeMatches.length > 0 && (
-            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              {conciergeMatches.map(provider => {
-                const href = providerUrl(provider.name, provider.id, provider.username);
+          {conciergeResults.length > 0 && (
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+              {conciergeResults.map(result => {
+                const serviceLabel = result.service_type || 'Campus service';
                 return (
-                  <Link
-                    key={provider.user_id || provider.username || provider.id}
-                    to={href}
-                    onClick={() => trackEvent('concierge_result_clicked', {
-                      prompt: conciergePrompt || conciergeSubmittedPrompt || '',
-                      provider_id: provider.id,
-                      provider_name: provider.name,
-                      provider_category: provider.category,
-                      provider_subcategory: provider.subcategory || provider.custom_category || '',
-                    })}
+                  <div
+                    key={`${result.name}-${serviceLabel}`}
                     style={{
-                      textDecoration: 'none',
                       borderRadius: 18,
                       border: '1px solid rgba(27,58,107,0.10)',
                       background: '#fff',
-                      padding: 14,
+                      padding: 16,
                       color: '#112345',
                       display: 'flex',
-                      alignItems: 'center',
+                      flexDirection: 'column',
                       gap: 12,
                       boxShadow: '0 12px 28px rgba(27,58,107,0.06)',
                     }}
                   >
-                    <div style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 14,
-                      background: '#1B3A6B',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontFamily: 'var(--font-display)',
-                      fontSize: 17,
-                      flexShrink: 0,
-                    }}>
-                      {initials(provider.name)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 14,
+                        background: '#1B3A6B',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 17,
+                        flexShrink: 0,
+                      }}>
+                        {initials(result.name)}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, lineHeight: 1.05, marginBottom: 4, color: '#112345' }}>
+                          {result.name}
+                        </div>
+                        <div style={{ color: '#7A6E65', fontSize: 12.5, lineHeight: 1.4 }}>
+                          {serviceLabel}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, lineHeight: 1.05, marginBottom: 4, color: '#112345' }}>
-                        {provider.name}
-                      </div>
-                      <div style={{ color: '#7A6E65', fontSize: 12.5, lineHeight: 1.4 }}>
-                        {(provider.merged_services?.[0] || provider.subcategory || provider.custom_category || 'Campus service')}
-                      </div>
-                      <div style={{ marginTop: 6, color: '#1B3A6B', fontSize: 13, fontWeight: 700 }}>
-                        {provider.merged_min_price ? `$${provider.merged_min_price}` : 'Ask'}
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ color: '#1B3A6B', fontSize: 15, fontWeight: 800 }}>
+                        {result.rate ? `$${result.rate}` : 'Ask'}
                         <span style={{ color: '#7A6E65', fontWeight: 500 }}> per session</span>
                       </div>
                     </div>
-                  </Link>
+                    <div style={{ color: '#5F5A50', fontSize: 13, lineHeight: 1.55 }}>
+                      {result.why || 'Matched from the live ASK provider list.'}
+                    </div>
+                  </div>
                 );
               })}
             </div>

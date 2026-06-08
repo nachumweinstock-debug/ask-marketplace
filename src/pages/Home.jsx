@@ -463,22 +463,22 @@ export default function Home() {
 
       <div className="section-spacer-home" />
 
-      <section className="provider-cta-home bg-[#1B3A6B] px-6 py-[220px] text-center sm:px-10 lg:px-12">
-        <div className="mx-auto max-w-[640px] rounded-[40px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-8 py-20 shadow-[0_20px_60px_rgba(0,0,0,0.08)] sm:px-12 lg:px-16 lg:py-24">
+      <section className="provider-cta-home flex min-h-[420px] items-center justify-center bg-[#1B3A6B] px-8 py-24 text-center sm:px-10 lg:px-12">
+        <div className="mx-auto w-full max-w-[760px] rounded-[40px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-8 py-20 shadow-[0_20px_60px_rgba(0,0,0,0.08)] sm:px-12 lg:px-16 lg:py-24">
           <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(255,255,255,0.4)]">
             For providers
           </div>
-          <h2 className="mx-auto max-w-[620px] font-['DM_Serif_Display'] text-[54px] leading-[1.02] tracking-[-1.3px] text-white">
+          <h2 className="mx-auto max-w-[620px] font-['DM_Serif_Display'] text-[54px] leading-[1.02] tracking-[-1.3px] text-white max-md:text-[36px]">
             Turn your skill into
             <br />
             <em className="italic text-[rgba(255,255,255,0.6)]">booked sessions.</em>
           </h2>
-          <p className="mx-auto mt-6 max-w-[520px] text-[17px] font-light leading-[1.7] text-[rgba(255,255,255,0.62)]">
+          <p className="mx-auto mt-6 max-w-xl text-[17px] font-light leading-[1.7] text-[rgba(255,255,255,0.62)]">
             Post a listing, set your availability, and grow your profile with verified reviews from every session.
           </p>
           <Link
             to="/become-a-provider"
-            className="mt-12 inline-block rounded-[12px] bg-white px-9 py-[15px] text-[15px] font-semibold text-[#1B3A6B] no-underline transition hover:-translate-y-[1px] hover:bg-[#FAF7F2]"
+            className="mt-8 inline-block rounded-full bg-[#FAF7F2] px-8 py-3 text-[15px] font-semibold text-[#1B3A6B] no-underline transition hover:-translate-y-[1px] hover:bg-white"
           >
             Become a provider
           </Link>
