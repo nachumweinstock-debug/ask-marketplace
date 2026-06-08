@@ -614,6 +614,7 @@ router.post('/concierge', async (req, res) => {
     const parsed = parseConciergeWithLocalModel(text, context);
     res.json(parsed);
   } catch (err) {
+    console.error('[concierge] local model failed', err);
     try {
       res.json(mergeConciergeHeuristics(localConciergeParse(text), text));
     } catch (fallbackErr) {
