@@ -200,24 +200,20 @@ async function parseConciergeWithGemini(text) {
           },
         ],
         generationConfig: {
-          responseFormat: {
-            text: {
-              mimeType: 'application/json',
-              schema: {
-                type: 'object',
-                properties: {
-                  answer: { type: 'string', description: 'Short response to show in the concierge panel.' },
-                  search: { type: 'string', description: 'Normalized search query to send to browse.' },
-                  category: { type: 'string', description: 'Best matching ASK category.' },
-                  subcategory: { type: 'string', description: 'Best matching ASK subcategory if any.' },
-                  session_type: { type: 'string', description: 'all, zoom, or in-person.' },
-                  campus: { type: 'string', description: 'all, WILF, or BEREN.' },
-                  should_search: { type: 'boolean', description: 'Whether the user wants provider matches.' },
-                },
-                required: ['answer', 'search', 'category', 'subcategory', 'session_type', 'campus', 'should_search'],
-                additionalProperties: false,
-              },
+          responseMimeType: 'application/json',
+          responseJsonSchema: {
+            type: 'object',
+            properties: {
+              answer: { type: 'string', description: 'Short response to show in the concierge panel.' },
+              search: { type: 'string', description: 'Normalized search query to send to browse.' },
+              category: { type: 'string', description: 'Best matching ASK category.' },
+              subcategory: { type: 'string', description: 'Best matching ASK subcategory if any.' },
+              session_type: { type: 'string', description: 'all, zoom, or in-person.' },
+              campus: { type: 'string', description: 'all, WILF, or BEREN.' },
+              should_search: { type: 'boolean', description: 'Whether the user wants provider matches.' },
             },
+            required: ['answer', 'search', 'category', 'subcategory', 'session_type', 'campus', 'should_search'],
+            additionalProperties: false,
           },
         },
       }),

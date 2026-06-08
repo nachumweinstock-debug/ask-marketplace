@@ -1,7 +1,10 @@
 const API = process.env.API_BASE || 'https://ask-marketplace-production.up.railway.app/api';
+const PROVIDER_TERMS_VERSION = '2026-06-06';
 const stamp = process.env.SMOKE_STAMP || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const dmMarker = `smoke-dm-${stamp.split('-').at(-1)}`;
 const password = `SmokePass-${stamp}!`;
+const conciergeVisitorId = `smoke-concierge-visitor-${stamp}`;
+const conciergeSessionId = `smoke-concierge-session-${stamp}`;
 
 const state = {
   provider: {},
@@ -13,6 +16,7 @@ const state = {
   helpWantedId: null,
   timeRequestId: null,
   connectionId: null,
+  conciergeMemorySeeded: false,
   failures: [],
 };
 
@@ -50,6 +54,7 @@ async function request(method, path, { token, body, expected = [200], label = `$
 
 async function signup(kind, name) {
   const email = `codex-smoke-${kind}-${stamp}@example.com`;
+  const role = kind === 'provider' ? 'provider' : 'student';
   const { data } = await request('POST', '/auth/signup', {
     body: {
       email,
@@ -61,6 +66,7 @@ async function signup(kind, name) {
       termsVersion: '2026-05-02',
       privacyVersion: '2026-05-02',
       timezone: 'America/New_York',
+      role,
     },
     label: `signup ${kind}`,
   });
@@ -79,6 +85,56 @@ async function login(kind) {
   state[kind].token = data.token;
   state[kind].user = data.user;
   log(`login ${kind}`, `id=${data.user.id}`);
+}
+
+async function seedConciergeMemory(token, prompt) {
+  await request('POST', '/analytics/events', {
+    token,
+    body: {
+      events: [{
+        event_name: 'concierge_prompt_submitted',
+        visitor_id: conciergeVisitorId,
+        session_id: conciergeSessionId,
+        url: 'https://www.uask.live/browse',
+        path: '/browse',
+        page_title: 'Browse Campus Services at Yeshiva University | ASK Marketplace',
+        page_type: 'marketplace',
+        referrer: '',
+        landing_page: '/browse',
+        utm: {},
+        device: { type: 'desktop', browser: 'Chrome', os: 'macOS' },
+        metadata: { prompt },
+      }],
+    },
+    expected: [200, 202],
+    label: 'seed concierge memory',
+  });
+  state.conciergeMemorySeeded = true;
+  log('concierge memory seeded', prompt);
+}
+
+async function smokeConcierge(token) {
+  const exactPrompt = 'Need Excel help for a job interview';
+  const exact = await request('POST', '/providers/concierge', {
+    token,
+    body: { text: exactPrompt },
+    label: 'concierge exact parse',
+  });
+  if (!exact.data.answer || !exact.data.search) throw new Error('concierge exact parse missing answer/search');
+  if (exact.data.category !== 'tutor') throw new Error(`concierge exact parse expected tutor, got ${exact.data.category}`);
+  log('concierge exact parse', `${exact.data.category}${exact.data.subcategory ? `/${exact.data.subcategory}` : ''}`);
+
+  await seedConciergeMemory(token, exactPrompt);
+
+  const fuzzyPrompt = 'same kind of thing again, but on campus tonight';
+  const fuzzy = await request('POST', '/providers/concierge', {
+    token,
+    body: { text: fuzzyPrompt },
+    label: 'concierge fuzzy parse',
+  });
+  if (!fuzzy.data.answer || !fuzzy.data.search) throw new Error('concierge fuzzy parse missing answer/search');
+  if (String(fuzzy.data.search).trim().length < 2) throw new Error('concierge fuzzy parse returned an empty search');
+  log('concierge fuzzy parse', `${fuzzy.data.category}${fuzzy.data.subcategory ? `/${fuzzy.data.subcategory}` : ''}`);
 }
 
 async function cleanup() {
@@ -154,8 +210,19 @@ async function main() {
   await request('GET', `/people/u/${account.data.username}`, { expected: [404], label: 'smoke user hidden from public username profile' });
   log('account persistence after relogin');
 
+  await smokeConcierge(state.student.token);
+  log('concierge parse + memory');
+
+  await request('POST', '/providers/terms/accept', {
+    token: state.provider.token,
+    body: { providerTermsVersion: PROVIDER_TERMS_VERSION },
+    label: 'provider accepts terms',
+  });
+  log('provider accepts terms');
+
   const become = await request('POST', '/providers/become', {
     token: state.provider.token,
+    body: { providerTermsAccepted: true, providerTermsVersion: PROVIDER_TERMS_VERSION },
     label: 'create listing shell',
   });
   state.listingId = become.data.profile_id;
@@ -193,6 +260,16 @@ async function main() {
   });
   state.availabilityId = slot.data.id;
   log('availability create', `slot=${state.availabilityId}`);
+
+  const parsedSchedule = await request('POST', '/availability/parse-schedule', {
+    token: state.provider.token,
+    body: { text: 'Tuesday and Thursday 6-7pm for the next 3 weeks' },
+    label: 'availability parse schedule',
+  });
+  if (!Array.isArray(parsedSchedule.data.slots) || parsedSchedule.data.slots.length < 2) {
+    throw new Error('schedule parser did not return expected slots');
+  }
+  log('availability parse schedule', `${parsedSchedule.data.slots.length} slots`);
 
   const publicListingLocked = await request('GET', `/providers/${state.listingId}`, { label: 'public listing payment locked' });
   if (publicListingLocked.data.payment_unlocked !== false || publicListingLocked.data.zelle !== null) {

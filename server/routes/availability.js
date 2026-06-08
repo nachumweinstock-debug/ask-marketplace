@@ -178,22 +178,18 @@ router.post('/parse-schedule', requireAuth, async (req, res) => {
           }],
         }],
         generationConfig: {
-          responseFormat: {
-            text: {
-              mimeType: 'application/json',
-              schema: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    date: { type: 'string', description: 'YYYY-MM-DD date' },
-                    start_time: { type: 'string', description: 'HH:MM 24hr start time' },
-                    end_time: { type: 'string', description: 'HH:MM 24hr end time' },
-                  },
-                  required: ['date', 'start_time', 'end_time'],
-                  additionalProperties: false,
-                },
+          responseMimeType: 'application/json',
+          responseJsonSchema: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                date: { type: 'string', description: 'YYYY-MM-DD date' },
+                start_time: { type: 'string', description: 'HH:MM 24hr start time' },
+                end_time: { type: 'string', description: 'HH:MM 24hr end time' },
               },
+              required: ['date', 'start_time', 'end_time'],
+              additionalProperties: false,
             },
           },
         },
