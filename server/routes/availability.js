@@ -211,7 +211,8 @@ router.post('/parse-schedule', requireAuth, async (req, res) => {
       ? normalized.slice(normalized.indexOf('['), normalized.lastIndexOf(']') + 1)
       : normalized;
     const slots = sanitizeAiSlots(JSON.parse(jsonSlice));
-    return res.json({ slots });
+    if (slots.length) return res.json({ slots, source: 'gemini' });
+    return res.json({ slots: parseScheduleFallback(text), source: 'fallback-empty' });
   } catch (err) {
     try {
       return res.json({ slots: parseScheduleFallback(text), source: 'fallback' });

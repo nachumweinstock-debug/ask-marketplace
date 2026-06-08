@@ -105,6 +105,19 @@ function normalizeConciergeResult(raw, fallbackText) {
   };
 }
 
+function mergeConciergeHeuristics(raw, text) {
+  const local = localConciergeParse(text);
+  const next = { ...raw };
+  if (!next.search || !String(next.search).trim()) next.search = local.search;
+  if (!next.category || next.category === 'all') next.category = local.category;
+  if (!next.subcategory) next.subcategory = local.subcategory;
+  if (!next.session_type || next.session_type === 'all') next.session_type = local.session_type;
+  if (!next.campus || next.campus === 'all') next.campus = local.campus;
+  if (!next.answer) next.answer = local.answer;
+  if (next.should_search === undefined) next.should_search = local.should_search;
+  return normalizeConciergeResult(next, text);
+}
+
 function recentConciergePrompts() {
   try {
     const rows = db.prepare(`
@@ -232,7 +245,7 @@ async function parseConciergeWithGemini(text) {
   const jsonSlice = normalized.includes('{')
     ? normalized.slice(normalized.indexOf('{'), normalized.lastIndexOf('}') + 1)
     : normalized;
-  return normalizeConciergeResult(JSON.parse(jsonSlice), text);
+  return mergeConciergeHeuristics(JSON.parse(jsonSlice), text);
 }
 
 // ── Named routes (must come before /:id) ──────────────────────────────────────
@@ -292,10 +305,10 @@ router.post('/concierge', async (req, res) => {
 
   try {
     const parsed = await parseConciergeWithGemini(text);
-    res.json(normalizeConciergeResult(parsed, text));
+    res.json(mergeConciergeHeuristics(parsed, text));
   } catch (err) {
     try {
-      res.json(normalizeConciergeResult(localConciergeParse(text), text));
+      res.json(mergeConciergeHeuristics(localConciergeParse(text), text));
     } catch (fallbackErr) {
       res.status(502).json({ error: fallbackErr.message || err.message || 'Failed to parse concierge request' });
     }
