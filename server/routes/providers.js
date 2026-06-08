@@ -90,6 +90,18 @@ function normalizeConciergeCampus(value) {
   return 'all';
 }
 
+function inferConciergeCategory(text) {
+  const lower = String(text || '').toLowerCase();
+  if (/\bbarber|haircut|fade|taper|beard\b/.test(lower)) return 'barber';
+  if (/\btennis|trainer|fitness|workout|boxing|yoga|basketball|soccer|running|golf\b/.test(lower)) return 'fitness';
+  if (/\bhebrew|spanish|french|arabic|language|ivrit|yiddish\b/.test(lower)) return 'languages';
+  if (/\bguitar|piano|violin|drums|vocal|music\b/.test(lower)) return 'music';
+  if (/\bgemara|halacha|chumash|torah|tanach|mishna\b/.test(lower)) return 'Torah Studies';
+  if (/\b(tutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats|finance|accounting|accountant|python|java|javascript|sql|statistics|data structures|algorithms|exam|test|quiz|midterm|final|homework|assignment|study|class|course|lesson)\b/.test(lower)) return 'tutor';
+  if (/\b(help me with|need help with|explain|study for|prep for|prepare for)\b/.test(lower)) return 'tutor';
+  return 'all';
+}
+
 function normalizeConciergeResult(raw, fallbackText) {
   const text = String(fallbackText || '').trim();
   const search = String(raw?.search || text).trim();
@@ -107,9 +119,10 @@ function normalizeConciergeResult(raw, fallbackText) {
 
 function mergeConciergeHeuristics(raw, text) {
   const local = localConciergeParse(text);
+  const inferredCategory = inferConciergeCategory(text);
   const next = { ...raw };
   if (!next.search || !String(next.search).trim()) next.search = local.search;
-  if (!next.category || next.category === 'all') next.category = local.category;
+  if (!next.category || next.category === 'all') next.category = inferredCategory !== 'all' ? inferredCategory : local.category;
   if (!next.subcategory) next.subcategory = local.subcategory;
   if (!next.session_type || next.session_type === 'all') next.session_type = local.session_type;
   if (!next.campus || next.campus === 'all') next.campus = local.campus;
@@ -118,28 +131,36 @@ function mergeConciergeHeuristics(raw, text) {
   return normalizeConciergeResult(next, text);
 }
 
-function recentConciergePrompts() {
+function recentConciergeExamples() {
   try {
     const rows = db.prepare(`
       SELECT metadata, created_at
       FROM analytics_events
-      WHERE event_name = 'concierge_prompt_submitted'
+      WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')
       ORDER BY created_at DESC
-      LIMIT 25
+      LIMIT 40
     `).all();
 
     const seen = new Set();
-    const prompts = [];
+    const examples = [];
     for (const row of rows) {
       try {
         const meta = JSON.parse(row.metadata || '{}');
         const prompt = String(meta?.prompt || meta?.query || meta?.text || '').trim();
-        if (!prompt || seen.has(prompt.toLowerCase())) continue;
-        seen.add(prompt.toLowerCase());
-        prompts.push(prompt);
+        const clicked = String(meta?.provider_name || meta?.selected_provider || meta?.match_name || '').trim();
+        const clickedCategory = String(meta?.provider_category || meta?.selected_category || meta?.category || '').trim();
+        if (!prompt) continue;
+        const key = `${prompt.toLowerCase()}|${clicked.toLowerCase()}|${clickedCategory.toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (clicked) {
+          examples.push(`Prompt: ${prompt}\nChosen match: ${clicked}${clickedCategory ? ` (${clickedCategory})` : ''}`);
+        } else {
+          examples.push(`Prompt: ${prompt}`);
+        }
       } catch {}
     }
-    return prompts.slice(0, 12);
+    return examples.slice(0, 12);
   } catch {
     return [];
   }
@@ -183,9 +204,9 @@ function localConciergeParse(text) {
 async function parseConciergeWithGemini(text) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return localConciergeParse(text);
-  const pastPrompts = recentConciergePrompts();
-  const memoryBlock = pastPrompts.length
-    ? `Recent successful ASK prompts from this marketplace:\n${pastPrompts.map(prompt => `- ${prompt}`).join('\n')}\nUse these as style examples only.`
+  const pastExamples = recentConciergeExamples();
+  const memoryBlock = pastExamples.length
+    ? `Recent successful ASK concierge examples from this marketplace:\n${pastExamples.map(example => `- ${example}`).join('\n\n')}\nUse these as strong semantic examples, not exact text matches.`
     : 'No historical prompts available.';
 
   const response = await fetch(

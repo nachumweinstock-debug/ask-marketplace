@@ -125,6 +125,33 @@ async function smokeConcierge(token) {
   log('concierge exact parse', `${exact.data.category}${exact.data.subcategory ? `/${exact.data.subcategory}` : ''}`);
 
   await seedConciergeMemory(token, exactPrompt);
+  await request('POST', '/analytics/events', {
+    token,
+    body: {
+      events: [{
+        event_name: 'concierge_result_clicked',
+        visitor_id: conciergeVisitorId,
+        session_id: conciergeSessionId,
+        url: 'https://www.uask.live/browse',
+        path: '/browse',
+        page_title: 'Browse Campus Services at Yeshiva University | ASK Marketplace',
+        page_type: 'marketplace',
+        referrer: '',
+        landing_page: '/browse',
+        utm: {},
+        device: { type: 'desktop', browser: 'Chrome', os: 'macOS' },
+        metadata: {
+          prompt: exactPrompt,
+          provider_name: 'Smoke Test Excel Tutor',
+          provider_category: 'tutor',
+          provider_subcategory: 'Excel',
+        },
+      }],
+    },
+    expected: [200, 202],
+    label: 'seed concierge click memory',
+  });
+  log('concierge click memory seeded', 'Smoke Test Excel Tutor');
 
   const fuzzyPrompt = 'same kind of thing again, but on campus tonight';
   const fuzzy = await request('POST', '/providers/concierge', {

@@ -200,7 +200,8 @@ function finderParamsFromPrompt(prompt) {
   else if (/\bhebrew|spanish|french|arabic|language|ivrit|yiddish\b/.test(lower)) next.category = 'languages';
   else if (/\bguitar|piano|violin|drums|vocal|music\b/.test(lower)) next.category = 'music';
   else if (/\bgemara|halacha|chumash|torah|tanach|mishna\b/.test(lower)) next.category = 'Torah Studies';
-  else if (/\btutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats\b/.test(lower)) next.category = 'tutor';
+  else if (/\btutor|math|excel|chemistry|biology|physics|coding|economics|history|english|calc|calculus|stats|finance|accounting|accountant|python|java|javascript|sql|data structures|algorithms|exam|test|quiz|midterm|final|homework|assignment|study|class|course|lesson|prep\b/.test(lower)) next.category = 'tutor';
+  else if (/\bhelp me with|need help with|explain|study for|prepare for|prep for\b/.test(lower)) next.category = 'tutor';
 
   if (/\bonline|virtual|zoom\b/.test(lower)) next.session_type = 'zoom';
   else if (/\bin person|on campus|near me\b/.test(lower)) next.session_type = 'in-person';
@@ -220,6 +221,15 @@ function conciergeText(provider) {
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
+function conciergeSemanticCategory(prompt) {
+  const parsed = finderParamsFromPrompt(prompt);
+  if (parsed.category && parsed.category !== 'all') return parsed.category;
+  const lower = String(prompt || '').toLowerCase();
+  if (/\b(problem set|problemset|lecture|syllabus|exam|test|quiz|midterm|final|homework|assignment|class|course|topic|chapter|section)\b/.test(lower)) return 'tutor';
+  if (/\bhelp me with|explain|understand|study for|prepare for|prep for\b/.test(lower)) return 'tutor';
+  return 'all';
+}
+
 function conciergeTokens(prompt) {
   return String(prompt || '')
     .toLowerCase()
@@ -233,13 +243,15 @@ function findConciergeMatches(prompt, rows) {
   if (!text) return [];
 
   const parsed = finderParamsFromPrompt(text);
-  const targetCategory = String(parsed.category || '').toLowerCase();
+  const targetCategory = String(parsed.category || conciergeSemanticCategory(text) || '').toLowerCase();
   const tokens = conciergeTokens(text);
+  const semanticCategory = conciergeSemanticCategory(text);
+  const lower = text.toLowerCase();
 
   return dedupeProvidersByUser(rows)
     .map(provider => {
       const haystack = conciergeText(provider);
-      let score = 0;
+      let score = 1;
 
       if (targetCategory && targetCategory !== 'all') {
         const category = String(provider.category || '').toLowerCase();
@@ -249,12 +261,30 @@ function findConciergeMatches(prompt, rows) {
 
         if (category === targetCategory) score += 10;
         if (customCategory.includes(targetCategory)) score += 8;
-        if (subcategory.includes(text.toLowerCase()) || text.toLowerCase().includes(subcategory)) score += 5;
+        if (subcategory.includes(lower) || lower.includes(subcategory)) score += 5;
         if (title.includes(targetCategory)) score += 3;
+      }
+
+      if (semanticCategory && semanticCategory !== 'all') {
+        const category = String(provider.category || '').toLowerCase();
+        const customCategory = String(provider.custom_category || '').toLowerCase();
+        if (semanticCategory === 'tutor' && ['tutor', 'hebrew tutor'].includes(category)) score += 7;
+        if (semanticCategory === 'fitness' && ['fitness', 'tennis'].includes(category)) score += 7;
+        if (semanticCategory === 'languages' && (category === 'hebrew tutor' || customCategory.includes('language'))) score += 7;
+        if (semanticCategory === 'music' && customCategory.includes('music')) score += 7;
+        if (semanticCategory === 'Torah Studies' && customCategory.includes('torah')) score += 7;
       }
 
       for (const token of tokens) {
         if (haystack.includes(token)) score += 2;
+      }
+
+      if (/(\bexam\b|\btest\b|\bquiz\b|\bmidterm\b|\bfinal\b|\bhomework\b|\bassignment\b|\bstudy\b|\bclass\b|\bcourse\b|\blecture\b)/.test(lower)) {
+        if (['tutor', 'hebrew tutor'].includes(String(provider.category || '').toLowerCase()) || String(provider.custom_category || '').toLowerCase().includes('language')) score += 6;
+      }
+
+      if (/(\bpython\b|\bjava\b|\bjavascript\b|\bsql\b|\bcoding\b|\bprogramming\b|\bdata structures\b|\balgorithms\b)/.test(lower)) {
+        if (['tutor', 'hebrew tutor'].includes(String(provider.category || '').toLowerCase()) || String(provider.title || '').toLowerCase().includes('coding') || String(provider.subcategory || '').toLowerCase().includes('coding')) score += 7;
       }
 
       if (text.toLowerCase().includes('online') || text.toLowerCase().includes('zoom') || text.toLowerCase().includes('virtual')) {
@@ -271,7 +301,6 @@ function findConciergeMatches(prompt, rows) {
 
       return { provider, score };
     })
-    .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score || String(a.provider.name || '').localeCompare(String(b.provider.name || '')))
     .map(item => item.provider);
 }
@@ -886,6 +915,13 @@ export default function Browse() {
                   <Link
                     key={provider.user_id || provider.username || provider.id}
                     to={href}
+                    onClick={() => trackEvent('concierge_result_clicked', {
+                      prompt: conciergePrompt || conciergeSubmittedPrompt || '',
+                      provider_id: provider.id,
+                      provider_name: provider.name,
+                      provider_category: provider.category,
+                      provider_subcategory: provider.subcategory || provider.custom_category || '',
+                    })}
                     style={{
                       textDecoration: 'none',
                       borderRadius: 18,
