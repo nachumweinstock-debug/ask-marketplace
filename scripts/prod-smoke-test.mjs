@@ -117,7 +117,13 @@ async function smokeConcierge(token) {
   const exactPrompt = 'Need Excel help for a job interview';
   const exact = await request('POST', '/providers/concierge', {
     token,
-    body: { text: exactPrompt },
+    body: {
+      text: exactPrompt,
+      analytics: {
+        visitor_id: conciergeVisitorId,
+        session_id: conciergeSessionId,
+      },
+    },
     label: 'concierge exact parse',
   });
   if (!exact.data.answer || !exact.data.search) throw new Error('concierge exact parse missing answer/search');
@@ -156,11 +162,19 @@ async function smokeConcierge(token) {
   const fuzzyPrompt = 'same kind of thing again, but on campus tonight';
   const fuzzy = await request('POST', '/providers/concierge', {
     token,
-    body: { text: fuzzyPrompt },
+    body: {
+      text: fuzzyPrompt,
+      analytics: {
+        visitor_id: conciergeVisitorId,
+        session_id: conciergeSessionId,
+      },
+    },
     label: 'concierge fuzzy parse',
   });
   if (!fuzzy.data.answer || !fuzzy.data.search) throw new Error('concierge fuzzy parse missing answer/search');
   if (String(fuzzy.data.search).trim().length < 2) throw new Error('concierge fuzzy parse returned an empty search');
+  if (fuzzy.data.category !== 'tutor') throw new Error(`concierge fuzzy parse expected tutor, got ${fuzzy.data.category}`);
+  if (String(fuzzy.data.subcategory || '').toLowerCase() !== 'excel') throw new Error(`concierge fuzzy parse expected Excel, got ${fuzzy.data.subcategory}`);
   log('concierge fuzzy parse', `${fuzzy.data.category}${fuzzy.data.subcategory ? `/${fuzzy.data.subcategory}` : ''}`);
 }
 

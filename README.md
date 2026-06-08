@@ -65,7 +65,7 @@ Important variables:
 Optional but expected in production:
 
 - `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`
-- `GEMINI_API_KEY` for the Ask Concierge parser
+- `GEMINI_API_KEY` for the availability parser only; Ask Concierge is now local and trained from ASK history
 - `RESEND_API_KEY`
 - `POSTHOG_API_KEY`
 - `PEXELS_API_KEY`

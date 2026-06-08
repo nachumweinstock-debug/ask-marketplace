@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import ProviderCard from '../components/ProviderCard';
-import { trackEvent } from '../lib/analytics';
+import { getAnalyticsContext, trackEvent } from '../lib/analytics';
 import FAQAccordion from '../components/FAQAccordion';
 import { TutorCardSkeleton } from '../components/Skeletons';
 import { hasSuggestion, suggestText } from '../lib/textSuggestions';
@@ -622,13 +622,14 @@ export default function Browse() {
     setConciergePrompt(text);
     setConciergeSubmittedPrompt(text);
     setConciergeSearching(true);
+    const analyticsContext = getAnalyticsContext();
     trackEvent('concierge_prompt_submitted', {
       prompt: text,
       prompt_length: text.length,
       detected_category: finderParamsFromPrompt(text).category || 'all',
     });
     try {
-      const { data } = await api.post('/providers/concierge', { text });
+      const { data } = await api.post('/providers/concierge', { text, analytics: analyticsContext });
       const nextSearch = String(data?.search || text).trim();
       const nextCategory = data?.category || 'all';
       const nextSubcategory = data?.subcategory || 'all';

@@ -44,6 +44,14 @@ function getSessionId() {
   return sessionId;
 }
 
+export function getAnalyticsContext() {
+  if (typeof window === 'undefined') return { visitor_id: '', session_id: '' };
+  return {
+    visitor_id: getVisitorId(),
+    session_id: getSessionId(),
+  };
+}
+
 export function classifyPage(path = window.location.pathname) {
   const clean = path.split('?')[0].replace(/\/+$/, '') || '/';
   if (clean === '/') return 'homepage';

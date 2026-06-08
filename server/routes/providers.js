@@ -45,7 +45,35 @@ function redactPublicListing(provider) {
 const router = Router();
 const STANDARD_CATS = ['tutor', 'barber', 'hebrew tutor', 'fitness', 'tennis', 'other'];
 const CURRENT_PROVIDER_TERMS = '2026-06-06';
-const CONCIERGE_MODEL = process.env.GEMINI_CONCIERGE_MODEL || 'gemini-2.5-flash-lite';
+const CONCIERGE_STOPWORDS = new Set([
+  'a', 'an', 'and', 'any', 'at', 'be', 'before', 'for', 'from', 'get', 'help', 'i', 'in', 'into',
+  'is', 'it', 'just', 'me', 'need', 'of', 'on', 'or', 'please', 'same', 'search', 'some', 'something',
+  'that', 'the', 'this', 'to', 'tonight', 'today', 'up', 'want', 'with', 'within', 'without', 'you',
+  'again', 'another', 'similar', 'kind', 'thing', 'like', 'more', 'now', 'near', 'nearby', 'around',
+  'looking', 'find', 'can', 'could', 'should', 'would', 'do', 'does', 'did', 'we', 'they', 'them',
+  'these', 'those', 'your', 'my', 'our', 'their', 'there', 'here', 'need', 'want', 'looking',
+]);
+
+const CONCIERGE_CATEGORY_HINTS = {
+  tutor: ['tutor', 'math', 'calc', 'calculus', 'statistics', 'stats', 'exam', 'test', 'quiz', 'midterm', 'final', 'homework', 'assignment', 'study', 'class', 'course', 'lesson', 'essay', 'paper', 'writing', 'research', 'coding', 'programming', 'python', 'java', 'javascript', 'sql', 'excel', 'finance', 'accounting', 'accountant', 'economics', 'history', 'english', 'chemistry', 'biology', 'physics'],
+  barber: ['barber', 'haircut', 'fade', 'taper', 'beard', 'lineup', 'trim'],
+  fitness: ['fitness', 'trainer', 'training', 'workout', 'boxing', 'yoga', 'basketball', 'soccer', 'running', 'golf', 'lifting'],
+  languages: ['hebrew', 'spanish', 'french', 'arabic', 'language', 'ivrit', 'yiddish'],
+  music: ['guitar', 'piano', 'violin', 'drums', 'vocal', 'music'],
+  'Torah Studies': ['gemara', 'halacha', 'chumash', 'torah', 'tanach', 'mishna'],
+};
+const CONCIERGE_CATEGORIES = ['tutor', 'barber', 'fitness', 'languages', 'music', 'Torah Studies'];
+
+const CONCIERGE_SUBCATEGORY_HINTS = {
+  tutor: ['Calculus', 'Excel', 'Accounting', 'Finance', 'Statistics', 'Chemistry', 'Biology', 'Physics', 'English', 'History', 'Coding', 'Economics', 'Math'],
+  barber: ['Haircut', 'Fade', 'Beard'],
+  fitness: ['Tennis', 'Workout', 'Training'],
+  languages: ['Hebrew', 'Spanish', 'French', 'Arabic'],
+  music: ['Guitar', 'Piano', 'Violin', 'Drums', 'Vocal'],
+  'Torah Studies': ['Gemara', 'Halacha', 'Chumash', 'Mishna'],
+};
+
+const CONCIERGE_FOLLOW_UP_RE = /\b(same kind|same thing|that again|another one|more like that|like before|similar one|again)\b/i;
 
 function latestDraftProfile(userId) {
   return db.prepare(`
@@ -131,41 +159,6 @@ function mergeConciergeHeuristics(raw, text) {
   return normalizeConciergeResult(next, text);
 }
 
-function recentConciergeExamples() {
-  try {
-    const rows = db.prepare(`
-      SELECT metadata, created_at
-      FROM analytics_events
-      WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')
-      ORDER BY created_at DESC
-      LIMIT 40
-    `).all();
-
-    const seen = new Set();
-    const examples = [];
-    for (const row of rows) {
-      try {
-        const meta = JSON.parse(row.metadata || '{}');
-        const prompt = String(meta?.prompt || meta?.query || meta?.text || '').trim();
-        const clicked = String(meta?.provider_name || meta?.selected_provider || meta?.match_name || '').trim();
-        const clickedCategory = String(meta?.provider_category || meta?.selected_category || meta?.category || '').trim();
-        if (!prompt) continue;
-        const key = `${prompt.toLowerCase()}|${clicked.toLowerCase()}|${clickedCategory.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if (clicked) {
-          examples.push(`Prompt: ${prompt}\nChosen match: ${clicked}${clickedCategory ? ` (${clickedCategory})` : ''}`);
-        } else {
-          examples.push(`Prompt: ${prompt}`);
-        }
-      } catch {}
-    }
-    return examples.slice(0, 12);
-  } catch {
-    return [];
-  }
-}
-
 function localConciergeParse(text) {
   const lower = String(text || '').toLowerCase();
   const result = {
@@ -201,72 +194,361 @@ function localConciergeParse(text) {
   return result;
 }
 
-async function parseConciergeWithGemini(text) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return localConciergeParse(text);
-  const pastExamples = recentConciergeExamples();
-  const memoryBlock = pastExamples.length
-    ? `Recent successful ASK concierge examples from this marketplace:\n${pastExamples.map(example => `- ${example}`).join('\n\n')}\nUse these as strong semantic examples, not exact text matches.`
-    : 'No historical prompts available.';
+function conciergeTokenize(text) {
+  const normalized = String(text || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9+]+/g, ' ')
+    .trim();
+  if (!normalized) return [];
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${CONCIERGE_MODEL}:generateContent`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{
-              text: [
-                'You are the ASK Marketplace concierge parser.',
-                'Interpret the user request into a concise browse query and filters.',
-                'Return JSON only.',
-                'If the user mentions a service, school context, campus, or format, map it to the closest browse filters.',
-                'Keep the answer short and practical.',
-                memoryBlock,
-                `User request: ${text}`,
-              ].join('\n'),
-            }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: {
-            type: 'object',
-            properties: {
-              answer: { type: 'string', description: 'Short response to show in the concierge panel.' },
-              search: { type: 'string', description: 'Normalized search query to send to browse.' },
-              category: { type: 'string', description: 'Best matching ASK category.' },
-              subcategory: { type: 'string', description: 'Best matching ASK subcategory if any.' },
-              session_type: { type: 'string', description: 'all, zoom, or in-person.' },
-              campus: { type: 'string', description: 'all, WILF, or BEREN.' },
-              should_search: { type: 'boolean', description: 'Whether the user wants provider matches.' },
-            },
-            required: ['answer', 'search', 'category', 'subcategory', 'session_type', 'campus', 'should_search'],
-            additionalProperties: false,
-          },
-        },
-      }),
-      signal: AbortSignal.timeout(7000),
-    }
-  );
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(detail || `Gemini request failed (${response.status})`);
+  const tokens = [];
+  for (const raw of normalized.split(/\s+/)) {
+    if (!raw || raw.length < 2 || CONCIERGE_STOPWORDS.has(raw)) continue;
+    tokens.push(raw);
+    if (raw === 'calc') tokens.push('calculus');
+    if (raw === 'stats') tokens.push('statistics');
+    if (raw === 'spreadsheets' || raw === 'spreadsheet') tokens.push('excel');
+    if (raw === 'accountant') tokens.push('accounting');
+    if (raw === 'programming') tokens.push('coding');
+    if (raw.endsWith('ies') && raw.length > 4) tokens.push(`${raw.slice(0, -3)}y`);
+    if (raw.endsWith('ing') && raw.length > 5) tokens.push(raw.slice(0, -3));
+    if (raw.endsWith('ed') && raw.length > 4) tokens.push(raw.slice(0, -2));
+    if (raw.endsWith('s') && raw.length > 3) tokens.push(raw.slice(0, -1));
   }
 
-  const payload = await response.json();
-  const rawText = payload?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('') || '';
-  const normalized = String(rawText).trim();
-  const jsonSlice = normalized.includes('{')
-    ? normalized.slice(normalized.indexOf('{'), normalized.lastIndexOf('}') + 1)
-    : normalized;
-  return mergeConciergeHeuristics(JSON.parse(jsonSlice), text);
+  return [...new Set(tokens)];
+}
+
+function conciergeFeatureTokens(text) {
+  const tokens = conciergeTokenize(text);
+  const bigrams = [];
+  for (let i = 0; i < tokens.length - 1; i += 1) {
+    bigrams.push(`${tokens[i]} ${tokens[i + 1]}`);
+  }
+  return [...new Set([...tokens, ...bigrams])];
+}
+
+function conciergeProviderText(provider) {
+  return [
+    provider.name,
+    provider.title,
+    provider.subcategory,
+    provider.custom_category,
+    provider.bio,
+    provider.category,
+    Array.isArray(provider.merged_services) ? provider.merged_services.join(' ') : '',
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function conciergeCanonicalCategory(providerCategory, customCategory) {
+  const category = String(providerCategory || '').trim().toLowerCase();
+  const custom = String(customCategory || '').trim().toLowerCase();
+  if (custom === 'torah studies' || category === 'torah studies' || category === 'torah') return 'Torah Studies';
+  if (custom === 'languages' || category === 'hebrew tutor' || category === 'languages') return 'languages';
+  if (custom === 'music' || category === 'music') return 'music';
+  if (category === 'fitness' || category === 'tennis') return 'fitness';
+  if (category === 'barber') return 'barber';
+  if (category === 'tutor') return 'tutor';
+  return 'all';
+}
+
+function conciergeCreateProfile(category, display = category) {
+  return {
+    category,
+    display,
+    counts: new Map(),
+    docs: 0,
+    totalWeight: 0,
+  };
+}
+
+function conciergeAddToProfile(profile, tokens, weight = 1) {
+  if (!profile) return;
+  profile.docs += 1;
+  profile.totalWeight += weight;
+  for (const token of new Set(tokens)) {
+    profile.counts.set(token, (profile.counts.get(token) || 0) + weight);
+  }
+}
+
+function conciergeScoreProfile(profile, tokens) {
+  if (!profile) return 0;
+  let score = 0;
+  for (const token of tokens) {
+    const count = profile.counts.get(token) || 0;
+    if (count) score += Math.log1p(count);
+  }
+  return score + Math.log1p(profile.totalWeight || 0);
+}
+
+function conciergeParseEventMetadata(metadata) {
+  try {
+    const meta = JSON.parse(metadata || '{}');
+    return {
+      prompt: String(meta?.prompt || meta?.query || meta?.text || '').trim(),
+      provider_name: String(meta?.provider_name || meta?.selected_provider || meta?.match_name || '').trim(),
+      provider_category: String(meta?.provider_category || meta?.selected_category || meta?.category || '').trim(),
+      provider_subcategory: String(meta?.provider_subcategory || meta?.selected_subcategory || meta?.subcategory || '').trim(),
+      custom_category: String(meta?.custom_category || '').trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function loadConciergeContextExamples(context = {}) {
+  const visitorId = String(context?.visitorId || context?.visitor_id || '').trim();
+  const sessionId = String(context?.sessionId || context?.session_id || '').trim();
+  if (!visitorId && !sessionId) return [];
+
+  const clauses = [];
+  const values = [];
+  if (visitorId) {
+    clauses.push('visitor_id = ?');
+    values.push(visitorId);
+  }
+  if (sessionId) {
+    clauses.push('session_id = ?');
+    values.push(sessionId);
+  }
+
+  const rows = db.prepare(`
+    SELECT event_name, metadata, visitor_id, session_id, created_at
+    FROM analytics_events
+    WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')
+      AND (${clauses.join(' OR ')})
+    ORDER BY created_at DESC
+    LIMIT 30
+  `).all(...values);
+
+  return rows
+    .map((row) => {
+      const meta = conciergeParseEventMetadata(row.metadata);
+      if (!meta?.prompt) return null;
+      return {
+        event_name: row.event_name,
+        prompt: meta.prompt,
+        provider_name: meta.provider_name,
+        provider_category: meta.provider_category,
+        provider_subcategory: meta.provider_subcategory,
+        custom_category: meta.custom_category,
+      };
+    })
+    .filter(Boolean);
+}
+
+let conciergeModelCache = { key: '', builtAt: 0, model: null };
+
+function conciergeModelSignature() {
+  const row = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM provider_profiles) AS provider_count,
+      COALESCE((SELECT MAX(created_at) FROM analytics_events WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')), '') AS latest_event
+  `).get();
+  return `${row?.provider_count || 0}:${row?.latest_event || ''}`;
+}
+
+function buildConciergeModel() {
+  const categories = new Map(CONCIERGE_CATEGORIES.map(category => [category, conciergeCreateProfile(category)]));
+  const subcategories = new Map();
+  const providerBoosts = new Map();
+
+  const providerRows = db.prepare(`
+    SELECT id, user_id, username, name, title, bio, category, custom_category, subcategory, price_per_session, session_type, campus
+    FROM provider_profiles
+  `).all();
+
+  for (const provider of providerRows) {
+    const category = conciergeCanonicalCategory(provider.category, provider.custom_category);
+    const tokens = conciergeFeatureTokens(conciergeProviderText(provider));
+    const weight = provider.merged_listing_count ? Math.min(Number(provider.merged_listing_count) || 1, 3) : 1;
+    if (categories.has(category)) conciergeAddToProfile(categories.get(category), tokens, weight);
+
+    const subcategory = String(provider.subcategory || '').trim();
+    if (subcategory) {
+      const key = `${category}::${subcategory.toLowerCase()}`;
+      if (!subcategories.has(key)) subcategories.set(key, conciergeCreateProfile(category, subcategory));
+      conciergeAddToProfile(subcategories.get(key), [...tokens, ...conciergeFeatureTokens(subcategory)], weight);
+    }
+  }
+
+  const rows = db.prepare(`
+    SELECT event_name, metadata, created_at
+    FROM analytics_events
+    WHERE event_name IN ('concierge_prompt_submitted', 'concierge_result_clicked')
+    ORDER BY created_at DESC
+    LIMIT 180
+  `).all();
+
+  for (const row of rows) {
+    const meta = conciergeParseEventMetadata(row.metadata);
+    if (!meta?.prompt) continue;
+    const category = conciergeCanonicalCategory(meta.provider_category, meta.custom_category);
+    const subcategory = String(meta.provider_subcategory || '').trim();
+    const tokens = conciergeFeatureTokens(meta.prompt);
+    const weight = row.event_name === 'concierge_result_clicked' ? 4 : 1;
+    if (categories.has(category)) conciergeAddToProfile(categories.get(category), tokens, weight);
+    if (category !== 'all' && subcategory) {
+      const key = `${category}::${subcategory.toLowerCase()}`;
+      if (!subcategories.has(key)) subcategories.set(key, conciergeCreateProfile(category, subcategory));
+      conciergeAddToProfile(subcategories.get(key), [...tokens, ...conciergeFeatureTokens(subcategory)], weight);
+    }
+    if (row.event_name === 'concierge_result_clicked' && meta.provider_name) {
+      const key = meta.provider_name.toLowerCase();
+      providerBoosts.set(key, (providerBoosts.get(key) || 0) + weight);
+    }
+  }
+
+  return { categories, subcategories, providerBoosts, providerRows };
+}
+
+function getConciergeModel() {
+  const key = conciergeModelSignature();
+  if (conciergeModelCache.model && conciergeModelCache.key === key && Date.now() - conciergeModelCache.builtAt < 60_000) {
+    return conciergeModelCache.model;
+  }
+  const model = buildConciergeModel();
+  conciergeModelCache = { key, builtAt: Date.now(), model };
+  return model;
+}
+
+function conciergeMemoryExample(contextExamples, promptTokens) {
+  if (!contextExamples.length) return null;
+  const followUp = CONCIERGE_FOLLOW_UP_RE.test(promptTokens.join(' '));
+  const clicked = contextExamples.find(example => example.event_name === 'concierge_result_clicked' && example.provider_category);
+  if (followUp && clicked) return clicked;
+
+  let best = null;
+  let bestScore = 0;
+  for (const example of contextExamples) {
+    const tokens = conciergeFeatureTokens(example.prompt);
+    const overlap = tokens.reduce((sum, token) => sum + (promptTokens.includes(token) ? 1 : 0), 0);
+    const score = overlap + (example.event_name === 'concierge_result_clicked' ? 2 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = example;
+    }
+  }
+  return bestScore >= 2 ? best : null;
+}
+
+function pickConciergeCategory(prompt, model, memoryExample) {
+  const promptTokens = conciergeFeatureTokens(prompt);
+  const lower = String(prompt || '').toLowerCase();
+  const explicit = inferConciergeCategory(prompt);
+  if (memoryExample && CONCIERGE_FOLLOW_UP_RE.test(lower)) {
+    const memoryCategory = conciergeCanonicalCategory(memoryExample.provider_category, memoryExample.custom_category);
+    if (memoryCategory !== 'all') return memoryCategory;
+  }
+
+  const scores = [];
+  for (const [category, profile] of model.categories.entries()) {
+    let score = conciergeScoreProfile(profile, promptTokens);
+    for (const hint of CONCIERGE_CATEGORY_HINTS[category] || []) {
+      if (lower.includes(hint.toLowerCase())) score += 3;
+    }
+    if (explicit === category) score += 8;
+    if (category === 'tutor' && /\b(exam|test|quiz|midterm|final|homework|assignment|study|class|course|lecture|paper|essay|chapter|topic|problem set|problemset)\b/.test(lower)) score += 5;
+    if (category === 'tutor' && /\b(help me with|need help with|explain|study for|prep for|prepare for)\b/.test(lower)) score += 5;
+    if (memoryExample) {
+      const memoryCategory = conciergeCanonicalCategory(memoryExample.provider_category, memoryExample.custom_category);
+      if (memoryCategory === category) score += 6;
+    }
+    scores.push({ category, score });
+  }
+
+  scores.sort((a, b) => b.score - a.score);
+  const top = scores[0];
+  const second = scores[1];
+  if (!top || top.score <= 0) return explicit !== 'all' ? explicit : 'all';
+  if (top.category === 'tutor' && /\b(exam|test|quiz|midterm|final|homework|assignment|study|class|course|lecture|paper|essay)\b/.test(lower)) return 'tutor';
+  if (second && top.score - second.score < 1.2 && explicit !== 'all') return explicit;
+  return top.category;
+}
+
+function pickConciergeSubcategory(prompt, category, model, memoryExample) {
+  const lower = String(prompt || '').toLowerCase();
+  if (memoryExample && CONCIERGE_FOLLOW_UP_RE.test(lower)) {
+    const memorySubcategory = String(memoryExample.provider_subcategory || '').trim();
+    if (memorySubcategory) return memorySubcategory;
+  }
+
+  const hints = CONCIERGE_SUBCATEGORY_HINTS[category] || [];
+  for (const hint of hints) {
+    if (lower.includes(hint.toLowerCase())) return hint;
+  }
+
+  let best = '';
+  let bestScore = 0;
+  for (const profile of model.subcategories.values()) {
+    if (profile.category !== category) continue;
+    const score = conciergeScoreProfile(profile, conciergeFeatureTokens(prompt));
+    if (score > bestScore) {
+      bestScore = score;
+      best = profile.display;
+    }
+  }
+
+  return bestScore > 0 ? best : '';
+}
+
+function expandConciergeSearch(text, category, subcategory, memoryExample) {
+  const lower = String(text || '').toLowerCase();
+  if (memoryExample && CONCIERGE_FOLLOW_UP_RE.test(lower)) {
+    const memorySearch = [memoryExample.provider_subcategory, memoryExample.provider_category].filter(Boolean).join(' ').trim();
+    if (memorySearch) return memorySearch;
+  }
+
+  let search = String(text || '').trim();
+  if (/\bcalc\b/i.test(search)) search = search.replace(/\bcalc\b/gi, 'calculus');
+  if (/\bstats\b/i.test(search)) search = search.replace(/\bstats\b/gi, 'statistics');
+  if (/\bspreadsheet(s)?\b/i.test(search)) search = search.replace(/\bspreadsheet(s)?\b/gi, 'Excel');
+  if (/\baccountant\b/i.test(search)) search = search.replace(/\baccountant\b/gi, 'accounting');
+  if (/\bprogramming\b/i.test(search)) search = search.replace(/\bprogramming\b/gi, 'coding');
+  if (subcategory && !new RegExp(`\\b${subcategory.toLowerCase()}\\b`, 'i').test(search)) {
+    search = `${subcategory} ${search}`.trim();
+  }
+  if (category === 'tutor' && /\b(exam|test|quiz|midterm|final|homework|assignment|study|class|course|lecture|paper|essay)\b/i.test(search) && !/\btutor\b/i.test(search)) {
+    search = `${search} tutor`;
+  }
+  return search.replace(/\s+/g, ' ').trim();
+}
+
+function parseConciergeWithLocalModel(text, context = {}) {
+  const prompt = String(text || '').trim();
+  const local = localConciergeParse(prompt);
+  const model = getConciergeModel();
+  const contextExamples = loadConciergeContextExamples(context);
+  const promptTokens = conciergeFeatureTokens(prompt);
+  const memoryExample = conciergeMemoryExample(contextExamples, promptTokens);
+
+  let category = pickConciergeCategory(prompt, model, memoryExample);
+  if (category === 'all' && local.category !== 'all') category = local.category;
+  if (!category || category === 'all') category = inferConciergeCategory(prompt);
+  if (!category || category === 'all') category = local.category;
+
+  let subcategory = pickConciergeSubcategory(prompt, category, model, memoryExample);
+  if (!subcategory) subcategory = local.subcategory;
+
+  const search = expandConciergeSearch(prompt, category, subcategory, memoryExample);
+  const answer = memoryExample && CONCIERGE_FOLLOW_UP_RE.test(prompt.toLowerCase())
+    ? `I’m using your earlier ASK request and pulling the closest ${category === 'all' ? 'matches' : category} options${subcategory ? ` for ${subcategory}` : ''}.`
+    : `I’m pulling the closest ${category === 'all' ? 'matches' : category} options${subcategory ? ` for ${subcategory}` : ''} and widening semantically.`;
+
+  return normalizeConciergeResult(
+    mergeConciergeHeuristics({
+      answer,
+      search,
+      category,
+      subcategory,
+      session_type: local.session_type,
+      campus: local.campus,
+      should_search: true,
+      source: memoryExample ? 'trained-memory' : 'trained',
+    }, prompt),
+    prompt
+  );
 }
 
 // ── Named routes (must come before /:id) ──────────────────────────────────────
@@ -323,10 +605,14 @@ router.get('/subcategories', (req, res) => {
 router.post('/concierge', async (req, res) => {
   const text = String(req.body?.text || '').trim();
   if (!text) return res.status(400).json({ error: 'text required' });
+  const context = {
+    visitorId: String(req.body?.analytics?.visitor_id || req.body?.visitor_id || '').trim(),
+    sessionId: String(req.body?.analytics?.session_id || req.body?.session_id || '').trim(),
+  };
 
   try {
-    const parsed = await parseConciergeWithGemini(text);
-    res.json(mergeConciergeHeuristics(parsed, text));
+    const parsed = parseConciergeWithLocalModel(text, context);
+    res.json(parsed);
   } catch (err) {
     try {
       res.json(mergeConciergeHeuristics(localConciergeParse(text), text));
